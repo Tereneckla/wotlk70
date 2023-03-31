@@ -64,7 +64,7 @@ func (hunter *Hunter) NewHunterPet() *HunterPet {
 	// Pet family bonus is now the same for all pets.
 	hp.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] *= 1.05
 
-	hp.AddStatDependency(stats.Strength, stats.AttackPower, 2)
+	hp.AddStatDependency(stats.Strength, stats.AttackPower, 1)
 	hp.AddStat(stats.AttackPower, -20)
 	hp.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritRatingPerCritChance/33)
 	core.ApplyPetConsumeEffects(&hp.Character, hunter.Consumes)
@@ -153,8 +153,8 @@ func (hp *HunterPet) killCommandMult() float64 {
 }
 
 var hunterPetBaseStats = stats.Stats{
-	stats.Agility:     113,
-	stats.Strength:    331,
+	stats.Agility:     128,
+	stats.Strength:    162,
 	stats.AttackPower: -20, // Apparently pets and warriors have a AP penalty.
 
 	// Add 1.8% because pets aren't affected by that component of crit suppression.
