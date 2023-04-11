@@ -25,10 +25,22 @@ import * as Tooltips from '../core/constants/tooltips.js';
 
 // Default talents. Uses the wowhead calculator format, make the talents on
 // https://wowhead.com/wotlk/talent-calc and copy the numbers in the url.
-export const CombatTalents = {
-	name: 'Combat',
+export const CombatSwords = {
+	name: 'Combat Swords',
 	data: SavedTalents.create({
 		talentsString: '00532-0252051000035015223100501251',
+		glyphs: Glyphs.create({
+			major1: RogueMajorGlyph.GlyphOfKillingSpree,
+			major2: RogueMajorGlyph.GlyphOfRupture,
+			major3: RogueMajorGlyph.RogueMajorGlyphNone,
+		})
+	}),
+};
+
+export const CombatDaggers = {
+	name: 'Combat Daggers',
+	data: SavedTalents.create({
+		talentsString: '00532-0252051050035010223100501251',
 		glyphs: Glyphs.create({
 			major1: RogueMajorGlyph.GlyphOfKillingSpree,
 			major2: RogueMajorGlyph.GlyphOfRupture,

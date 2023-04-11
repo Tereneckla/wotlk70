@@ -18,7 +18,7 @@ func TestCombat(t *testing.T) {
 		Race:        proto.Race_RaceHuman,
 		OtherRaces:  []proto.Race{proto.Race_RaceOrc},
 		GearSet:     core.GearSetCombo{Label: "P1", GearSet: P1Gear},
-		Talents:     CombatTalents,
+		Talents:     CombatSwords,
 		Glyphs:      CombatGlyphs,
 		Consumes:    FullConsumes,
 		SpecOptions: core.SpecOptionsCombo{Label: "MH Deadly OH Instant", SpecOptions: PlayerOptionsCombatDI},
@@ -126,7 +126,7 @@ func TestCritDamageMultipliers(t *testing.T) {
 	// Poison, with RED
 	GenerateCriticalDamageMultiplierTestCase(t, "PoisonRED", GearWithRED, CombatNoPotWTalents, PlayerOptionsNoPotW, Poison, 1.545000)
 	// Poison, with RED & PotW
-	GenerateCriticalDamageMultiplierTestCase(t, "PoisonREDPotW", GearWithRED, CombatTalents, PlayerOptionsCombatDI, Poison, 1.854000)
+	GenerateCriticalDamageMultiplierTestCase(t, "PoisonREDPotW", GearWithRED, CombatSwords, PlayerOptionsCombatDI, Poison, 1.854000)
 	// Auto, no RED, no Lethality, no PotW
 	GenerateCriticalDamageMultiplierTestCase(t, "Auto", GearWithoutRED, CombatNoLethalityNoPotWTalents, PlayerOptionsNoLethalityNoPotW, MHAuto, 2.0)
 	// Auto, RED, no Lethality, no PotW
@@ -138,13 +138,13 @@ func TestCritDamageMultipliers(t *testing.T) {
 	// Builder, RED, Lethality, no PotW
 	GenerateCriticalDamageMultiplierTestCase(t, "BuilderREDLethality", GearWithRED, CombatNoPotWTalents, PlayerOptionsNoPotW, Builder, 2.378000)
 	// Builder, no RED, Lethality, PotW
-	GenerateCriticalDamageMultiplierTestCase(t, "BuilderLethalityPotW", GearWithoutRED, CombatTalents, PlayerOptionsCombatDI, Builder, 2.820000)
+	GenerateCriticalDamageMultiplierTestCase(t, "BuilderLethalityPotW", GearWithoutRED, CombatSwords, PlayerOptionsCombatDI, Builder, 2.820000)
 	// Builder, RED, Lethality, PotW
-	GenerateCriticalDamageMultiplierTestCase(t, "BuilderREDLethalityPotW", GearWithRED, CombatTalents, PlayerOptionsCombatDI, Builder, 2.913600)
+	GenerateCriticalDamageMultiplierTestCase(t, "BuilderREDLethalityPotW", GearWithRED, CombatSwords, PlayerOptionsCombatDI, Builder, 2.913600)
 	// Finisher, no RED, Lethality, PotW
-	GenerateCriticalDamageMultiplierTestCase(t, "FinisherLethalityPotW", GearWithoutRED, CombatTalents, PlayerOptionsCombatDI, Finisher, 2.4)
+	GenerateCriticalDamageMultiplierTestCase(t, "FinisherLethalityPotW", GearWithoutRED, CombatSwords, PlayerOptionsCombatDI, Finisher, 2.4)
 	// Finisher, no RED, Lethality, PotW
-	GenerateCriticalDamageMultiplierTestCase(t, "FinisherREDLethalityPotW", GearWithRED, CombatTalents, PlayerOptionsCombatDI, Finisher, 2.472)
+	GenerateCriticalDamageMultiplierTestCase(t, "FinisherREDLethalityPotW", GearWithRED, CombatSwords, PlayerOptionsCombatDI, Finisher, 2.472)
 	*/
 }
 
@@ -174,7 +174,7 @@ func BenchmarkSimulate(b *testing.B) {
 	core.RaidBenchmark(b, rsr)
 }
 
-var CombatTalents = "00532000523-0252051050035010223100501251"
+var CombatSwords = "00532000523-0252051050035010223100501251"
 var CombatNoLethalityTalents = "00532000023-0252051050035010223100501251"
 var CombatNoPotWTalents = "00532000523-0252051050035010223100501201"
 var CombatNoLethalityNoPotWTalents = "00532000023-0252051050035010223100501201"
