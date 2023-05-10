@@ -313,7 +313,7 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 	{
 		spec: Spec.SpecMage,
 		rotation: MagePresets.DefaultFireRotation,
-		talents: MagePresets.FireTalents.data,
+		talents: MagePresets.FireBomb.data,
 		specOptions: MagePresets.DefaultFireOptions,
 		consumes: MagePresets.DefaultFireConsumes,
 		otherDefaults: MagePresets.OtherDefaults,		
