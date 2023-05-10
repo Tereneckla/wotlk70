@@ -86,8 +86,8 @@ export const MageRotationConfig = {
 						player.setTalentsString(eventID, Presets.ArcaneTalents.data.talentsString);
 						player.setGlyphs(eventID, Presets.ArcaneTalents.data.glyphs!);
 					} else if (newRotation.type == RotationType.Fire) {
-						player.setTalentsString(eventID, Presets.FireTalents.data.talentsString);
-						player.setGlyphs(eventID, Presets.FireTalents.data.glyphs!);
+						player.setTalentsString(eventID, Presets.FireTTW.data.talentsString);
+						player.setGlyphs(eventID, Presets.FireTTW.data.glyphs!);
 					} else if (newRotation.type == RotationType.Frost) {
 						player.setTalentsString(eventID, Presets.FrostTalents.data.talentsString);
 						player.setGlyphs(eventID, Presets.FrostTalents.data.glyphs!);

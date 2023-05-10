@@ -48,13 +48,27 @@ export const ArcaneTalents = {
 		}),
 	}),
 };
-export const FireTalents = {
-	name: 'Fire',
+export const FireBomb = {
+	name: 'Fire - Living Bomb',
+	data: SavedTalents.create({
+		talentsString: '-0055032012301331053120301351-050003',
+		glyphs: Glyphs.create({
+			major1: MageMajorGlyph.GlyphOfFireball,
+			major2: MageMajorGlyph.GlyphOfMoltenArmor,
+			major3: MageMajorGlyph.MageMajorGlyphNone,
+			minor1: MageMinorGlyph.GlyphOfSlowFall,
+			minor2: MageMinorGlyph.GlyphOfFrostWard,
+			minor3: MageMinorGlyph.GlyphOfBlastWave,
+		}),
+	}),
+};
+export const FireTTW = {
+	name: 'Fire - TTW',
 	data: SavedTalents.create({
 		talentsString: '23000503110003-00550300123013300531203003',
 		glyphs: Glyphs.create({
 			major1: MageMajorGlyph.GlyphOfFireball,
-			major2: MageMajorGlyph.GlyphOfMoltenArmor,
+			major2: MageMajorGlyph.GlyphOfLivingBomb,
 			major3: MageMajorGlyph.MageMajorGlyphNone,
 			minor1: MageMinorGlyph.GlyphOfSlowFall,
 			minor2: MageMinorGlyph.GlyphOfFrostWard,
