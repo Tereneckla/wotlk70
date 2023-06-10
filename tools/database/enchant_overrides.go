@@ -54,12 +54,11 @@ var EnchantOverrides = []*proto.UIEnchant{
 	{EffectId: 1891, SpellId: 27905, Name: "Bracer - Stats", Quality: proto.ItemQuality_ItemQualityUncommon, Stats: stats.Stats{stats.Stamina: 4, stats.Intellect: 4, stats.Spirit: 4, stats.Strength: 4, stats.Agility: 4}.ToFloatArray(), Type: proto.ItemType_ItemTypeWrist},
 
 	// Hands
-	{EffectId: 2935, ItemId: 28271, SpellId: 33994, Name: "Gloves - Spell Strike", Quality: proto.ItemQuality_ItemQualityUncommon, Stats: stats.Stats{stats.SpellHit: 15}.ToFloatArray(), Type: proto.ItemType_ItemTypeHands},
+	{EffectId: 2935, ItemId: 28271, SpellId: 33994, Name: "Gloves - Precise Strikes", Quality: proto.ItemQuality_ItemQualityUncommon, Stats: stats.Stats{stats.MeleeHit: 15, stats.SpellHit: 15}.ToFloatArray(), Type: proto.ItemType_ItemTypeHands},
 	{EffectId: 2937, ItemId: 28272, SpellId: 33997, Name: "Gloves - Major Spellpower", Quality: proto.ItemQuality_ItemQualityUncommon, Stats: stats.Stats{stats.SpellPower: 20}.ToFloatArray(), Type: proto.ItemType_ItemTypeHands},
 	{EffectId: 684, SpellId: 33995, Name: "Gloves - Major Strength", Quality: proto.ItemQuality_ItemQualityUncommon, Stats: stats.Stats{stats.Strength: 15}.ToFloatArray(), Type: proto.ItemType_ItemTypeHands},
 	{EffectId: 2564, ItemId: 33152, SpellId: 25080, Name: "Gloves - Major Agility", Quality: proto.ItemQuality_ItemQualityRare, Stats: stats.Stats{stats.Agility: 15}.ToFloatArray(), Type: proto.ItemType_ItemTypeHands},
 	{EffectId: 2613, ItemId: 33153, SpellId: 25072, Name: "Gloves - Threat", Quality: proto.ItemQuality_ItemQualityRare, Stats: stats.Stats{}.ToFloatArray(), Type: proto.ItemType_ItemTypeHands},
-
 	// Legs
 	{EffectId: 2748, ItemId: 24274, SpellId: 31372, Name: "Runic Spellthread", Quality: proto.ItemQuality_ItemQualityEpic, Stats: stats.Stats{stats.SpellPower: 35, stats.Stamina: 20}.ToFloatArray(), Type: proto.ItemType_ItemTypeLegs},
 	{EffectId: 2747, ItemId: 24273, SpellId: 31371, Name: "Mystic Spellthread", Quality: proto.ItemQuality_ItemQualityRare, Stats: stats.Stats{stats.SpellPower: 25, stats.Stamina: 15}.ToFloatArray(), Type: proto.ItemType_ItemTypeLegs},

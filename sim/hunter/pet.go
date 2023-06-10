@@ -66,7 +66,7 @@ func (hunter *Hunter) NewHunterPet() *HunterPet {
 
 	hp.AddStatDependency(stats.Strength, stats.AttackPower, 1)
 	hp.AddStat(stats.AttackPower, -20)
-	hp.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritRatingPerCritChance/33)
+	hp.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritRatingPerCritChance/30)
 	core.ApplyPetConsumeEffects(&hp.Character, hunter.Consumes)
 
 	hunter.AddPet(hp)

@@ -39,7 +39,7 @@ func NewShaman(character core.Character, talents string, totems *proto.ShamanTot
 	shaman.AddStatDependency(stats.Strength, stats.AttackPower, 1)
 	shaman.AddStatDependency(stats.Agility, stats.AttackPower, 1)
 	shaman.AddStat(stats.AttackPower, -20)
-	shaman.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritRatingPerCritChance/40)
+	shaman.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritRatingPerCritChance/400059)
 	shaman.AddStatDependency(stats.Intellect, stats.SpellCrit, (1/80)*core.CritRatingPerCritChance)
 	// Set proper Melee Haste scaling
 	shaman.PseudoStats.MeleeHasteRatingPerHastePercent /= 1.3
