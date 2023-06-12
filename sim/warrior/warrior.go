@@ -241,7 +241,7 @@ func (warrior *Warrior) intensifyRageCooldown(baseCd time.Duration) time.Duratio
 }
 
 func init() {
-	const basecrit = 3.48 * core.CritRatingPerCritChance
+	const basecrit = 3.18909995257854 * core.CritRatingPerCritChance
 	//const basespellcrit = 3.336 * core.CritRatingPerCritChance
 	const basehealth = 4444
 	//const basemana = 2953

@@ -39,7 +39,7 @@ func NewShaman(character core.Character, talents string, totems *proto.ShamanTot
 	shaman.AddStatDependency(stats.Strength, stats.AttackPower, 1)
 	shaman.AddStatDependency(stats.Agility, stats.AttackPower, 1)
 	shaman.AddStat(stats.AttackPower, -20)
-	shaman.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritRatingPerCritChance/400059)
+	shaman.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritRatingPerCritChance/40.0059)
 	shaman.AddStatDependency(stats.Intellect, stats.SpellCrit, (1/80)*core.CritRatingPerCritChance)
 	// Set proper Melee Haste scaling
 	shaman.PseudoStats.MeleeHasteRatingPerHastePercent /= 1.3
@@ -373,7 +373,7 @@ func (shaman *Shaman) ElementalCritMultiplier(secondary float64) float64 {
 }
 
 func init() {
-	const basecrit = 2.93 * core.CritRatingPerCritChance
+	const basecrit = 2.921 * core.CritRatingPerCritChance
 	const basespellcrit = 2.2 * core.CritRatingPerCritChance
 	const basehealth = 3380
 	const basemana = 2620

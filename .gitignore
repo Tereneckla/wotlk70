@@ -30,3 +30,4 @@ TestWarlock.results
 
 # air tmp dir
 tmp/
+tools/database/createsql/main.go
