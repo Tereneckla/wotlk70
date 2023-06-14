@@ -32,6 +32,7 @@ func (mage *Mage) registerPyroblastSpell() {
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
 				if mage.HotStreakAura.IsActive() {
 					cast.CastTime = 0
+					mage.HotStreakAura.Deactivate(sim)
 				}
 			},
 		},
