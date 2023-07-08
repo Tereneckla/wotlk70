@@ -1,4 +1,5 @@
 import {
+	ArmorType,
 	Class,
 	Consumes,
 	Cooldowns,
@@ -83,6 +84,7 @@ import { sum } from './utils.js';
 import { wait } from './utils.js';
 import { WorkerPool } from './worker_pool.js';
 import { EnhancementShaman_Options } from './proto/shaman.js';
+import { Console } from 'console';
 
 // Manages all the gear / consumes / other settings for a single Player.
 export class Player<SpecType extends Spec> {
@@ -672,9 +674,15 @@ export class Player<SpecType extends Spec> {
 				itemStats = itemStats.withPseudoStat(PseudoStat.PseudoStatRangedDps, weaponDps);
 			}
 		}
-
-		let ep = itemStats.computeEP(this.epWeights);
-
+		
+ 		let epWeight = Stats.fromJson(this.epWeights.toJson());
+		
+		if (this.isSpec(Spec.SpecFeralTankDruid) && item.armorType != ArmorType.ArmorTypeCloth && item.armorType != ArmorType.ArmorTypeLeather) {
+			epWeight = epWeight.withStat(Stat.StatArmor, epWeight.getStat(Stat.StatArmor) / 6.87561);
+		}
+		
+		let ep = itemStats.computeEP(epWeight);
+		
 		// unique items are slightly worse than non-unique because you can have only one.
 		if (item.unique) {
 			ep -= 0.01;
