@@ -1122,7 +1122,7 @@ const idToCategoryMap: Record<number, number> = {
 	[12043]: SPELL_ACTION_CATEGORY + 0.41, // Presence of Mind
 	[31687]: SPELL_ACTION_CATEGORY + 0.41, // Water Elemental
 	[55342]: SPELL_ACTION_CATEGORY + 0.5, // Mirror Image
-	[33312]: SPELL_ACTION_CATEGORY + 0.51, // Mana Gems
+	[22044]: SPELL_ACTION_CATEGORY + 0.51, // Mana Gems
 	[12051]: SPELL_ACTION_CATEGORY + 0.52, // Evocate
 	[44401]: SPELL_ACTION_CATEGORY + 0.6, // Missile Barrage
 	[44448]: SPELL_ACTION_CATEGORY + 0.6, // Hot Streak

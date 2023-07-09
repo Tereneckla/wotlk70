@@ -10,7 +10,7 @@ import (
 
 func (mage *Mage) registerManaGemsCD() {
 
-	actionID := core.ActionID{ItemID: 33312}
+	actionID := core.ActionID{ItemID: 22044}
 	manaMetrics := mage.NewManaMetrics(actionID)
 	var gemAura *core.Aura
 
