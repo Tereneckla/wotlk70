@@ -347,8 +347,8 @@ dps_results: {
 dps_results: {
  key: "TestFeral-AllItems-TheNightBlade-31331"
  value: {
-  dps: 1721.89395
-  tps: 1907.81644
+  dps: 1577.25303
+  tps: 1789.58075
  }
 }
 dps_results: {

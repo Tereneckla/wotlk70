@@ -270,8 +270,8 @@ dps_results: {
 dps_results: {
  key: "TestAssassination-AllItems-TheNightBlade-31331"
  value: {
-  dps: 1109.68385
-  tps: 787.87553
+  dps: 1048.61337
+  tps: 744.51549
  }
 }
 dps_results: {

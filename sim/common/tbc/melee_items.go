@@ -236,11 +236,11 @@ func init() {
 			Duration:  time.Second * 10,
 			MaxStacks: 3,
 			OnStacksChange: func(aura *core.Aura, sim *core.Simulation, oldStacks int32, newStacks int32) {
-				character.AddStatDynamic(sim, stats.ArmorPenetration, 435*float64(newStacks-oldStacks))
+				character.AddStatDynamic(sim, stats.ArmorPenetration, 62*float64(newStacks-oldStacks))
 			},
 		})
 
-		const procChance = 2 * 1.8 / 60.0
+		const procChance = 2.4 * 1.8 / 60.0
 		character.GetOrRegisterAura(core.Aura{
 			Label:    "The Night Blade",
 			Duration: core.NeverExpires,

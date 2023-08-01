@@ -410,8 +410,8 @@ dps_results: {
 dps_results: {
  key: "TestFury-AllItems-TheNightBlade-31331"
  value: {
-  dps: 808.99105
-  tps: 614.80401
+  dps: 713.38222
+  tps: 542.69043
  }
 }
 dps_results: {
