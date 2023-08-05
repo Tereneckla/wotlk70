@@ -144,8 +144,8 @@ dps_results: {
 dps_results: {
  key: "TestCombat-AllItems-DragonspineTrophy-28830"
  value: {
-  dps: 1093.2167
-  tps: 776.18386
+  dps: 1093.26235
+  tps: 776.21627
  }
 }
 dps_results: {
@@ -193,8 +193,8 @@ dps_results: {
 dps_results: {
  key: "TestCombat-AllItems-Heartrazor-29962"
  value: {
-  dps: 1271.99681
-  tps: 903.11774
+  dps: 1271.62178
+  tps: 902.85146
  }
 }
 dps_results: {
@@ -312,8 +312,8 @@ dps_results: {
 dps_results: {
  key: "TestCombat-AllItems-SingingCrystalAxe-31318"
  value: {
-  dps: 1354.94872
-  tps: 962.01359
+  dps: 1354.18992
+  tps: 961.47485
  }
 }
 dps_results: {
@@ -354,15 +354,15 @@ dps_results: {
 dps_results: {
  key: "TestCombat-AllItems-TheNightBlade-31331"
  value: {
-  dps: 1209.91715
-  tps: 859.04118
+  dps: 1209.61997
+  tps: 858.83018
  }
 }
 dps_results: {
  key: "TestCombat-AllItems-TheTwinBladesofAzzinoth"
  value: {
-  dps: 1909.87216
-  tps: 1356.00924
+  dps: 1909.89998
+  tps: 1356.02899
  }
 }
 dps_results: {
@@ -410,8 +410,8 @@ dps_results: {
 dps_results: {
  key: "TestCombat-Average-Default"
  value: {
-  dps: 1053.67812
-  tps: 748.11146
+  dps: 1053.67515
+  tps: 748.10936
  }
 }
 dps_results: {
@@ -753,7 +753,7 @@ dps_results: {
 dps_results: {
  key: "TestCombat-SwitchInFrontOfTarget-Default"
  value: {
-  dps: 977.61683
-  tps: 694.10795
+  dps: 977.90263
+  tps: 694.31086
  }
 }
