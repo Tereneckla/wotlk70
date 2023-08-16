@@ -48,6 +48,9 @@ func (warrior *Warrior) applyDeepWounds() {
 			aura.Activate(sim)
 		},
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if result.Target == &warrior.Unit {
+				return
+			}
 			if result.Outcome.Matches(core.OutcomeCrit) {
 				if warrior.WarriorInputs.Munch {
 					warrior.procMunchedDeepWounds(sim, result.Target, spell.IsOH())
