@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Tereneckla/wotlk/sim/core"
+	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/core/stats"
 )
 
@@ -26,24 +27,37 @@ type FireElemental struct {
 	shamanOwner *Shaman
 }
 
-func (shaman *Shaman) NewFireElemental() *FireElemental {
+func (shaman *Shaman) NewFireElemental(bonusSpellPower float64) *FireElemental {
 	fireElemental := &FireElemental{
-		Pet:         core.NewPet("Greater Fire Elemental", &shaman.Character, fireElementalPetBaseStats, shaman.fireElementalStatInheritance(), nil, false, true),
+		Pet:         core.NewPet("Greater Fire Elemental", &shaman.Character, fireElementalPetBaseStats, shaman.fireElementalStatInheritance(), false, true),
 		shamanOwner: shaman,
 	}
 	fireElemental.EnableManaBar()
 	fireElemental.EnableAutoAttacks(fireElemental, core.AutoAttackOptions{
 		MainHand: core.Weapon{
 			BaseDamageMin:  1,  // Estimated from base AP
-			BaseDamageMax:  24, // Estimated from base AP
+			BaseDamageMax:  23, // Estimated from base AP
 			SwingSpeed:     2,
-			SwingDuration:  time.Second * 2,
 			CritMultiplier: 2, // Pretty sure this is right.
 			SpellSchool:    core.SpellSchoolFire,
 		},
 		AutoSwingMelee: true,
 	})
 	fireElemental.AddStatDependency(stats.Intellect, stats.SpellCrit, core.CritRatingPerCritChance/100)
+
+	if bonusSpellPower > 0 {
+		fireElemental.AddStat(stats.SpellPower, float64(bonusSpellPower)*0.5218)
+		fireElemental.AddStat(stats.AttackPower, float64(bonusSpellPower)*4.45)
+	}
+
+	if shaman.hasHeroicPresence || shaman.Race == proto.Race_RaceDraenei {
+		fireElemental.AddStats(stats.Stats{
+			stats.MeleeHit:  -core.MeleeHitRatingPerHitChance,
+			stats.SpellHit:  -core.SpellHitRatingPerHitChance,
+			stats.Expertise: math.Floor(-core.SpellHitRatingPerHitChance * 0.79),
+		})
+	}
+
 	fireElemental.OnPetEnable = fireElemental.enable
 	fireElemental.OnPetDisable = fireElemental.disable
 
@@ -65,12 +79,14 @@ func (fireElemental *FireElemental) GetPet() *core.Pet {
 }
 
 func (fireElemental *FireElemental) Initialize() {
+
 	fireElemental.registerFireBlast()
 	fireElemental.registerFireNova()
 	fireElemental.registerFireShieldAura()
 }
 
-func (fireElemental *FireElemental) Reset(sim *core.Simulation) {
+func (fireElemental *FireElemental) Reset(_ *core.Simulation) {
+
 }
 
 func (fireElemental *FireElemental) OnGCDReady(sim *core.Simulation) {
@@ -134,8 +150,8 @@ var fireElementalPetBaseStats = stats.Stats{
 	stats.Health:      994,
 	stats.Intellect:   147,
 	stats.Stamina:     327,
-	stats.SpellPower:  995,  //Estimated
-	stats.AttackPower: 1369, //Estimated
+	stats.SpellPower:  0,    //Estimated
+	stats.AttackPower: 1303, //Estimated
 
 	// TODO : Log digging and my own samples this seems to be around the 5% mark.
 	stats.MeleeCrit: (5 + 1.8) * core.CritRatingPerCritChance,
@@ -150,10 +166,10 @@ func (shaman *Shaman) fireElementalStatInheritance() core.PetStatInheritance {
 		ownerHitChance := ownerStats[stats.MeleeHit] / core.MeleeHitRatingPerHitChance
 		hitRatingFromOwner := math.Floor(ownerHitChance) * core.MeleeHitRatingPerHitChance
 		return stats.Stats{
-			stats.Stamina:     ownerStats[stats.Stamina] * 0.3,
+			stats.Stamina:     ownerStats[stats.Stamina] * 0.75,
 			stats.Intellect:   ownerStats[stats.Intellect] * 0.30,
-			stats.SpellPower:  ownerStats[stats.SpellPower] * 1,
-			stats.AttackPower: ownerStats[stats.SpellPower] * 3,
+			stats.SpellPower:  ownerStats[stats.SpellPower] * 0.4970,
+			stats.AttackPower: ownerStats[stats.SpellPower] * 4.2381,
 
 			// TODO tested useing pre-patch lvl 70 stats need to confirm in WOTLK at 80.
 			stats.MeleeHit: hitRatingFromOwner,

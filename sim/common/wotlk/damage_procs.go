@@ -44,7 +44,6 @@ func newProcDamageEffect(config ProcDamageEffect) {
 }
 
 func init() {
-
 	newProcDamageEffect(ProcDamageEffect{
 		ID: 12631,
 		Trigger: core.ProcTrigger{
@@ -52,7 +51,8 @@ func init() {
 			Callback:   core.CallbackOnSpellHitDealt,
 			ProcMask:   core.ProcMaskMelee,
 			Outcome:    core.OutcomeLanded,
-			ProcChance: 1.0,
+			ProcChance: 1,
+			ActionID:   core.ActionID{ItemID: 12631},
 		},
 		School: core.SpellSchoolFire,
 		MinDmg: 4,
@@ -66,7 +66,8 @@ func init() {
 			Callback:   core.CallbackOnSpellHitDealt,
 			ProcMask:   core.ProcMaskMelee,
 			Outcome:    core.OutcomeLanded,
-			ProcChance: 1.0,
+			ProcChance: 1,
+			ActionID:   core.ActionID{ItemID: 12632},
 		},
 		School: core.SpellSchoolNature,
 		MinDmg: 3,
@@ -80,7 +81,8 @@ func init() {
 			Callback:   core.CallbackOnSpellHitDealt,
 			ProcMask:   core.ProcMaskMelee,
 			Outcome:    core.OutcomeLanded,
-			ProcChance: 1.0,
+			ProcChance: 1,
+			ActionID:   core.ActionID{ItemID: 17111},
 		},
 		School: core.SpellSchoolFire,
 		MinDmg: 2,
@@ -95,6 +97,7 @@ func init() {
 			ProcMask: core.ProcMaskMelee,
 			Outcome:  core.OutcomeLanded,
 			PPM:      0.5 * 3.5,
+			ActionID: core.ActionID{ItemID: 28573},
 		},
 		School: core.SpellSchoolPhysical,
 		MinDmg: 600,
@@ -104,11 +107,12 @@ func init() {
 	newProcDamageEffect(ProcDamageEffect{
 		ID: 28579,
 		Trigger: core.ProcTrigger{
-			Name:     "Romulo's Poison Vial",
-			Callback: core.CallbackOnSpellHitDealt,
-			ProcMask: core.ProcMaskMeleeOrRanged,
-			Outcome:  core.OutcomeLanded,
-			PPM:      1.0,
+			Name:       "Romulo's Poison Vial",
+			Callback:   core.CallbackOnSpellHitDealt,
+			ProcMask:   core.ProcMaskMeleeOrRanged,
+			Outcome:    core.OutcomeLanded,
+			PPM: 		1.0,
+			ActionID:   core.ActionID{ItemID: 28579},
 		},
 		School: core.SpellSchoolNature,
 		MinDmg: 222,
@@ -118,11 +122,12 @@ func init() {
 	newProcDamageEffect(ProcDamageEffect{
 		ID: 28767,
 		Trigger: core.ProcTrigger{
-			Name:     "The Decapitator",
-			Callback: core.CallbackOnSpellHitDealt,
-			ProcMask: core.ProcMaskMelee,
-			Outcome:  core.OutcomeLanded,
-			ICD:      time.Minute * 3,
+			Name:       "The Decapicator",
+			Callback:   core.CallbackOnSpellHitDealt,
+			ProcMask:   core.ProcMaskMelee,
+			Outcome:    core.OutcomeLanded,
+			ICD:        time.Minute * 3,
+			ActionID:   core.ActionID{ItemID: 28767},
 		},
 		School: core.SpellSchoolPhysical,
 		MinDmg: 513,
@@ -132,11 +137,12 @@ func init() {
 	newProcDamageEffect(ProcDamageEffect{
 		ID: 28774,
 		Trigger: core.ProcTrigger{
-			Name: "Glaive of the Pit	",
-			Callback: core.CallbackOnSpellHitDealt,
-			ProcMask: core.ProcMaskMelee,
-			Outcome:  core.OutcomeLanded,
-			PPM:      3.7,
+			Name:       "Glaive of the Pit",
+			Callback:   core.CallbackOnSpellHitDealt,
+			ProcMask:   core.ProcMaskMelee,
+			Outcome:    core.OutcomeLanded,
+			PPM:		3.7,
+			ActionID:   core.ActionID{ItemID: 28774},
 		},
 		School: core.SpellSchoolShadow,
 		MinDmg: 285,
@@ -152,9 +158,110 @@ func init() {
 			Outcome:    core.OutcomeLanded,
 			ProcChance: 0.1,
 			ICD:        time.Second * 15,
+			ActionID:   core.ActionID{ItemID: 34470},
 		},
 		School: core.SpellSchoolShadow,
 		MinDmg: 285,
 		MaxDmg: 475,
 	})
+
+	core.AddEffectsToTest = false
+
+	newProcDamageEffect(ProcDamageEffect{
+		ID: 37064,
+		Trigger: core.ProcTrigger{
+			Name:       "Vestige of Haldor",
+			Callback:   core.CallbackOnSpellHitDealt,
+			ProcMask:   core.ProcMaskMeleeOrRanged,
+			Outcome:    core.OutcomeLanded,
+			ProcChance: 0.15,
+			ICD:        time.Second * 45,
+			ActionID:   core.ActionID{ItemID: 37064},
+		},
+		School: core.SpellSchoolFire,
+		MinDmg: 1024,
+		MaxDmg: 1536,
+	})
+
+	newProcDamageEffect(ProcDamageEffect{
+		ID: 37264,
+		Trigger: core.ProcTrigger{
+			Name:       "Pendulum of Telluric Currents",
+			Callback:   core.CallbackOnSpellHitDealt,
+			ProcMask:   core.ProcMaskSpellOrProc,
+			Outcome:    core.OutcomeLanded,
+			ProcChance: 0.15,
+			ICD:        time.Second * 45,
+			ActionID:   core.ActionID{ItemID: 37264},
+		},
+		School: core.SpellSchoolShadow,
+		MinDmg: 1168,
+		MaxDmg: 1752,
+	})
+
+	newProcDamageEffect(ProcDamageEffect{
+		ID: 39889,
+		Trigger: core.ProcTrigger{
+			Name:       "Horn of Agent Fury",
+			Callback:   core.CallbackOnSpellHitDealt,
+			ProcMask:   core.ProcMaskMeleeOrRanged,
+			Outcome:    core.OutcomeLanded,
+			ProcChance: 0.15,
+			ICD:        time.Second * 45,
+			ActionID:   core.ActionID{ItemID: 39889},
+		},
+		School: core.SpellSchoolHoly,
+		MinDmg: 1024,
+		MaxDmg: 1536,
+	})
+
+	core.AddEffectsToTest = true
+
+	newProcDamageEffect(ProcDamageEffect{
+		ID: 40371,
+		Trigger: core.ProcTrigger{
+			Name:       "Bandit's Insignia",
+			Callback:   core.CallbackOnSpellHitDealt,
+			ProcMask:   core.ProcMaskMeleeOrRanged,
+			Outcome:    core.OutcomeLanded,
+			ProcChance: 0.15,
+			ICD:        time.Second * 45,
+			ActionID:   core.ActionID{ItemID: 40371},
+		},
+		School: core.SpellSchoolArcane,
+		MinDmg: 1504,
+		MaxDmg: 2256,
+	})
+
+	newProcDamageEffect(ProcDamageEffect{
+		ID: 40373,
+		Trigger: core.ProcTrigger{
+			Name:       "Extract of Necromantic Power",
+			Callback:   core.CallbackOnPeriodicDamageDealt,
+			Harmful:    true,
+			ProcChance: 0.10,
+			ICD:        time.Second * 15,
+			ActionID:   core.ActionID{ItemID: 40373},
+		},
+		School: core.SpellSchoolShadow,
+		MinDmg: 788,
+		MaxDmg: 1312,
+	})
+
+	newProcDamageEffect(ProcDamageEffect{
+		ID: 42990,
+		Trigger: core.ProcTrigger{
+			Name:       "DMC Death",
+			Callback:   core.CallbackOnSpellHitDealt | core.CallbackOnPeriodicDamageDealt,
+			Harmful:    true,
+			ProcChance: 0.15,
+			ICD:        time.Second * 45,
+			ActionID:   core.ActionID{ItemID: 42990},
+		},
+		School: core.SpellSchoolShadow,
+		MinDmg: 1750,
+		MaxDmg: 2250,
+	})
+
+	core.AddEffectsToTest = true
 }

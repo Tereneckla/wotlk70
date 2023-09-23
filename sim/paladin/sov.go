@@ -44,18 +44,19 @@ func (paladin *Paladin) registerSealOfVengeanceSpellAndAura() {
 	justicarArmor2 := core.TernaryFloat64(paladin.HasSetBonus(ItemSetJusticarArmor, 2), 0.1, 0)
 
 	dotSpell := paladin.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: 31803},
+		ActionID:    core.ActionID{SpellID: 31803, Tag: 2},
 		SpellSchool: core.SpellSchoolHoly,
-		ProcMask:    core.ProcMaskEmpty, // Might need to be changed later if SOV secondary rolls can proc other things.
+		ProcMask:    core.ProcMaskSpellDamage,
 		Flags:       core.SpellFlagMeleeMetrics,
 
 		DamageMultiplier: 1 *
-			(1 + paladin.getTalentSealsOfThePureBonus()) * core.TernaryFloat64(paladin.HasSetBonus(ItemSetJusticarArmor, 2), 1.1, 1),
+			(1 + paladin.getItemSetLightswornBattlegearBonus4() + paladin.getItemSetAegisPlateBonus2() + paladin.getTalentSealsOfThePureBonus()) *
+			core.TernaryFloat64(paladin.HasSetBonus(ItemSetJusticarArmor, 2), 1.1, 1),
 		ThreatMultiplier: 1,
 
 		Dot: core.DotConfig{
 			Aura: core.Aura{
-				Label:     "Holy Vengeance",
+				Label:     "Holy Vengeance (DoT)",
 				MaxStacks: 5,
 			},
 			NumberOfTicks: 5,
@@ -72,13 +73,24 @@ func (paladin *Paladin) registerSealOfVengeanceSpellAndAura() {
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.Spell.OutcomeAlwaysHit)
 			},
 		},
+	})
+	paladin.SovDotSpell = dotSpell
+
+	dotApplicationSpell := paladin.RegisterSpell(core.SpellConfig{
+		ActionID:    core.ActionID{SpellID: 31803, Tag: 1},
+		SpellSchool: core.SpellSchoolHoly,
+		ProcMask:    core.ProcMaskProc,
+
+		DamageMultiplier: 1 *
+			(1 + paladin.getItemSetLightswornBattlegearBonus4() + paladin.getItemSetAegisPlateBonus2() + paladin.getTalentSealsOfThePureBonus()),
+		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			// Does no damage, just applies dot and rolls.
 			result := spell.CalcAndDealOutcome(sim, target, spell.OutcomeMeleeSpecialHit)
 
 			if result.Landed() {
-				dot := spell.Dot(target)
+				dot := dotSpell.Dot(target)
 				if !dot.IsActive() {
 					dot.Apply(sim)
 				}
@@ -88,17 +100,18 @@ func (paladin *Paladin) registerSealOfVengeanceSpellAndAura() {
 			}
 		},
 	})
-	paladin.SovDotSpell = dotSpell
 
 	onJudgementProc := paladin.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 31804}, // Judgement of Vengeance.
 		SpellSchool: core.SpellSchoolHoly,
-		ProcMask:    core.ProcMaskMeleeOrRangedSpecial,
+		ProcMask:    core.ProcMaskMeleeSpecial,
 		Flags:       core.SpellFlagMeleeMetrics | SpellFlagSecondaryJudgement,
 
-		BonusCritRating: (6 * float64(paladin.Talents.Fanaticism) * core.CritRatingPerCritChance),
+		BonusCritRating: (6 * float64(paladin.Talents.Fanaticism) * core.CritRatingPerCritChance) +
+			(core.TernaryFloat64(paladin.HasSetBonus(ItemSetTuralyonsBattlegear, 4), 5, 0) * core.CritRatingPerCritChance),
 		DamageMultiplier: 1 *
-			(1 + paladin.getTalentSealsOfThePureBonus() + paladin.getMajorGlyphOfJudgementBonus() + paladin.getTalentTheArtOfWarBonus()) *
+			(1 + paladin.getItemSetLightswornBattlegearBonus4() +
+				paladin.getTalentSealsOfThePureBonus() + paladin.getMajorGlyphOfJudgementBonus() + paladin.getTalentTheArtOfWarBonus()) *
 			(1 + paladin.getTalentTwoHandedWeaponSpecializationBonus()) *
 			(1 + justicarArmor2),
 		CritMultiplier:   paladin.MeleeCritMultiplier(),
@@ -113,6 +126,7 @@ func (paladin *Paladin) registerSealOfVengeanceSpellAndAura() {
 			// i = i * (1 + (0.10 * stacks))
 			baseDamage *= 1 + .1*float64(dotSpell.Dot(target).GetStacks())
 			baseDamage += justicarBattle2
+
 			// Secondary Judgements cannot miss if the Primary Judgement hit, only roll for crit.
 			spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialCritOnly)
 		},
@@ -121,12 +135,12 @@ func (paladin *Paladin) registerSealOfVengeanceSpellAndAura() {
 	onSpecialOrSwingProc := paladin.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 42463}, // Seal of Vengeance damage bonus.
 		SpellSchool: core.SpellSchoolHoly,
-		ProcMask:    core.ProcMaskEmpty,
+		ProcMask:    core.ProcMaskProc, // does proc certain spell damage-based items, e.g. Black Magic, Pendulum of Telluric Currents
 		Flags:       core.SpellFlagMeleeMetrics,
 
 		// (mult * weaponScaling / stacks)
 		DamageMultiplier: 1 *
-			(1 + paladin.getTalentSealsOfThePureBonus()) *
+			(1 + paladin.getItemSetLightswornBattlegearBonus4() + paladin.getItemSetAegisPlateBonus2() + paladin.getTalentSealsOfThePureBonus()) *
 			(1 + paladin.getTalentTwoHandedWeaponSpecializationBonus()) * .33 / 5,
 		CritMultiplier:   paladin.MeleeCritMultiplier(),
 		ThreatMultiplier: 1,
@@ -136,7 +150,8 @@ func (paladin *Paladin) registerSealOfVengeanceSpellAndAura() {
 				float64(dotSpell.Dot(target).GetStacks())
 
 			// can't miss if melee swing landed, but can crit
-			spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialCritOnly)
+			result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialCritOnly)
+			paladin.maybeProcVengeance(sim, result)
 		},
 	})
 
@@ -184,9 +199,22 @@ func (paladin *Paladin) registerSealOfVengeanceSpellAndAura() {
 				}
 			}
 
-			// Only white hits, HotR, CS, and DS can trigger this. (SoV dot)
-			if spell.ProcMask.Matches(core.ProcMaskMeleeWhiteHit) || spell == paladin.HammerOfTheRighteous || spell == paladin.CrusaderStrike || spell == paladin.DivineStorm {
-				dotSpell.Cast(sim, result.Target)
+			dotApplicableSpells := []*core.Spell{
+				paladin.HammerOfTheRighteous,
+				paladin.CrusaderStrike,
+				paladin.DivineStorm,
+				paladin.HammerOfWrath,
+				paladin.ShieldOfRighteousness,
+			}
+			isApplicableSpell := false
+			for _, validSpell := range dotApplicableSpells {
+				if spell == validSpell {
+					isApplicableSpell = true
+				}
+			}
+
+			if spell.ProcMask.Matches(core.ProcMaskMeleeWhiteHit) || isApplicableSpell {
+				dotApplicationSpell.Cast(sim, result.Target)
 			}
 		},
 	})
@@ -195,6 +223,7 @@ func (paladin *Paladin) registerSealOfVengeanceSpellAndAura() {
 	paladin.SealOfVengeance = paladin.RegisterSpell(core.SpellConfig{
 		ActionID:    auraActionID, // Seal of Vengeance self buff.
 		SpellSchool: core.SpellSchoolHoly,
+		Flags:       core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.14,

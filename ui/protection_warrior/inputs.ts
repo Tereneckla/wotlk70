@@ -1,17 +1,5 @@
-import { IconPickerConfig } from '../core/components/icon_picker.js';
-import { RaidTarget } from '../core/proto/common.js';
 import { Spec } from '../core/proto/common.js';
-import { NO_TARGET } from '../core/proto_utils/utils.js';
 import { ActionId } from '../core/proto_utils/action_id.js';
-import { Player } from '../core/player.js';
-import { Sim } from '../core/sim.js';
-import { EventID, TypedEvent } from '../core/typed_event.js';
-import { IndividualSimUI } from '../core/individual_sim_ui.js';
-import { Target } from '../core/target.js';
-import { EnumPicker } from '../core/components/enum_picker.js';
-import { IconEnumPicker, IconEnumPickerConfig } from '../core/components/icon_enum_picker.js';
-import { CustomRotationPickerConfig } from '../core/components/individual_sim_ui/custom_rotation_picker.js';
-import { CustomRotation } from '../core/proto/common.js';
 
 import {
 	WarriorShout,
@@ -41,7 +29,7 @@ export const ShoutPicker = InputHelpers.makeSpecOptionsEnumIconInput<Spec.SpecPr
 	fieldName: 'shout',
 	values: [
 		{ color: 'c79c6e', value: WarriorShout.WarriorShoutNone },
-		{ actionId: ActionId.fromSpellId(2048), value: WarriorShout.WarriorShoutBattle },
+		{ actionId: ActionId.fromSpellId(47436), value: WarriorShout.WarriorShoutBattle },
 		{ actionId: ActionId.fromSpellId(469), value: WarriorShout.WarriorShoutCommanding },
 	],
 });
@@ -51,25 +39,19 @@ export const ShatteringThrow = InputHelpers.makeSpecOptionsBooleanIconInput<Spec
 	id: ActionId.fromSpellId(64382),
 });
 
-export const Munch = InputHelpers.makeSpecOptionsBooleanInput<Spec.SpecProtectionWarrior>({
-	fieldName: 'munch',
-	label: 'Munching',
-	labelTooltip: 'Apply "munching" to Deep Wounds',
-});
-
 export const ProtectionWarriorRotationConfig = {
 	inputs: [
 		InputHelpers.makeCustomRotationInput<Spec.SpecProtectionWarrior, SpellOption>({
 			fieldName: 'customRotation',
 			numColumns: 3,
 			values: [
-				{ actionId: ActionId.fromSpellId(30357), value: SpellOption.Revenge },
+				{ actionId: ActionId.fromSpellId(57823), value: SpellOption.Revenge },
 				{ actionId: ActionId.fromSpellId(30356), value: SpellOption.ShieldSlam },
 				{ actionId: ActionId.fromSpellId(469), value: SpellOption.Shout },
 				{ actionId: ActionId.fromSpellId(25264), value: SpellOption.ThunderClap },
 				{ actionId: ActionId.fromSpellId(25203), value: SpellOption.DemoralizingShout },
-				{ actionId: ActionId.fromSpellId(71552), value: SpellOption.MortalStrike },
-				{ actionId: ActionId.fromSpellId(30022), value: SpellOption.Devastate },
+				{ actionId: ActionId.fromSpellId(47486), value: SpellOption.MortalStrike },
+				{ actionId: ActionId.fromSpellId(47498), value: SpellOption.Devastate },
 				{ actionId: ActionId.fromSpellId(25225), value: SpellOption.SunderArmor },
 				{ actionId: ActionId.fromSpellId(12809), value: SpellOption.ConcussionBlow },
 				{ actionId: ActionId.fromSpellId(46968), value: SpellOption.Shockwave },

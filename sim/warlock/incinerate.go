@@ -8,12 +8,13 @@ import (
 )
 
 func (warlock *Warlock) registerIncinerateSpell() {
-	spellCoeff := 0.713 * (1 + 0.04*float64(warlock.Talents.ShadowAndFlame))
+	spellCoeff := 0.714 * (1 + 0.04*float64(warlock.Talents.ShadowAndFlame))
 
 	warlock.Incinerate = warlock.RegisterSpell(core.SpellConfig{
 		ActionID:     core.ActionID{SpellID: 32231},
 		SpellSchool:  core.SpellSchoolFire,
 		ProcMask:     core.ProcMaskSpellDamage,
+		Flags:        core.SpellFlagAPL,
 		MissileSpeed: 24,
 
 		ManaCost: core.ManaCostOptions{
@@ -28,8 +29,9 @@ func (warlock *Warlock) registerIncinerateSpell() {
 		},
 
 		BonusCritRating: 0 +
-			warlock.masterDemonologistFireCrit +
-			core.TernaryFloat64(warlock.Talents.Devastation, 5*core.CritRatingPerCritChance, 0),
+			core.TernaryFloat64(warlock.Talents.Devastation, 5*core.CritRatingPerCritChance, 0) +
+			core.TernaryFloat64(warlock.HasSetBonus(ItemSetDeathbringerGarb, 4), 5*core.CritRatingPerCritChance, 0) +
+			core.TernaryFloat64(warlock.HasSetBonus(ItemSetDarkCovensRegalia, 2), 5*core.CritRatingPerCritChance, 0),
 		DamageMultiplierAdditive: 1 +
 			warlock.GrandFirestoneBonus() +
 			0.03*float64(warlock.Talents.Emberstorm) +

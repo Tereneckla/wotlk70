@@ -3,6 +3,8 @@ package warlock
 import (
 	"time"
 
+	"github.com/Tereneckla/wotlk/sim/common/wotlk"
+
 	"github.com/Tereneckla/wotlk/sim/core"
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/core/stats"
@@ -15,9 +17,6 @@ type Warlock struct {
 	Talents  *proto.WarlockTalents
 	Options  *proto.Warlock_Options
 	Rotation *proto.Warlock_Rotation
-
-	procTrackers []*ProcTracker
-	majorCds     []*core.MajorCooldown
 
 	Pet *WarlockPet
 
@@ -34,6 +33,7 @@ type Warlock struct {
 	Conflagrate        *core.Spell
 	DrainSoul          *core.Spell
 	Shadowburn         *core.Spell
+	SearingPain        *core.Spell
 
 	CurseOfElements      *core.Spell
 	CurseOfElementsAuras core.AuraArray
@@ -46,6 +46,7 @@ type Warlock struct {
 	Seed                 *core.Spell
 	SeedDamageTracker    []float64
 
+	ShadowEmbraceAuras     core.AuraArray
 	NightfallProcAura      *core.Aura
 	EradicationAura        *core.Aura
 	DemonicEmpowerment     *core.Spell
@@ -67,28 +68,29 @@ type Warlock struct {
 	Infernal *InfernalPet
 	Inferno  *core.Spell
 
-	// Rotation related memory
-	CorruptionRolloverPower float64
-	DrainSoulRolloverPower  float64
 	// The sum total of demonic pact spell power * seconds.
-	DPSPAggregate  float64
-	PreviousTime   time.Duration
-	SpellsRotation []SpellRotation
+	DPSPAggregate float64
+	PreviousTime  time.Duration
 
-	petStmBonusSP                float64
-	masterDemonologistFireCrit   float64
-	masterDemonologistShadowCrit float64
+	petStmBonusSP float64
+	acl           []ActionCondition
 
-	CritDebuffCategory *core.ExclusiveCategory
+	// contains for each target the time the last shadowbolt was casted onto them
+	corrRefreshList []time.Duration
 }
 
-type SpellRotation struct {
-	Spell    *core.Spell
-	CastIn   CastReadyness
-	Priority int
-}
+type ACLaction int
 
-type CastReadyness func(*core.Simulation) time.Duration
+const (
+	ACLCast ACLaction = iota
+	ACLNext
+	ACLRecast
+)
+
+type ActionCondition struct {
+	Spell     *core.Spell
+	Condition func(*core.Simulation) (ACLaction, *core.Unit)
+}
 
 func (warlock *Warlock) GetCharacter() *core.Character {
 	return &warlock.Character
@@ -99,14 +101,13 @@ func (warlock *Warlock) GetWarlock() *Warlock {
 }
 
 func (warlock *Warlock) GrandSpellstoneBonus() float64 {
-	return core.TernaryFloat64(warlock.Consumes.WeaponMain == proto.WeaponImbue_ImbueSpellStone, 0.01, 0)
+	return core.TernaryFloat64(warlock.Options.WeaponImbue == proto.Warlock_Options_GrandSpellstone, 0.01, 0)
 }
 func (warlock *Warlock) GrandFirestoneBonus() float64 {
-	return core.TernaryFloat64(warlock.Consumes.WeaponMain == proto.WeaponImbue_ImbueFireStone, 0.01, 0)
+	return core.TernaryFloat64(warlock.Options.WeaponImbue == proto.Warlock_Options_GrandFirestone, 0.01, 0)
 }
 
 func (warlock *Warlock) Initialize() {
-
 	warlock.registerIncinerateSpell()
 	warlock.registerShadowBoltSpell()
 	warlock.registerImmolateSpell()
@@ -124,15 +125,13 @@ func (warlock *Warlock) Initialize() {
 	warlock.registerConflagrateSpell()
 	warlock.registerHauntSpell()
 	warlock.registerChaosBoltSpell()
-
 	warlock.registerDemonicEmpowermentSpell()
-	if warlock.Talents.Metamorphosis {
-		warlock.registerMetamorphosisSpell()
-		warlock.registerImmolationAuraSpell()
-	}
+	warlock.registerMetamorphosisSpell()
 	warlock.registerDarkPactSpell()
 	warlock.registerShadowBurnSpell()
+	warlock.registerSearingPainSpell()
 	warlock.registerInfernoSpell()
+	warlock.registerBlackBook()
 
 	warlock.defineRotation()
 
@@ -142,6 +141,34 @@ func (warlock *Warlock) Initialize() {
 	}
 	// Do this post-finalize so cast speed is updated with new stats
 	warlock.Env.RegisterPostFinalizeEffect(func() {
+		// if itemswap is enabled, correct for any possible haste changes
+		var correction stats.Stats
+		if warlock.ItemSwap.IsEnabled() {
+			correction = warlock.ItemSwap.CalcStatChanges([]proto.ItemSlot{proto.ItemSlot_ItemSlotMainHand,
+				proto.ItemSlot_ItemSlotOffHand, proto.ItemSlot_ItemSlotRanged})
+
+			warlock.AddStats(correction)
+			warlock.MultiplyCastSpeed(1.0)
+		}
+
+		if warlock.Options.Summon != proto.Warlock_Options_NoSummon && warlock.Talents.DemonicKnowledge > 0 {
+			warlock.RegisterPrepullAction(-999*time.Second, func(sim *core.Simulation) {
+				// TODO: investigate a better way of handling this like a "reverse inheritance" for pets.
+				// TODO: this will break if we ever get stamina/intellect from procs, but there aren't
+				// many such effects and none that we care about
+				bonus := (warlock.Pet.GetStat(stats.Stamina) + warlock.Pet.GetStat(stats.Intellect)) *
+					(0.04 * float64(warlock.Talents.DemonicKnowledge))
+				if bonus != warlock.petStmBonusSP {
+					warlock.AddStatDynamic(sim, stats.SpellPower, bonus-warlock.petStmBonusSP)
+					warlock.petStmBonusSP = bonus
+				}
+			})
+		}
+
+		if warlock.IsUsingAPL {
+			return
+		}
+
 		precastSpellAt := -warlock.ApplyCastSpeedForSpell(precastSpell.DefaultCast.CastTime, precastSpell)
 
 		warlock.RegisterPrepullAction(precastSpellAt, func(sim *core.Simulation) {
@@ -151,6 +178,10 @@ func (warlock *Warlock) Initialize() {
 			warlock.RegisterPrepullAction(precastSpellAt-warlock.SpellGCD(), func(sim *core.Simulation) {
 				warlock.LifeTap.Cast(sim, nil)
 			})
+		}
+		if warlock.ItemSwap.IsEnabled() {
+			warlock.AddStats(correction.Multiply(-1))
+			warlock.MultiplyCastSpeed(1.0)
 		}
 	})
 }
@@ -171,6 +202,11 @@ func (warlock *Warlock) Reset(sim *core.Simulation) {
 	if sim.CurrentTime == 0 {
 		warlock.petStmBonusSP = 0
 	}
+
+	warlock.ItemSwap.SwapItems(sim, []proto.ItemSlot{proto.ItemSlot_ItemSlotMainHand,
+		proto.ItemSlot_ItemSlotOffHand, proto.ItemSlot_ItemSlotRanged}, false)
+	warlock.corrRefreshList = make([]time.Duration, len(warlock.Env.Encounter.TargetUnits))
+	warlock.setupCooldowns(sim)
 }
 
 func NewWarlock(character core.Character, options *proto.Player) *Warlock {
@@ -186,11 +222,10 @@ func NewWarlock(character core.Character, options *proto.Player) *Warlock {
 	warlock.EnableManaBar()
 
 	warlock.AddStatDependency(stats.Strength, stats.AttackPower, 1)
-	warlock.AddStat(stats.AttackPower, -10)
-	warlock.AddStatDependency(stats.Intellect, stats.SpellCrit, (1/81.92)*core.CritRatingPerCritChance)
+
 	if warlock.Options.Armor == proto.Warlock_Options_FelArmor {
 		demonicAegisMultiplier := 1 + float64(warlock.Talents.DemonicAegis)*0.1
-		amount := 100.0 * demonicAegisMultiplier
+		amount := 180.0 * demonicAegisMultiplier
 		warlock.AddStat(stats.SpellPower, amount)
 		warlock.AddStatDependency(stats.Spirit, stats.SpellPower, 0.3*demonicAegisMultiplier)
 	}
@@ -199,11 +234,14 @@ func NewWarlock(character core.Character, options *proto.Player) *Warlock {
 		warlock.Pet = warlock.NewWarlockPet()
 	}
 
-	if warlock.Rotation.UseInfernal {
-		warlock.Infernal = warlock.NewInfernal()
+	warlock.Infernal = warlock.NewInfernal()
+
+	if warlock.Rotation.Type == proto.Warlock_Rotation_Affliction && warlock.Rotation.EnableWeaponSwap {
+		warlock.EnableItemSwap(warlock.Rotation.WeaponSwap, 1, 1, 1)
 	}
 
 	warlock.applyWeaponImbue()
+	wotlk.ConstructValkyrPets(&warlock.Character)
 
 	return warlock
 }
@@ -223,74 +261,6 @@ func RegisterWarlock() {
 			player.Spec = playerSpec
 		},
 	)
-}
-
-func init() {
-	//const basecrit = 3.29 * core.CritRatingPerCritChance
-	const basespellcrit = 1.7 * core.CritRatingPerCritChance
-	const basehealth = 3377
-	const basemana = 2615
-
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceBloodElf, Class: proto.Class_ClassWarlock}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  48,
-		stats.Agility:   60,
-		stats.Stamina:   76,
-		stats.Intellect: 136,
-		stats.Spirit:    137,
-		stats.Mana:      basemana,
-		stats.SpellCrit: basespellcrit,
-		// Not sure how stats modify the crit chance.
-		// stats.MeleeCrit:   4.43 * core.CritRatingPerCritChance,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceOrc, Class: proto.Class_ClassWarlock}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  54,
-		stats.Agility:   55,
-		stats.Stamina:   77,
-		stats.Intellect: 130,
-		stats.Spirit:    141,
-		stats.Mana:      basemana,
-		stats.SpellCrit: basespellcrit,
-		// Not sure how stats modify the crit chance.
-		// stats.MeleeCrit:   4.43 * core.CritRatingPerCritChance,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceUndead, Class: proto.Class_ClassWarlock}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  50,
-		stats.Agility:   56,
-		stats.Stamina:   76,
-		stats.Intellect: 131,
-		stats.Spirit:    144,
-		stats.Mana:      basemana,
-		stats.SpellCrit: basespellcrit,
-		// Not sure how stats modify the crit chance.
-		// stats.MeleeCrit:   4.43 * core.CritRatingPerCritChance,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceHuman, Class: proto.Class_ClassWarlock}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  51,
-		stats.Agility:   58,
-		stats.Stamina:   76,
-		stats.Intellect: 133,
-		stats.Spirit:    139, // racial makes this 170
-		stats.Mana:      basemana,
-		stats.SpellCrit: basespellcrit,
-		// Not sure how stats modify the crit chance.
-		// stats.MeleeCrit:   4.43 * core.CritRatingPerCritChance,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceGnome, Class: proto.Class_ClassWarlock}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  46,
-		stats.Agility:   60,
-		stats.Stamina:   76,
-		stats.Intellect: 136, // racial makes this 170
-		stats.Spirit:    139,
-		stats.Mana:      basemana,
-		stats.SpellCrit: basespellcrit,
-		// Not sure how stats modify the crit chance.
-		// stats.MeleeCrit:   4.43 * core.CritRatingPerCritChance,
-	}
 }
 
 // Agent is a generic way to access underlying warlock on any of the agents.

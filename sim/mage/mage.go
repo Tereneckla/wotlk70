@@ -3,6 +3,8 @@ package mage
 import (
 	"time"
 
+	"github.com/Tereneckla/wotlk/sim/common/wotlk"
+
 	"github.com/Tereneckla/wotlk/sim/core"
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/core/stats"
@@ -45,13 +47,10 @@ type Mage struct {
 
 	arcaneBlastStreak int32
 	arcanePowerMCD    *core.MajorCooldown
-	heatingUp         bool
-	igniteMunchDmg    float64
-	igniteMunchTime   time.Duration
 	delayedPyroAt     time.Duration
 
 	waterElemental *WaterElemental
-	//mirrorImage    *MirrorImage
+	mirrorImage    *MirrorImage
 
 	// Cached values for a few mechanics.
 	bonusCritDamage float64
@@ -68,11 +67,11 @@ type Mage struct {
 	FireBlast       *core.Spell
 	Flamestrike     *core.Spell
 	Frostbolt       *core.Spell
-	//FrostfireBolt   *core.Spell
-	IceLance    *core.Spell
-	Pyroblast   *core.Spell
-	Scorch      *core.Spell
-	MirrorImage *core.Spell
+	FrostfireBolt   *core.Spell
+	IceLance        *core.Spell
+	Pyroblast       *core.Spell
+	Scorch          *core.Spell
+	MirrorImage     *core.Spell
 
 	IcyVeins             *core.Spell
 	SummonWaterElemental *core.Spell
@@ -83,6 +82,7 @@ type Mage struct {
 	MissileBarrageAura *core.Aura
 	ClearcastingAura   *core.Aura
 	ScorchAuras        core.AuraArray
+	hotStreakCritAura  *core.Aura
 	HotStreakAura      *core.Aura
 	CombustionAura     *core.Aura
 	FingersOfFrostAura *core.Aura
@@ -132,27 +132,26 @@ func (mage *Mage) Initialize() {
 	mage.registerScorchSpell()
 	mage.registerLivingBombSpell()
 	//mage.registerFrostfireBoltSpell()
-
-	mage.registerEvocationCD()
+	mage.registerEvocationSpells()
 	mage.registerManaGemsCD()
-	/*
-		mage.registerMirrorImageCD()
+	//mage.registerMirrorImageCD()
 
-		if mirrorImageMCD := mage.GetMajorCooldownIgnoreTag(mage.MirrorImage.ActionID); mirrorImageMCD != nil {
-			if len(mirrorImageMCD.GetTimings()) == 0 {
-				mage.RegisterPrepullAction(-1500*time.Millisecond, func(sim *core.Simulation) {
-					mage.MirrorImage.Cast(sim, nil)
-				})
-			}
+	if !mage.IsUsingAPL {
+		mage.registerEvocationCD()
+	}
+
+	if mirrorImageMCD := mage.GetMajorCooldownIgnoreTag(mage.MirrorImage.ActionID); mirrorImageMCD != nil {
+		if len(mirrorImageMCD.GetTimings()) == 0 {
+			mage.RegisterPrepullAction(-1500*time.Millisecond, func(sim *core.Simulation) {
+				mage.MirrorImage.Cast(sim, nil)
+			})
 		}
-	*/
+	}
 }
 
 func (mage *Mage) Reset(sim *core.Simulation) {
 	mage.arcaneBlastStreak = 0
 	mage.arcanePowerMCD = mage.GetMajorCooldown(core.ActionID{SpellID: 12042})
-	mage.igniteMunchDmg = 0
-	mage.igniteMunchTime = 0
 	mage.delayedPyroAt = 0
 }
 
@@ -169,7 +168,7 @@ func NewMage(character core.Character, options *proto.Player) *Mage {
 		PyroblastDelayMs: time.Millisecond * time.Duration(mageOptions.Rotation.PyroblastDelayMs),
 	}
 	core.FillTalentsProto(mage.Talents.ProtoReflect(), options.TalentsString, TalentTreeSizes)
-	mage.AddStatDependency(stats.Intellect, stats.SpellCrit, (1/80)*core.CritRatingPerCritChance)
+
 	mage.bonusCritDamage = .25*float64(mage.Talents.SpellPower) + .1*float64(mage.Talents.Burnout)
 	mage.EnableManaBar()
 	mage.EnableResumeAfterManaWait(mage.tryUseGCD)
@@ -189,90 +188,29 @@ func NewMage(character core.Character, options *proto.Player) *Mage {
 		if mage.HasMajorGlyph(proto.MageMajorGlyph_GlyphOfMageArmor) {
 			mage.PseudoStats.SpiritRegenRateCasting += .2
 		}
+		if mage.HasSetBonus(ItemSetKhadgarsRegalia, 2) {
+			mage.PseudoStats.SpiritRegenRateCasting += .1
+		}
 	} else if mage.Options.Armor == proto.Mage_Options_MoltenArmor {
 		//Need to switch to spirit crit calc
 		multi := 0.35
 		if mage.HasMajorGlyph(proto.MageMajorGlyph_GlyphOfMoltenArmor) {
 			multi += .2
 		}
+		if mage.HasSetBonus(ItemSetKhadgarsRegalia, 2) {
+			multi += .15
+		}
 		mage.Character.AddStatDependency(stats.Spirit, stats.SpellCrit, multi)
 	}
 
-	//mage.mirrorImage = mage.NewMirrorImage()
+	mage.mirrorImage = mage.NewMirrorImage()
 
 	if mage.Talents.SummonWaterElemental {
 		mage.waterElemental = mage.NewWaterElemental(mage.Rotation.WaterElementalDisobeyChance)
 	}
 
+	wotlk.ConstructValkyrPets(&mage.Character)
 	return mage
-}
-
-func init() {
-	//const basecrit = 7.84 * core.CritRatingPerCritChance
-	const basespellcrit = 0.91 * core.CritRatingPerCritChance
-	const basehealth = 3393
-	const basemana = 2241
-
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceBloodElf, Class: proto.Class_ClassMage}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  30,
-		stats.Agility:   41,
-		stats.Stamina:   51,
-		stats.Intellect: 154,
-		stats.Spirit:    143,
-		stats.Mana:      basemana,
-		stats.SpellCrit: basespellcrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceDraenei, Class: proto.Class_ClassMage}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  34,
-		stats.Agility:   36,
-		stats.Stamina:   51,
-		stats.Intellect: 151,
-		stats.Spirit:    147,
-		stats.Mana:      basemana,
-		stats.SpellCrit: basespellcrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceGnome, Class: proto.Class_ClassMage}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  28,
-		stats.Agility:   41,
-		stats.Stamina:   51,
-		stats.Intellect: 154, // Gnomes start with 162 int, we assume this include racial so / 1.05
-		stats.Spirit:    145,
-		stats.Mana:      basemana,
-		stats.SpellCrit: basespellcrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceHuman, Class: proto.Class_ClassMage}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  33,
-		stats.Agility:   39,
-		stats.Stamina:   51,
-		stats.Intellect: 151,
-		stats.Spirit:    145,
-		stats.Mana:      basemana,
-		stats.SpellCrit: basespellcrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceTroll, Class: proto.Class_ClassMage}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  34,
-		stats.Agility:   41,
-		stats.Stamina:   51,
-		stats.Intellect: 147,
-		stats.Spirit:    146,
-		stats.Mana:      basemana,
-		stats.SpellCrit: basespellcrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceUndead, Class: proto.Class_ClassMage}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  32,
-		stats.Agility:   37,
-		stats.Stamina:   51,
-		stats.Intellect: 149,
-		stats.Spirit:    150,
-		stats.Mana:      basemana,
-		stats.SpellCrit: basespellcrit,
-	}
 }
 
 // Agent is a generic way to access underlying mage on any of the agents.

@@ -14,13 +14,13 @@ func (druid *Druid) registerStarfallSpell() {
 	}
 
 	numberOfTicks := core.TernaryInt32(druid.Env.GetNumTargets() > 1, 20, 10)
-	tickLength := core.TernaryDuration(druid.Env.GetNumTargets() > 1, time.Millisecond*500, time.Millisecond*1000)
+	tickLength := time.Second
 
-	druid.Starfall = druid.RegisterSpell(core.SpellConfig{
+	druid.Starfall = druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 53199},
 		SpellSchool: core.SpellSchoolArcane,
 		ProcMask:    core.ProcMaskSpellDamage,
-		Flags:       SpellFlagNaturesGrace | SpellFlagOmenTrigger,
+		Flags:       SpellFlagNaturesGrace | SpellFlagOmenTrigger | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.35,
@@ -51,6 +51,8 @@ func (druid *Druid) registerStarfallSpell() {
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				baseDamage := sim.Roll(325, 377) + 0.3*dot.Spell.SpellPower()
 				dot.Spell.CalcAndDealDamage(sim, target, baseDamage, dot.Spell.OutcomeMagicHitAndCrit)
+				// can proc canProcFromProc on-cast trinkets
+				druid.GetDummyProcSpell().Cast(sim, target)
 			},
 		},
 
@@ -63,8 +65,8 @@ func (druid *Druid) registerStarfallSpell() {
 		},
 	})
 
-	druid.StarfallSplash = druid.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: 53190},
+	druid.StarfallSplash = druid.RegisterSpell(Any, core.SpellConfig{
+		ActionID:    core.ActionID{SpellID: 53188},
 		SpellSchool: core.SpellSchoolArcane,
 		ProcMask:    core.ProcMaskSpellDamage,
 
@@ -82,8 +84,10 @@ func (druid *Druid) registerStarfallSpell() {
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				baseDamage := 58 + 0.13*dot.Spell.SpellPower()
 				baseDamage *= sim.Encounter.AOECapMultiplier()
-				for _, aoeTarget := range sim.Encounter.Targets {
-					dot.Spell.CalcAndDealDamage(sim, &aoeTarget.Unit, baseDamage, dot.Spell.OutcomeMagicHitAndCrit)
+				for _, aoeTarget := range sim.Encounter.TargetUnits {
+					dot.Spell.CalcAndDealDamage(sim, aoeTarget, baseDamage, dot.Spell.OutcomeMagicHitAndCrit)
+					// can proc canProcFromProc on-cast trinkets
+					druid.GetDummyProcSpell().Cast(sim, aoeTarget)
 				}
 			},
 		},

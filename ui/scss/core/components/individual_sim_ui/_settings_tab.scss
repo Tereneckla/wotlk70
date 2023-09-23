@@ -7,8 +7,6 @@
 .settings-tab {
   .tab-pane-content-container {
     .tab-panel-left {
-      flex: 4;
-
       .tab-panel-col {
         flex: 2;
 
@@ -16,10 +14,6 @@
           flex: 3;
         }
       }
-    }
-
-    .tab-panel-right {
-      flex: 1;
     }
   }
 
@@ -32,24 +26,6 @@
       &> .picker-group:last-child {
         &> .input-root {
           margin-bottom: 0;
-        }
-      }
-    }
-  }
-
-  .rotation-settings,
-  .player-settings,
-  .custom-section {
-    .icon-group {
-      display: flex;
-      flex-wrap: wrap;
-
-      &> * {
-        margin-bottom: $block-spacer;
-        flex: 0;
-
-        &:not(:last-child) {
-          margin-right: $block-spacer;
         }
       }
     }

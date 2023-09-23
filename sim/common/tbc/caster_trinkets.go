@@ -4,12 +4,11 @@ import (
 	"time"
 
 	"github.com/Tereneckla/wotlk/sim/core"
-	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/core/stats"
 )
 
 func init() {
-	core.AddEffectsToTest = false
+
 	// Offensive trinkets. Keep these in order by item ID.
 	core.NewSimpleStatOffensiveTrinketEffect(23046, stats.Stats{stats.SpellPower: 130}, time.Second*20, time.Minute*2)  // Restrained Essence of Sapphiron
 	core.NewSimpleStatOffensiveTrinketEffect(24126, stats.Stats{stats.SpellPower: 150}, time.Second*20, time.Minute*5)  // Living Ruby Serpent
@@ -19,19 +18,71 @@ func init() {
 	core.NewSimpleStatOffensiveTrinketEffect(29132, stats.Stats{stats.SpellPower: 150}, time.Second*15, time.Second*90) // Scryer's Bloodgem
 	core.NewSimpleStatOffensiveTrinketEffect(29179, stats.Stats{stats.SpellPower: 150}, time.Second*15, time.Second*90) // Xiri's Gift
 	core.NewSimpleStatOffensiveTrinketEffect(29370, stats.Stats{stats.SpellPower: 158}, time.Second*20, time.Minute*2)  // Icon of the Silver Crescent
+	core.NewSimpleStatOffensiveTrinketEffect(29376, stats.Stats{stats.SpellPower: 158}, time.Second*20, time.Minute*2)  // Essence of the Marytr
 	core.NewSimpleStatOffensiveTrinketEffect(30340, stats.Stats{stats.SpellPower: 125}, time.Second*15, time.Second*90) // Living Ruby Serpent
 	core.NewSimpleStatOffensiveTrinketEffect(32483, stats.Stats{stats.SpellHaste: 175}, time.Second*20, time.Minute*2)  // Skull of Gul'dan
 	core.NewSimpleStatOffensiveTrinketEffect(33829, stats.Stats{stats.SpellPower: 211}, time.Second*20, time.Minute*2)  // Hex Shrunken Head
 	core.NewSimpleStatOffensiveTrinketEffect(34429, stats.Stats{stats.SpellPower: 320}, time.Second*15, time.Second*90) // Shifting Naaru Sliver
-	core.NewSimpleStatOffensiveTrinketEffect(29376, stats.Stats{stats.SpellPower: 158}, time.Second*20, time.Minute*2)  // Essence of the Marytr
 
-	// Proc effects. Keep these in order by item ID.
+	// Even though these item effects are handled elsewhere, add them so they are
+	// detected for automatic testing.
+	for _, itemID := range core.AlchStoneItemIDs {
+		core.NewItemEffect(itemID, func(core.Agent) {})
+	}
 
-	core.NewItemEffect(23207, func(agent core.Agent) {
+	core.NewItemEffect(21625, func(agent core.Agent) { // Scarab Brooch
 		character := agent.GetCharacter()
-		if character.CurrentTarget.MobType == proto.MobType_MobTypeDemon || character.CurrentTarget.MobType == proto.MobType_MobTypeUndead {
-			character.PseudoStats.MobTypeSpellPower += 85
-		}
+		actionID := core.ActionID{ItemID: 21625}
+
+		shieldSpell := character.GetOrRegisterSpell(core.SpellConfig{
+			ActionID:    core.ActionID{SpellID: 26470},
+			SpellSchool: core.SpellSchoolNature,
+			ProcMask:    core.ProcMaskSpellHealing,
+			Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagHelpful,
+
+			DamageMultiplier: 1,
+			ThreatMultiplier: 1,
+
+			Shield: core.ShieldConfig{
+				Aura: core.Aura{
+					Label:    "Scarab Brooch Shield",
+					Duration: time.Second * 30,
+				},
+			},
+		})
+
+		activeAura := core.MakeProcTriggerAura(&character.Unit, core.ProcTrigger{
+			Name:     "Persistent Shield",
+			ActionID: core.ActionID{SpellID: 26467},
+			Callback: core.CallbackOnHealDealt,
+			Duration: time.Second * 30,
+			Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
+				shieldSpell.Shield(result.Target).Apply(sim, result.Damage*0.15)
+			},
+		})
+
+		spell := character.RegisterSpell(core.SpellConfig{
+			ActionID:    actionID,
+			SpellSchool: core.SpellSchoolPhysical,
+			ProcMask:    core.ProcMaskEmpty,
+			Flags:       core.SpellFlagNoOnCastComplete,
+
+			Cast: core.CastConfig{
+				CD: core.Cooldown{
+					Timer:    character.NewTimer(),
+					Duration: time.Minute * 3,
+				},
+			},
+
+			ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+				activeAura.Activate(sim)
+			},
+		})
+
+		character.AddMajorCooldown(core.MajorCooldown{
+			Type:  core.CooldownTypeDPS,
+			Spell: spell,
+		})
 	})
 
 	core.NewItemEffect(30447, func(agent core.Agent) {
@@ -48,7 +99,6 @@ func init() {
 			OnReset: func(aura *core.Aura, sim *core.Simulation) {
 				aura.Activate(sim)
 			},
-
 			OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
 
 				if sim.RandomFloat("Tome of Fiery Redemption") > 0.15 {
@@ -59,7 +109,6 @@ func init() {
 				}
 				icd.Use(sim)
 				procAura.Activate(sim)
-
 			},
 		})
 	})
@@ -117,11 +166,4 @@ func init() {
 			},
 		})
 	})
-
-	// Even though these item effects are handled elsewhere, add them so they are
-	// detected for automatic testing.
-	for _, itemID := range core.AlchStoneItemIDs {
-		core.NewItemEffect(itemID, func(core.Agent) {})
-	}
-	core.AddEffectsToTest = true
 }

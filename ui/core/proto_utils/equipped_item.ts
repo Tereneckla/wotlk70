@@ -1,4 +1,5 @@
-import { GemColor, Suffix } from '../proto/common.js';
+import { GemColor } from '../proto/common.js';
+import { Suffix } from '../proto/common.js';
 import { ItemSlot } from '../proto/common.js';
 import { ItemSpec } from '../proto/common.js';
 import { ItemType } from '../proto/common.js';
@@ -36,8 +37,8 @@ export class EquippedItem {
 		this._item = item;
 		this._enchant = enchant || null;
 		this._gems = gems || [];
-		
-		this.numPossibleSockets = this.numSockets();
+
+		this.numPossibleSockets = this.numSockets(false);
 
 		// Fill gems with null so we always have the same number of gems as gem slots.
 		if (this._gems.length < this.numPossibleSockets) {
@@ -104,6 +105,11 @@ export class EquippedItem {
 			}
 		});
 
+		// Copy the extra socket gem directly.
+		if (this.couldHaveExtraSocket()) {
+			newGems.push(this._gems[this._gems.length - 1]);
+		}
+
 		return new EquippedItem(item, newEnchant, newGems);
 	}
 
@@ -154,6 +160,16 @@ export class EquippedItem {
 		return curItem;
 	}
 
+	removeAllGems(): EquippedItem {
+		let curItem: EquippedItem | null = this;
+
+		for (let i = 0; i < curItem._gems.length; i++) {
+			curItem = curItem.withGemHelper(null, i);
+		}
+
+		return curItem;
+	}
+
 	asActionId(): ActionId {
 		return ActionId.fromItemId(this._item.id, this.item.suffix);
 	}
@@ -181,28 +197,59 @@ export class EquippedItem {
 		}
 	}
 
+	// Whether this item could have an extra socket, assuming Blacksmithing.
+	couldHaveExtraSocket(): boolean {
+		return [ItemType.ItemTypeWaist, ItemType.ItemTypeWrist, ItemType.ItemTypeHands].includes(this.item.type);
+	}
+
+	requiresExtraSocket(): boolean {
+		return [ItemType.ItemTypeWrist, ItemType.ItemTypeHands].includes(this.item.type)
+			&& this.hasExtraGem()
+			&& this._gems[this._gems.length - 1] != null;
+	}
+
 	getPossibleSuffixes(): Suffix[] {
 		return this._item.suffixes
 	}
 
+	hasExtraSocket(isBlacksmithing: boolean): boolean {
+		return this.item.type == ItemType.ItemTypeWaist ||
+			(isBlacksmithing && [ItemType.ItemTypeWrist, ItemType.ItemTypeHands].includes(this.item.type));
+	}
 
-	numSockets(): number {
-		return this._item.gemSockets.length;
+	numSockets(isBlacksmithing: boolean): number {
+		return this._item.gemSockets.length + (this.hasExtraSocket(isBlacksmithing) ? 1 : 0);
+	}
+
+	numSocketsOfColor(color: GemColor): number {
+		let numSockets: number = 0;
+
+		for (var socketColor of this._item.gemSockets) {
+			if (socketColor == color) {
+				numSockets += 1;
+			}
+		}
+
+		return numSockets;
 	}
 
 	hasExtraGem(): boolean {
 		return this._gems.length > this.item.gemSockets.length;
 	}
 
-	allSocketColors(): Array<GemColor> {
-		return this._item.gemSockets;
-	}
-	curSocketColors(): Array<GemColor> {
-		return this._item.gemSockets;
+	hasSocketedGem(socketIdx: number): boolean {
+		return this._gems[socketIdx] != null;
 	}
 
-	curGems(): Array<Gem> {
-		return (this._gems.filter(g => g != null) as Array<Gem>).slice(0, this.numSockets());
+	allSocketColors(): Array<GemColor> {
+		return this.couldHaveExtraSocket() ? this._item.gemSockets.concat([GemColor.GemColorPrismatic]) : this._item.gemSockets;
+	}
+	curSocketColors(isBlacksmithing: boolean): Array<GemColor> {
+		return this.hasExtraSocket(isBlacksmithing) ? this._item.gemSockets.concat([GemColor.GemColorPrismatic]) : this._item.gemSockets;
+	}
+
+	curGems(isBlacksmithing: boolean): Array<Gem> {
+		return (this._gems.filter(g => g != null) as Array<Gem>).slice(0, this.numSockets(isBlacksmithing));
 	}
 
 	getProfessionRequirements(): Array<Profession> {
@@ -218,6 +265,9 @@ export class EquippedItem {
 				profs.push(gem.requiredProfession);
 			}
 		});
+		if (this.requiresExtraSocket()) {
+			profs.push(Profession.Blacksmithing);
+		}
 		return distinct(profs);
 	}
 	getFailedProfessionRequirements(professions: Array<Profession>): Array<Item | Gem | Enchant> {
@@ -235,7 +285,7 @@ export class EquippedItem {
 		});
 		return failed;
 	}
-
+	
 	static getSuffixName(suffix: Suffix): string {
 		switch(suffix) {
 			case Suffix.SuffixMonkey: return "of the Monkey";

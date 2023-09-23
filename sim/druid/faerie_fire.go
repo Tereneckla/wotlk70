@@ -16,6 +16,7 @@ func (druid *Druid) registerFaerieFireSpell() {
 	cd := core.Cooldown{}
 	flatThreatBonus := 66. * 2.
 	flags := SpellFlagOmenTrigger
+	formMask := Humanoid | Moonkin
 
 	if druid.InForm(Cat | Bear) {
 		actionID = core.ActionID{SpellID: 16857}
@@ -23,18 +24,20 @@ func (druid *Druid) registerFaerieFireSpell() {
 		gcd = time.Second
 		ignoreHaste = true
 		flags = core.SpellFlagNone
+		formMask = Cat | Bear
 		cd = core.Cooldown{
 			Timer:    druid.NewTimer(),
 			Duration: time.Second * 6,
 		}
 		flatThreatBonus = 632.
 	}
+	flags |= core.SpellFlagAPL
 
 	druid.FaerieFireAuras = druid.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		return core.FaerieFireAura(target, druid.Talents.ImprovedFaerieFire)
 	})
 
-	druid.FaerieFire = druid.RegisterSpell(core.SpellConfig{
+	druid.FaerieFire = druid.RegisterSpell(formMask, core.SpellConfig{
 		ActionID:    actionID,
 		SpellSchool: core.SpellSchoolNature,
 		ProcMask:    core.ProcMaskSpellDamage,
@@ -67,6 +70,8 @@ func (druid *Druid) registerFaerieFireSpell() {
 				druid.FaerieFireAuras.Get(target).Activate(sim)
 			}
 		},
+
+		RelatedAuras: []core.AuraArray{druid.FaerieFireAuras},
 	})
 }
 

@@ -2,18 +2,11 @@ import { RaidBuffs } from '../core/proto/common.js';
 import { PartyBuffs } from '../core/proto/common.js';
 import { IndividualBuffs } from '../core/proto/common.js';
 import { Debuffs } from '../core/proto/common.js';
-import { Class } from '../core/proto/common.js';
-import { Consumes } from '../core/proto/common.js';
-import { Encounter } from '../core/proto/common.js';
-import { ItemSlot } from '../core/proto/common.js';
-import { MobType } from '../core/proto/common.js';
-import { RaidTarget } from '../core/proto/common.js';
 import { Spec } from '../core/proto/common.js';
 import { Stat } from '../core/proto/common.js';
 import { TristateEffect } from '../core/proto/common.js'
 import { Stats } from '../core/proto_utils/stats.js';
 import { Player } from '../core/player.js';
-import { Sim } from '../core/sim.js';
 import { IndividualSimUI } from '../core/individual_sim_ui.js';
 
 import {
@@ -79,7 +72,7 @@ export class MageSimUI extends IndividualSimUI<Spec.SpecMage> {
 
 			defaults: {
 				// Default equipped gear.
-				gear: Presets.ARCANE_PRERAID_PRESET.gear,
+				gear: Presets.ARCANE_P1_PRESET.gear,
 				// Default EP weights for sorting gear in the gear picker.
 				epWeights: Stats.fromMap({
 					[Stat.StatIntellect]: 0.48,
@@ -108,7 +101,7 @@ export class MageSimUI extends IndividualSimUI<Spec.SpecMage> {
 					divineSpirit: true,
 					swiftRetribution: true,
 					sanctifiedRetribution: true,
-					demonicPact: 2500,
+					demonicPact: 500,
 					moonkinAura: TristateEffect.TristateEffectImproved,
 					arcaneBrilliance: true,
 				}),
@@ -138,7 +131,6 @@ export class MageSimUI extends IndividualSimUI<Spec.SpecMage> {
 			rotationInputs: MageInputs.MageRotationConfig,
 			// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
 			includeBuffDebuffInputs: [
-				IconInputs.StaminaBuff,
 				//Should add hymn of hope, revitalize, and 
 			],
 			excludeBuffDebuffInputs: [
@@ -146,7 +138,6 @@ export class MageSimUI extends IndividualSimUI<Spec.SpecMage> {
 			// Inputs to include in the 'Other' section on the settings tab.
 			otherInputs: {
 				inputs: [
-					MageInputs.IgniteMunching,
 					MageInputs.EvocationTicks,
 					MageInputs.FocusMagicUptime,
 					MageInputs.ReactionTime,
@@ -160,16 +151,40 @@ export class MageSimUI extends IndividualSimUI<Spec.SpecMage> {
 			},
 
 			presets: {
+				// Preset rotations that the user can quickly select.
+				rotations: [
+					Presets.ARCANE_ROTATION_PRESET_DEFAULT,
+					Presets.FIRE_ROTATION_PRESET_DEFAULT,
+					Presets.FROSTFIRE_ROTATION_PRESET_DEFAULT,
+					Presets.FROST_ROTATION_PRESET_DEFAULT,
+				],
 				// Preset talents that the user can quickly select.
 				talents: [
 					Presets.ArcaneTalents,
-					Presets.FireBomb,
-					Presets.FireTTW,
+					Presets.FireTalents,
+					Presets.FrostfireTalents,
 					Presets.FrostTalents,
+					Presets.Phase3FireTalents,
 				],
 				// Preset gear configurations that the user can quickly select.
 				gear: [
 					Presets.ARCANE_PRERAID_PRESET,
+					Presets.FIRE_PRERAID_PRESET,
+					Presets.ARCANE_P1_PRESET,
+					Presets.FIRE_P1_PRESET,
+					Presets.FROST_P1_PRESET,
+					Presets.ARCANE_P2_PRESET,
+					Presets.FIRE_P2_PRESET,
+					Presets.FROST_P2_PRESET,
+					Presets.FFB_P2_PRESET,
+					Presets.ARCANE_P3_PRESET_ALLIANCE,
+					Presets.ARCANE_P3_PRESET_HORDE,
+					Presets.FROST_P3_PRESET_ALLIANCE,
+					Presets.FROST_P3_PRESET_HORDE,
+					Presets.FIRE_P3_PRESET_ALLIANCE,
+					Presets.FIRE_P3_PRESET_HORDE,
+					Presets.FFB_P3_PRESET_ALLIANCE,
+					Presets.FFB_P3_PRESET_HORDE,
 				],
 			},
 		});

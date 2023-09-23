@@ -257,16 +257,33 @@ func (rp *RunicPowerBar) SpentDeathRuneReadyAt() time.Duration {
 	return readyAt
 }
 
-func (rp *RunicPowerBar) CurrentRuneGrace(sim *Simulation, slot int32) time.Duration {
-	if rp.runeMeta[slot].lastRegenTime < sim.CurrentTime {
-		return time.Millisecond*2500 - MinDuration(2500*time.Millisecond, sim.CurrentTime-rp.runeMeta[slot].lastRegenTime)
+func (rp *RunicPowerBar) RuneGraceRemaining(sim *Simulation, slot int8) time.Duration {
+	lastRegenTime := rp.runeMeta[slot].lastRegenTime
+
+	// pre-pull casts should not get rune-grace
+	if sim.CurrentTime <= 0 || lastRegenTime <= 0 {
+		return 0
+	}
+
+	if lastRegenTime < sim.CurrentTime {
+		return time.Millisecond*2500 - MinDuration(2500*time.Millisecond, sim.CurrentTime-lastRegenTime)
 	}
 	return 0
 }
 
-const anyBloodSpent = 0b0101
-const anyFrostSpent = 0b0101 << 4
-const anyUnholySpent = 0b0101 << 8
+func (rp *RunicPowerBar) CurrentRuneGrace(sim *Simulation, slot int8) time.Duration {
+	lastRegenTime := rp.runeMeta[slot].lastRegenTime
+
+	// pre-pull casts should not get rune-grace
+	if sim.CurrentTime <= 0 || lastRegenTime <= 0 {
+		return 0
+	}
+
+	if lastRegenTime < sim.CurrentTime {
+		return MinDuration(2500*time.Millisecond, sim.CurrentTime-lastRegenTime)
+	}
+	return 0
+}
 
 func (rp *RunicPowerBar) CurrentBloodRuneGrace(sim *Simulation) time.Duration {
 	return MaxDuration(rp.CurrentRuneGrace(sim, 0), rp.CurrentRuneGrace(sim, 1))
@@ -280,9 +297,21 @@ func (rp *RunicPowerBar) CurrentUnholyRuneGrace(sim *Simulation) time.Duration {
 	return MaxDuration(rp.CurrentRuneGrace(sim, 4), rp.CurrentRuneGrace(sim, 5))
 }
 
-func (rp *RunicPowerBar) CurrentRuneGraces(sim *Simulation) (time.Duration, time.Duration, time.Duration) {
-	return rp.CurrentBloodRuneGrace(sim), rp.CurrentFrostRuneGrace(sim), rp.CurrentUnholyRuneGrace(sim)
+func (rp *RunicPowerBar) BloodRuneGraceRemaining(sim *Simulation) time.Duration {
+	return MaxDuration(rp.RuneGraceRemaining(sim, 0), rp.RuneGraceRemaining(sim, 1))
 }
+
+func (rp *RunicPowerBar) FrostRuneGraceRemaining(sim *Simulation) time.Duration {
+	return MaxDuration(rp.RuneGraceRemaining(sim, 2), rp.RuneGraceRemaining(sim, 3))
+}
+
+func (rp *RunicPowerBar) UnholyRuneGraceRemaining(sim *Simulation) time.Duration {
+	return MaxDuration(rp.RuneGraceRemaining(sim, 4), rp.RuneGraceRemaining(sim, 5))
+}
+
+const anyBloodSpent = 0b0101
+const anyFrostSpent = 0b0101 << 4
+const anyUnholySpent = 0b0101 << 8
 
 func (rp *RunicPowerBar) NormalSpentBloodRuneReadyAt(sim *Simulation) time.Duration {
 	readyAt := NeverExpires
@@ -402,6 +431,30 @@ func (rp *RunicPowerBar) UnholyRuneReadyAt(sim *Simulation) time.Duration {
 	return MinDuration(rp.runeMeta[4].regenAt, rp.runeMeta[5].regenAt)
 }
 
+func (rp *RunicPowerBar) NextRuneTypeReadyAt(sim *Simulation, left int8, right int8) time.Duration {
+	if rp.runeStates&isSpents[left] != isSpents[left] && rp.runeStates&isSpents[right] != isSpents[right] {
+		// Both are ready so return current time
+		return sim.CurrentTime
+	} else if rp.runeStates&isSpents[left] == isSpents[left] || rp.runeStates&isSpents[right] == isSpents[right] {
+		// One is spent so return the time it will regen at
+		return MinDuration(rp.runeMeta[left].regenAt, rp.runeMeta[right].regenAt)
+	}
+	// Both are spent so return the last one to regen at
+	return MaxDuration(rp.runeMeta[left].regenAt, rp.runeMeta[right].regenAt)
+}
+
+func (rp *RunicPowerBar) NextBloodRuneReadyAt(sim *Simulation) time.Duration {
+	return rp.NextRuneTypeReadyAt(sim, 0, 1)
+}
+
+func (rp *RunicPowerBar) NextFrostRuneReadyAt(sim *Simulation) time.Duration {
+	return rp.NextRuneTypeReadyAt(sim, 2, 3)
+}
+
+func (rp *RunicPowerBar) NextUnholyRuneReadyAt(sim *Simulation) time.Duration {
+	return rp.NextRuneTypeReadyAt(sim, 4, 5)
+}
+
 // AnySpentRuneReadyAt returns the next time that a rune will regenerate.
 //
 //	It will be NeverExpires if there is no rune pending regeneration.
@@ -487,6 +540,10 @@ func (rp *RunicPowerBar) RightBloodRuneReady() bool {
 	}
 }
 
+func (rp *RunicPowerBar) RuneIsActive(slot int8) bool {
+	return (rp.runeStates & isSpents[slot]) == 0
+}
+
 func (rp *RunicPowerBar) RuneIsDeath(slot int8) bool {
 	return (rp.runeStates & isDeaths[slot]) != 0
 }
@@ -554,15 +611,28 @@ func (rp *RunicPowerBar) DeathRunesInFU() int8 {
 	return count
 }
 
-func (rp *RunicPowerBar) NormalCurrentBloodRunes() int32 {
+func (rp *RunicPowerBar) BloodRunesBTSync() bool {
 	const unspentBlood1 = isSpent
 	const unspentBlood2 = unspentBlood1 << 2
 
+	if rp.runeStates&unspentBlood1 != 0 && rp.runeStates&unspentBlood2 == 0 {
+		return true
+	}
+
+	return false
+}
+
+func (rp *RunicPowerBar) NormalCurrentBloodRunes() int32 {
+	const unspentBlood1 = isSpent
+	const unspentBlood2 = unspentBlood1 << 2
+	const deathBlood1 = isDeath
+	const deathBlood2 = deathBlood1 << 2
+
 	var count int32
-	if rp.runeStates&unspentBlood1 == 0 {
+	if rp.runeStates&unspentBlood1 == 0 && rp.runeStates&deathBlood1 == 0 {
 		count++
 	}
-	if rp.runeStates&unspentBlood2 == 0 {
+	if rp.runeStates&unspentBlood2 == 0 && rp.runeStates&deathBlood2 == 0 {
 		count++
 	}
 
@@ -570,14 +640,16 @@ func (rp *RunicPowerBar) NormalCurrentBloodRunes() int32 {
 }
 
 func (rp *RunicPowerBar) NormalCurrentFrostRunes() int32 {
-	const unspentFrost1 = (isSpent) << 4
+	const unspentFrost1 = isSpent << 4
 	const unspentFrost2 = unspentFrost1 << 2
+	const deathFrost1 = isDeath << 4
+	const deathFrost2 = deathFrost1 << 2
 
 	var count int32
-	if rp.runeStates&unspentFrost1 == 0 {
+	if rp.runeStates&unspentFrost1 == 0 && rp.runeStates&deathFrost1 == 0 {
 		count++
 	}
-	if rp.runeStates&unspentFrost2 == 0 {
+	if rp.runeStates&unspentFrost2 == 0 && rp.runeStates&deathFrost2 == 0 {
 		count++
 	}
 
@@ -585,14 +657,16 @@ func (rp *RunicPowerBar) NormalCurrentFrostRunes() int32 {
 }
 
 func (rp *RunicPowerBar) NormalCurrentUnholyRunes() int32 {
-	const unspentUnholy1 = (isSpent) << 8
+	const unspentUnholy1 = isSpent << 8
 	const unspentUnholy2 = unspentUnholy1 << 2
+	const deathUnholy1 = isDeath << 8
+	const deathUnholy2 = deathUnholy1 << 2
 
 	var count int32
-	if rp.runeStates&unspentUnholy1 == 0 {
+	if rp.runeStates&unspentUnholy1 == 0 && rp.runeStates&deathUnholy1 == 0 {
 		count++
 	}
-	if rp.runeStates&unspentUnholy2 == 0 {
+	if rp.runeStates&unspentUnholy2 == 0 && rp.runeStates&deathUnholy2 == 0 {
 		count++
 	}
 
@@ -888,8 +962,13 @@ func (rp *RunicPowerBar) SpendRuneFromKind(sim *Simulation, rkind RuneKind) int8
 }
 
 func (rp *RunicPowerBar) RuneGraceAt(slot int8, at time.Duration) (runeGraceDuration time.Duration) {
-	if rp.runeMeta[slot].lastRegenTime != -1 {
-		runeGraceDuration = MinDuration(time.Millisecond*2500, at-rp.runeMeta[slot].lastRegenTime)
+	lastRegenTime := rp.runeMeta[slot].lastRegenTime
+	// pre-pull casts should not get rune-grace
+	if at <= 0 || lastRegenTime <= 0 {
+		return 0
+	}
+	if lastRegenTime != -1 {
+		runeGraceDuration = MinDuration(time.Millisecond*2500, at-lastRegenTime)
 	}
 	return runeGraceDuration
 }
@@ -1048,9 +1127,12 @@ func (rp *RunicPowerBar) SpendUnholyRune(sim *Simulation, metrics *ResourceMetri
 //
 //	Returns -1 if there are no ready death runes
 func (rp *RunicPowerBar) ReadyDeathRune() int8 {
-	for i := int8(0); i < 6; i++ {
-		if rp.runeStates&isDeaths[i] != 0 && rp.runeStates&isSpents[i] == 0 {
-			return i
+	// Death runes are spent in the order Unholy -> Frost -> Blood in-game...
+	for runeType := int8(2); runeType >= 0; runeType-- {
+		for i := runeType * 2; i < (runeType+1)*2; i++ {
+			if rp.runeStates&isDeaths[i] != 0 && rp.runeStates&isSpents[i] == 0 {
+				return i
+			}
 		}
 	}
 	return -1

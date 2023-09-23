@@ -7,13 +7,13 @@ import (
 )
 
 func (druid *Druid) registerFerociousBiteSpell() {
-	dmgPerComboPoint := 169.0 + core.TernaryFloat64(druid.Equip[core.ItemSlotRanged].ID == 25667, 14, 0)
+	dmgPerComboPoint := 169.0 + core.TernaryFloat64(druid.Ranged().ID == 25667, 14, 0)
 
-	druid.FerociousBite = druid.RegisterSpell(core.SpellConfig{
+	druid.FerociousBite = druid.RegisterSpell(Cat, core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 24248},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		EnergyCost: core.EnergyCostOptions{
 			Cost:          35,
@@ -27,10 +27,11 @@ func (druid *Druid) registerFerociousBiteSpell() {
 			IgnoreHaste: true,
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return druid.InForm(Cat) && druid.ComboPoints() > 0
+			return druid.ComboPoints() > 0
 		},
 
 		BonusCritRating: 0 +
+			core.TernaryFloat64(druid.HasSetBonus(ItemSetMalfurionsBattlegear, 4), 5*core.CritRatingPerCritChance, 0.0) +
 			core.TernaryFloat64(druid.AssumeBleedActive, 5*float64(druid.Talents.RendAndTear)*core.CritRatingPerCritChance, 0),
 		DamageMultiplier: (1 + 0.03*float64(druid.Talents.FeralAggression)) *
 			core.TernaryFloat64(druid.HasSetBonus(ItemSetThunderheartHarness, 4), 1.15, 1.0),
@@ -43,7 +44,7 @@ func (druid *Druid) registerFerociousBiteSpell() {
 			excessEnergy := core.MinFloat(druid.CurrentEnergy(), 30)
 
 			baseDamage := 57.0 +
-				sim.RandomFloat("Ferocious Bite")*64.0 +
+				sim.RandomFloat("Ferocious Bite")*66.0 +
 				dmgPerComboPoint*comboPoints +
 				excessEnergy*(3.4+attackPower/410) +
 				attackPower*0.07*comboPoints

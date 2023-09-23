@@ -3,6 +3,7 @@ package shadow
 import (
 	"time"
 
+	"github.com/Tereneckla/wotlk/sim/common/wotlk"
 	"github.com/Tereneckla/wotlk/sim/core"
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/priest"
@@ -34,20 +35,21 @@ func NewShadowPriest(character core.Character, options *proto.Player) *ShadowPri
 	}
 
 	basePriest := priest.New(character, selfBuffs, options.TalentsString)
-	basePriest.Latency = shadowOptions.Rotation.Latency
+	basePriest.Latency = float64(basePriest.ChannelClipDelay.Milliseconds())
 	spriest := &ShadowPriest{
 		Priest:   basePriest,
 		rotation: shadowOptions.Rotation,
 		options:  shadowOptions.Options,
 	}
 
-	spriest.SelfBuffs.PowerInfusionTarget = &proto.RaidTarget{TargetIndex: -1}
+	spriest.SelfBuffs.PowerInfusionTarget = &proto.UnitReference{}
 	if spriest.Talents.PowerInfusion && shadowOptions.Options.PowerInfusionTarget != nil {
 		spriest.SelfBuffs.PowerInfusionTarget = shadowOptions.Options.PowerInfusionTarget
 	}
 
 	spriest.EnableResumeAfterManaWait(spriest.tryUseGCD)
 	spriest.CanRolloverSWP = spriest.Talents.MindFlay && spriest.Talents.PainAndSuffering > 0
+	wotlk.ConstructValkyrPets(&spriest.Character)
 
 	return spriest
 }

@@ -1,6 +1,5 @@
-import { RaidTarget } from '../core/proto/common.js';
+import { UnitReference, UnitReference_Type as UnitType } from '../core/proto/common.js';
 import { Spec } from '../core/proto/common.js';
-import { NO_TARGET } from '../core/proto_utils/utils.js';
 import { ActionId } from '../core/proto_utils/action_id.js';
 import { Player } from '../core/player.js';
 import { EventID, TypedEvent } from '../core/typed_event.js';
@@ -11,7 +10,10 @@ import {
 	BalanceDruid_Options as DruidOptions,
 	BalanceDruid_Rotation_Type as RotationType,
 	BalanceDruid_Rotation_MfUsage as MfUsage,
+	BalanceDruid_Rotation_MfExtension as MfExtension,
 	BalanceDruid_Rotation_IsUsage as IsUsage,
+	BalanceDruid_Rotation_WrathUsage as WrathUsage,
+	BalanceDruid_Rotation_EclipsePrio as EclipsePrio,
 } from '../core/proto/druid.js';
 
 
@@ -24,11 +26,12 @@ export const SelfInnervate = InputHelpers.makeSpecOptionsBooleanIconInput<Spec.S
 	extraCssClasses: [
 		'within-raid-sim-hide',
 	],
-	getValue: (player: Player<Spec.SpecBalanceDruid>) => player.getSpecOptions().innervateTarget?.targetIndex != NO_TARGET,
+	getValue: (player: Player<Spec.SpecBalanceDruid>) => player.getSpecOptions().innervateTarget?.type == UnitType.Player,
 	setValue: (eventID: EventID, player: Player<Spec.SpecBalanceDruid>, newValue: boolean) => {
 		const newOptions = player.getSpecOptions();
-		newOptions.innervateTarget = RaidTarget.create({
-			targetIndex: newValue ? 0 : NO_TARGET,
+		newOptions.innervateTarget = UnitReference.create({
+			type: newValue ? UnitType.Player : UnitType.Unknown,
+			index: 0,
 		});
 		player.setSpecOptions(eventID, newOptions);
 	},
@@ -39,22 +42,26 @@ export const BalanceDruidRotationConfig = {
 		InputHelpers.makeRotationEnumInput<Spec.SpecBalanceDruid, RotationType>({
 			fieldName: 'type',
 			label: 'Type',
-			labelTooltip: 'If set to \'Adaptive\', will dynamically adjust rotation.',
+			labelTooltip: 'Set to \'Manual\', to manage eclipses, spells, CDs and DoTs usage.',
 			values: [
 				{
-					name: 'Adaptive', value: RotationType.Adaptive,
-					tooltip: 'Dynamically adapts based on available mana to maximize CL casts without going OOM.',
+					name: 'Default', value: RotationType.Default,
+					tooltip: 'The default rotation.',
 				},
 				{
 					name: 'Manual', value: RotationType.Manual,
-					tooltip: 'Allows custom selection of which spells to use, dot managment and CD usage.',
+					tooltip: 'Allows custom selection of which spells to use, dot management and CD usage.',
 				},
 			],
 		}),
-		InputHelpers.makeRotationBooleanInput<Spec.SpecBalanceDruid>({
-			fieldName: 'useSmartCooldowns',
-			label: 'Smart Cooldowns usage',
-			labelTooltip: 'The rotation will use cooldowns during eclipses, avoiding Haste CDs in solar and Crit CDs in lunar',
+		InputHelpers.makeRotationEnumInput<Spec.SpecBalanceDruid, EclipsePrio>({
+			fieldName: 'eclipsePrio',
+			label: 'Eclipse priority',
+			labelTooltip: 'Defines which eclipse will get prioritized in the rotation.',
+			values: [
+				{ name: 'Lunar', value: EclipsePrio.Lunar },
+				{ name: 'Solar', value: EclipsePrio.Solar },
+			],
 			showWhen: (player: Player<Spec.SpecBalanceDruid>) => player.getRotation().type == RotationType.Manual,
 		}),
 		InputHelpers.makeRotationEnumInput<Spec.SpecBalanceDruid, MfUsage>({
@@ -65,6 +72,18 @@ export const BalanceDruidRotationConfig = {
 				{ name: 'Unused', value: MfUsage.NoMf },
 				{ name: 'Before lunar', value: MfUsage.BeforeLunar },
 				{ name: 'Maximize', value: MfUsage.MaximizeMf },
+				{ name: 'Multidot', value: MfUsage.MultidotMf },
+			],
+			showWhen: (player: Player<Spec.SpecBalanceDruid>) => player.getRotation().type == RotationType.Manual,
+		}),
+		InputHelpers.makeRotationEnumInput<Spec.SpecBalanceDruid, MfExtension>({
+			fieldName: 'mfExtension',
+			label: 'Moonfire Extension',
+			labelTooltip: 'When should the rotation try to extend Moonfire on the main target.',
+			values: [
+				{ name: 'Extend always', value: MfExtension.ExtendAlways },
+				{ name: 'Extend outside solar', value: MfExtension.ExtendOutsideSolar },
+				{ name: 'Do not extend', value: MfExtension.DontExtend },
 			],
 			showWhen: (player: Player<Spec.SpecBalanceDruid>) => player.getRotation().type == RotationType.Manual,
 		}),
@@ -75,7 +94,19 @@ export const BalanceDruidRotationConfig = {
 			values: [
 				{ name: 'Unused', value: IsUsage.NoIs },
 				{ name: 'Before solar', value: IsUsage.BeforeSolar },
-				{ name: 'Maximize', value: IsUsage.MaximizeIs },
+				{ name: 'Optimize', value: IsUsage.OptimizeIs },
+				{ name: 'Multidot', value: IsUsage.MultidotIs },
+			],
+			showWhen: (player: Player<Spec.SpecBalanceDruid>) => player.getRotation().type == RotationType.Manual,
+		}),
+		InputHelpers.makeRotationEnumInput<Spec.SpecBalanceDruid, WrathUsage>({
+			fieldName: 'wrathUsage',
+			label: 'Wrath usage',
+			labelTooltip: 'Defines how Wrath will be used in the rotation.',
+			values: [
+				{ name: 'Unused', value: WrathUsage.NoWrath },
+				{ name: 'Fishing for Lunar', value: WrathUsage.FishingForLunar },
+				{ name: 'Regular', value: WrathUsage.RegularWrath },
 			],
 			showWhen: (player: Player<Spec.SpecBalanceDruid>) => player.getRotation().type == RotationType.Manual,
 		}),
@@ -86,9 +117,21 @@ export const BalanceDruidRotationConfig = {
 			showWhen: (player: Player<Spec.SpecBalanceDruid>) => player.getRotation().type == RotationType.Manual,
 		}),
 		InputHelpers.makeRotationBooleanInput<Spec.SpecBalanceDruid>({
-			fieldName: 'useWrath',
-			label: 'Use Wrath',
-			labelTooltip: 'Should the rotation use Wrath.',
+			fieldName: 'useSmartCooldowns',
+			label: 'Smart Cooldowns usage',
+			labelTooltip: 'The rotation will use cooldowns during eclipses, avoiding Haste CDs in solar and Crit CDs in lunar',
+			showWhen: (player: Player<Spec.SpecBalanceDruid>) => player.getRotation().type == RotationType.Manual,
+		}),
+		InputHelpers.makeRotationBooleanInput<Spec.SpecBalanceDruid>({
+			fieldName: 'snapshotMf',
+			label: 'Snapshot Moonfire',
+			labelTooltip: 'The rotation will try to snapshot Moonfire with SP procs',
+			showWhen: (player: Player<Spec.SpecBalanceDruid>) => player.getRotation().type == RotationType.Manual,
+		}),
+		InputHelpers.makeRotationBooleanInput<Spec.SpecBalanceDruid>({
+			fieldName: 'eclipseShuffling',
+			label: 'Eclipse Shuffling',
+			labelTooltip: 'Should the rotation alternate Starfire and Wrath when both eclipses are available.',
 			showWhen: (player: Player<Spec.SpecBalanceDruid>) => player.getRotation().type == RotationType.Manual,
 		}),
 		InputHelpers.makeRotationBooleanInput<Spec.SpecBalanceDruid>({
@@ -108,6 +151,14 @@ export const BalanceDruidRotationConfig = {
 			label: 'Use Battle Res',
 			labelTooltip: 'Cast Battle Res on an ally sometime during the encounter.',
 			showWhen: (player: Player<Spec.SpecBalanceDruid>) => player.getRotation().type == RotationType.Manual,
+		}),
+		InputHelpers.makeRotationNumberInput<Spec.SpecBalanceDruid>({
+			fieldName: 'okfPpm',
+			label: 'Owlkin Frenzy PPM',
+			labelTooltip: 'Amount of Owlkin Frenzy procs per minute.',
+			showWhen: (player: Player<Spec.SpecBalanceDruid>) => player.getRotation().type == RotationType.Manual,
+			float: true,
+			positive: true,
 		}),
 		InputHelpers.makeRotationNumberInput<Spec.SpecBalanceDruid>({
 			fieldName: 'playerLatency',

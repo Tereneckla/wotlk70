@@ -13,12 +13,13 @@ func (priest *Priest) registerGreaterHealSpell() {
 		ActionID:    core.ActionID{SpellID: 25213},
 		SpellSchool: core.SpellSchoolHoly,
 		ProcMask:    core.ProcMaskSpellHealing,
-		Flags:       core.SpellFlagHelpful,
+		Flags:       core.SpellFlagHelpful | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost: 0.32,
 			Multiplier: 1 *
-				(1 - .05*float64(priest.Talents.ImprovedHealing)),
+				(1 - .05*float64(priest.Talents.ImprovedHealing)) *
+				core.TernaryFloat64(priest.HasSetBonus(ItemSetRegaliaOfFaith, 4), .95, 1),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{

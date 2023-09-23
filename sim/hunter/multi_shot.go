@@ -17,9 +17,8 @@ func (hunter *Hunter) registerMultiShotSpell(timer *core.Timer) {
 		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
-			BaseCost: 0.09,
-			Multiplier: (1 - 0.03*float64(hunter.Talents.Efficiency)) *
-				core.TernaryFloat64(hunter.HasSetBonus(ItemSetDemonStalker, 4), 0.9, 1),
+			BaseCost:   0.09,
+			Multiplier: 1 - 0.03*float64(hunter.Talents.Efficiency),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -42,7 +41,7 @@ func (hunter *Hunter) registerMultiShotSpell(timer *core.Timer) {
 			.04*float64(hunter.Talents.Barrage),
 		DamageMultiplier: 1 *
 			hunter.markedForDeathMultiplier(),
-		CritMultiplier:   hunter.critMultiplier(true, false),
+		CritMultiplier:   hunter.critMultiplier(true, false, false),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
@@ -53,7 +52,7 @@ func (hunter *Hunter) registerMultiShotSpell(timer *core.Timer) {
 
 			curTarget := target
 			for hitIndex := int32(0); hitIndex < numHits; hitIndex++ {
-				baseDamage := sharedDmg + 0.2*spell.RangedAttackPower(curTarget) + hunter.talonOfAlarActive()
+				baseDamage := sharedDmg + 0.2*spell.RangedAttackPower(curTarget)
 				spell.CalcAndDealDamage(sim, curTarget, baseDamage, spell.OutcomeRangedHitAndCrit)
 
 				curTarget = sim.Environment.NextTargetUnit(curTarget)

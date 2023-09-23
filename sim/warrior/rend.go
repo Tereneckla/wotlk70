@@ -20,7 +20,7 @@ func (warrior *Warrior) RegisterRendSpell(rageThreshold float64, healthThreshold
 		ActionID:    core.ActionID{SpellID: 25208},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagNoOnCastComplete,
+		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
 			Cost:   10 - float64(warrior.Talents.FocusedRage),
@@ -33,12 +33,17 @@ func (warrior *Warrior) RegisterRendSpell(rageThreshold float64, healthThreshold
 			IgnoreHaste: true,
 		},
 
+		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
+			return warrior.StanceMatches(BattleStance)
+		},
+
 		DamageMultiplier: 1 + 0.1*float64(warrior.Talents.ImprovedRend),
 		ThreatMultiplier: 1,
 
 		Dot: core.DotConfig{
 			Aura: core.Aura{
-				Label: "Rends",
+				Label: "Rend",
+				Tag:   "Rend",
 			},
 			NumberOfTicks: dotTicks,
 			TickLength:    time.Second * 3,
@@ -59,12 +64,25 @@ func (warrior *Warrior) RegisterRendSpell(rageThreshold float64, healthThreshold
 			result := spell.CalcOutcome(sim, target, spell.OutcomeMeleeSpecialHit)
 			if result.Landed() {
 				spell.Dot(target).Apply(sim)
-				warrior.procBloodFrenzy(sim, result, dotDuration)
-				warrior.rendValidUntil = sim.CurrentTime + dotDuration
+				warrior.RendValidUntil = sim.CurrentTime + dotDuration
 			} else {
 				spell.IssueRefund(sim)
 			}
+
 			spell.DealOutcome(sim, result)
+
+			// Queue Overpower to be cast at 3s after rend if talented for 3/3 TfB
+			if warrior.Talents.TasteForBlood == 3 {
+				core.StartDelayedAction(sim, core.DelayedActionOptions{
+					DoAt: sim.CurrentTime + time.Second*3,
+					OnAction: func(_ *core.Simulation) {
+						// Force to use OP on first 3s due to AM ticks that happens before TfB procs and break that
+						if warrior.Overpower.CanCast(sim, target) && (warrior.ShouldOverpower(sim) || sim.CurrentTime >= time.Second*3 && sim.CurrentTime <= time.Second*4) {
+							warrior.CastFullTfbOverpower(sim, target)
+						}
+					},
+				})
+			}
 		},
 	})
 
@@ -73,10 +91,6 @@ func (warrior *Warrior) RegisterRendSpell(rageThreshold float64, healthThreshold
 }
 
 func (warrior *Warrior) ShouldRend(sim *core.Simulation) bool {
-	if warrior.PrimaryTalentTree == FuryTree {
-		return warrior.Rend.IsReady(sim) && sim.CurrentTime >= (warrior.rendValidUntil-warrior.RendCdThreshold) && !warrior.Whirlwind.IsReady(sim) &&
-			warrior.CurrentRage() <= warrior.RendRageThresholdBelow && warrior.RendHealthThresholdAbove < sim.GetRemainingDurationPercent() &&
-			warrior.CurrentRage() >= warrior.Rend.DefaultCast.Cost
-	}
-	return warrior.Rend.IsReady(sim) && sim.CurrentTime >= (warrior.rendValidUntil-warrior.RendCdThreshold) && warrior.CurrentRage() >= warrior.Rend.DefaultCast.Cost
+	return warrior.Rend.IsReady(sim) && sim.CurrentTime >= (warrior.RendValidUntil-warrior.RendCdThreshold) &&
+		warrior.CurrentRage() >= warrior.Rend.DefaultCast.Cost && warrior.RendHealthThresholdAbove < sim.GetRemainingDurationPercent()
 }

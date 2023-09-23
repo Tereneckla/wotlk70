@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
+	"github.com/Tereneckla/wotlk/sim"
 	"github.com/Tereneckla/wotlk/sim/core"
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 	_ "github.com/Tereneckla/wotlk/sim/encounters" // Needed for preset encounters.
@@ -22,12 +24,13 @@ import (
 // go run ./tools/database/gen_db -outDir=assets -gen=wowhead-spells -maxid=75000
 // go run ./tools/database/gen_db -outDir=assets -gen=wowhead-gearplannerdb
 // go run ./tools/database/gen_db -outDir=assets -gen=wotlk-items
+// go run ./tools/database/gen_db -outDir=assets -gen=wago-db2-items
 // go run ./tools/database/gen_db -outDir=assets -gen=db
 
 var minId = flag.Int("minid", 1, "Minimum ID to scan for")
-var maxId = flag.Int("maxid", 38000, "Maximum ID to scan for")
+var maxId = flag.Int("maxid", 57000, "Maximum ID to scan for")
 var outDir = flag.String("outDir", "assets", "Path to output directory for writing generated .go files.")
-var genAsset = flag.String("gen", "", "Asset to generate. Valid values are 'db', 'atlasloot', 'wowhead-items', 'wowhead-spells', 'wowhead-itemdb', and 'wotlk-items'")
+var genAsset = flag.String("gen", "", "Asset to generate. Valid values are 'db', 'atlasloot', 'wowhead-items', 'wowhead-spells', 'wowhead-itemdb', 'wotlk-items', and 'wago-db2-items'")
 
 func main() {
 	flag.Parse()
@@ -54,6 +57,9 @@ func main() {
 	} else if *genAsset == "wotlk-items" {
 		database.NewWotlkItemTooltipManager(fmt.Sprintf("%s/wotlk_items_tooltips.csv", inputsDir)).Fetch(int32(*minId), int32(*maxId))
 		return
+	} else if *genAsset == "wago-db2-items" {
+		tools.WriteFile(fmt.Sprintf("%s/wago_db2_items.csv", inputsDir), tools.ReadWebRequired("https://wago.tools/db2/ItemSparse/csv?build=3.4.2.49311"))
+		return
 	} else if *genAsset != "db" {
 		panic("Invalid gen value")
 	}
@@ -62,6 +68,7 @@ func main() {
 	spellTooltips := database.NewWowheadSpellTooltipManager(fmt.Sprintf("%s/wowhead_spell_tooltips.csv", inputsDir)).Read()
 	wowheadDB := database.ParseWowheadDB(tools.ReadFile(fmt.Sprintf("%s/wowhead_gearplannerdb.txt", inputsDir)))
 	atlaslootDB := database.ReadDatabaseFromJson(tools.ReadFile(fmt.Sprintf("%s/atlasloot_db.json", inputsDir)))
+	factionRestrictions := database.ParseItemFactionRestrictionsFromWagoDB(tools.ReadFile(fmt.Sprintf("%s/wago_db2_items.csv", inputsDir)))
 
 	db := database.NewWowDatabase()
 	db.Encounters = core.PresetEncounters
@@ -69,12 +76,16 @@ func main() {
 
 	for _, response := range itemTooltips {
 		if response.IsEquippable() {
-			db.MergeItem(response.ToItemProto())
+			// Only included items that are in wowheads gearplanner db
+			// Wowhead doesn't seem to have a field/flag to signify 'not available / in game' but their gearplanner db has them filtered
+			item := response.ToItemProto()
+			if _, ok := wowheadDB.Items[strconv.Itoa(int(item.Id))]; ok {
+				db.MergeItem(item)
+			}
 		} else if response.IsGem() {
 			db.MergeGem(response.ToGemProto())
 		}
 	}
-
 	for _, wowheadItem := range wowheadDB.Items {
 		item := wowheadItem.ToProto()
 		if _, ok := db.Items[item.Id]; ok {
@@ -91,6 +102,7 @@ func main() {
 	db.MergeGems(database.GemOverrides)
 	db.MergeEnchants(database.EnchantOverrides)
 	ApplyGlobalFilters(db)
+	AttachFactionInformation(db, factionRestrictions)
 
 	leftovers := db.Clone()
 	ApplyNonSimmableFilters(leftovers)
@@ -123,6 +135,12 @@ func main() {
 	}
 
 	for _, spellIds := range GetAllTalentSpellIds(&inputsDir) {
+		for _, spellId := range spellIds {
+			db.AddSpellIcon(spellId, spellTooltips)
+		}
+	}
+
+	for _, spellIds := range GetAllRotationSpellIds() {
 		for _, spellId := range spellIds {
 			db.AddSpellIcon(spellId, spellTooltips)
 		}
@@ -178,6 +196,20 @@ func ApplyGlobalFilters(db *database.WowDatabase) {
 		return true
 	})
 
+	// There is an 'unavailable' version of many t9 set pieces, e.g. https://www.wowhead.com/wotlk/item=48842/thralls-hauberk
+	triumphItems := core.FilterMap(db.Items, func(_ int32, item *proto.UIItem) bool {
+		return strings.HasSuffix(item.Name, "of Triumph")
+	})
+	db.Items = core.FilterMap(db.Items, func(_ int32, item *proto.UIItem) bool {
+		nameToMatch := item.Name + " of Triumph"
+		for _, item := range triumphItems {
+			if item.Name == nameToMatch {
+				return false
+			}
+		}
+		return true
+	})
+
 	db.Gems = core.FilterMap(db.Gems, func(_ int32, gem *proto.UIGem) bool {
 		if _, ok := database.GemDenyList[gem.Id]; ok {
 			return false
@@ -191,6 +223,13 @@ func ApplyGlobalFilters(db *database.WowDatabase) {
 		return true
 	})
 
+	db.Gems = core.FilterMap(db.Gems, func(_ int32, gem *proto.UIGem) bool {
+		if strings.HasSuffix(gem.Name, "Stormjewel") {
+			gem.Unique = false
+		}
+		return true
+	})
+
 	db.ItemIcons = core.FilterMap(db.ItemIcons, func(_ int32, icon *proto.IconData) bool {
 		return icon.Name != "" && icon.Icon != ""
 	})
@@ -199,11 +238,17 @@ func ApplyGlobalFilters(db *database.WowDatabase) {
 	})
 }
 
+// AttachFactionInformation attaches faction information (faction restrictions) to the DB items.
+func AttachFactionInformation(db *database.WowDatabase, factionRestrictions map[int32]proto.UIItem_FactionRestriction) {
+	for _, item := range db.Items {
+		item.FactionRestriction = factionRestrictions[item.Id]
+	}
+}
+
 // Filters out entities which shouldn't be included in the sim.
 func ApplySimmableFilters(db *database.WowDatabase) {
 	db.Items = core.FilterMap(db.Items, simmableItemFilter)
 	db.Gems = core.FilterMap(db.Gems, simmableGemFilter)
-	db.Enchants = core.FilterMap(db.Enchants, tbcEnchantsFilter)
 }
 func ApplyNonSimmableFilters(db *database.WowDatabase) {
 	db.Items = core.FilterMap(db.Items, func(id int32, item *proto.UIItem) bool {
@@ -212,61 +257,53 @@ func ApplyNonSimmableFilters(db *database.WowDatabase) {
 	db.Gems = core.FilterMap(db.Gems, func(id int32, gem *proto.UIGem) bool {
 		return !simmableGemFilter(id, gem)
 	})
-	db.Enchants = core.FilterMap(db.Enchants, func(key database.EnchantDBKey, enchant *proto.UIEnchant) bool {
-		return !tbcEnchantsFilter(key, enchant)
-	})
-}
-func tbcEnchantsFilter(_ database.EnchantDBKey, enchant *proto.UIEnchant) bool {
-	if enchant.SpellId == 46594 || enchant.SpellId == 42974 || enchant.SpellId == 63746 || enchant.SpellId == 46578 {
-		return true
-	}
-	if enchant.SpellId > 42974 {
-		return false
-	}
-	return true
 }
 func simmableItemFilter(_ int32, item *proto.UIItem) bool {
 	if _, ok := database.ItemAllowList[item.Id]; ok {
 		return true
 	}
-	if item.Id > 39000 {
-		return false
-	}
-
-	if item.Ilvl > 164 {
-		return false
-	}
-
-	if item.Quality > proto.ItemQuality_ItemQualityLegendary {
-		return false
-	}
-
-	if item.Quality < proto.ItemQuality_ItemQualityEpic && item.Ilvl > 115 {
-		return false
-	}
 
 	if item.Quality < proto.ItemQuality_ItemQualityUncommon {
 		return false
+	} else if item.Quality == proto.ItemQuality_ItemQualityArtifact {
+		return false
+	} else if item.Quality > proto.ItemQuality_ItemQualityHeirloom {
+		return false
+	} else if item.Quality < proto.ItemQuality_ItemQualityEpic {
+		if item.ilvl < 145 {
+			return false
+		}
+		if item.ilvl < 149 && item.SetName == "" {
+			return false
+		}
+	} else {
+		// Epic and legendary items might come from classic, so use a lower ilvl threshold.
+		if item.Quality != proto.ItemQuality_ItemQualityHeirloom && item.ilvl < 140 {
+			return false
+		}
 	}
-	if item.Ilvl == 0 {
+	if item.ilvl == 0 {
 		fmt.Printf("Missing ilvl: %s\n", item.Name)
 	}
 
 	return true
 }
 func simmableGemFilter(_ int32, gem *proto.UIGem) bool {
-	if gem.Quality < proto.ItemQuality_ItemQualityUncommon {
-		return false
-	} else if strings.Contains(gem.Name, "Scarlet Ruby") || strings.Contains(gem.Name, "Bloodstone") || strings.Contains(gem.Name, "Sky Sapphire") || strings.Contains(gem.Name, "Chalcedony") || strings.Contains(gem.Name, "Autumn's Glow") || strings.Contains(gem.Name, "Sun Crystal") || strings.Contains(gem.Name, "Forest Emerald") || strings.Contains(gem.Name, "Dark Jade") || strings.Contains(gem.Name, "Monarch Topaz") || strings.Contains(gem.Name, "Huge Citrine") || strings.Contains(gem.Name, "Twilight Opal") || strings.Contains(gem.Name, "Shadow Crystal") || strings.Contains(gem.Name, "Earthsiege") || strings.Contains(gem.Name, "Skyflare") || strings.Contains(gem.Name, "Earthshatter") || strings.Contains(gem.Name, "Starflare") || strings.Contains(gem.Name, "Enchanted Tear") || strings.Contains(gem.Name, "Enchanted Pearl") || strings.Contains(gem.Name, "Dragon's Eye") {
-		return false
-	} else if strings.Contains(gem.Name, "Cardinal") || strings.Contains(gem.Name, "Majestic Zircon") || strings.Contains(gem.Name, "King's Amber") || strings.Contains(gem.Name, "Eye of Zul") || strings.Contains(gem.Name, "Ametrine") || strings.Contains(gem.Name, "Dreadstone") || strings.Contains(gem.Name, "Nightmare Tear") {
-		return false
-	} else if strings.Contains(gem.Name, "Stormjewel") {
-		return false
-	} else if gem.Id == 33132 {
+	if _, ok := database.GemAllowList[gem.Id]; ok {
+		return true
+	}
+
+	// Allow all meta gems
+	if gem.Color == proto.GemColor_GemColorMeta {
+		return true
+	}
+
+	// Arbitrary to filter out old gems
+	if gem.Id < 39900 {
 		return false
 	}
-	return true
+
+	return gem.Quality >= proto.ItemQuality_ItemQualityUncommon
 }
 
 type TalentConfig struct {
@@ -381,4 +418,145 @@ func getGlyphIDsFromJson(infile string) []*proto.GlyphID {
 			SpellId: gid.SpellID,
 		}
 	})
+}
+
+func CreateTempAgent(r *proto.Raid) core.Agent {
+	encounter := core.MakeSingleTargetEncounter(0.0)
+	env, _, _ := core.NewEnvironment(r, encounter)
+	return env.Raid.Parties[0].Players[0]
+}
+
+type RotContainer struct {
+	Name string
+	Raid *proto.Raid
+}
+
+func GetAllRotationSpellIds() map[string][]int32 {
+	sim.RegisterAll()
+
+	rotMapping := []RotContainer{
+		{Name: "feral", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassDruid,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "-503202132322010053120230310511-205503012",
+		}, &proto.Player_FeralDruid{FeralDruid: &proto.FeralDruid{Options: &proto.FeralDruid_Options{}, Rotation: &proto.FeralDruid_Rotation{}}}), nil, nil, nil)},
+		{Name: "balance", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassDruid,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "5102233115331303213305311031--205003002",
+		}, &proto.Player_BalanceDruid{BalanceDruid: &proto.BalanceDruid{Options: &proto.BalanceDruid_Options{}, Rotation: &proto.BalanceDruid_Rotation{}}}), nil, nil, nil)},
+		{Name: "guardian", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassDruid,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "-503232132322010353120300313511-20350001",
+		}, &proto.Player_FeralTankDruid{FeralTankDruid: &proto.FeralTankDruid{Options: &proto.FeralTankDruid_Options{}, Rotation: &proto.FeralTankDruid_Rotation{}}}), nil, nil, nil)},
+		{Name: "restodruid", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassDruid,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "05320031103--230023312131502331050313051",
+		}, &proto.Player_RestorationDruid{RestorationDruid: &proto.RestorationDruid{Options: &proto.RestorationDruid_Options{}, Rotation: &proto.RestorationDruid_Rotation{}}}), nil, nil, nil)},
+		{Name: "elemental", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassShaman,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "0532001523212351322301351-005052031",
+		}, &proto.Player_ElementalShaman{ElementalShaman: &proto.ElementalShaman{Options: &proto.ElementalShaman_Options{}, Rotation: &proto.ElementalShaman_Rotation{}}}), nil, nil, nil)},
+		{Name: "enhance", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassShaman,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "053030152-30405003105021333031131031051",
+		}, &proto.Player_EnhancementShaman{EnhancementShaman: &proto.EnhancementShaman{Options: &proto.EnhancementShaman_Options{}, Rotation: &proto.EnhancementShaman_Rotation{}}}), nil, nil, nil)},
+		{Name: "restosham", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassShaman,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "-3020503-50005331335310501122331251",
+		}, &proto.Player_RestorationShaman{RestorationShaman: &proto.RestorationShaman{Options: &proto.RestorationShaman_Options{}, Rotation: &proto.RestorationShaman_Rotation{}}}), nil, nil, nil)},
+		{Name: "hunter", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassHunter,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "-015305101-5000032500033330532135301311",
+		}, &proto.Player_Hunter{Hunter: &proto.Hunter{Options: &proto.Hunter_Options{}, Rotation: &proto.Hunter_Rotation{}}}), nil, nil, nil)},
+		{Name: "mage", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassMage,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "23000513310033015032310250532-03-023303001",
+		}, &proto.Player_Mage{Mage: &proto.Mage{Options: &proto.Mage_Options{}, Rotation: &proto.Mage_Rotation{}}}), nil, nil, nil)},
+		{Name: "healingpriest", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassPriest,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "0503203130300512301313231251-2351010303",
+		}, &proto.Player_HealingPriest{HealingPriest: &proto.HealingPriest{Options: &proto.HealingPriest_Options{}, Rotation: &proto.HealingPriest_Rotation{}}}), nil, nil, nil)},
+		{Name: "shadow", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassPriest,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "05032031--325023051223010323151301351",
+		}, &proto.Player_ShadowPriest{ShadowPriest: &proto.ShadowPriest{Options: &proto.ShadowPriest_Options{}, Rotation: &proto.ShadowPriest_Rotation{}}}), nil, nil, nil)},
+		{Name: "rogue", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassRogue,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "00532000523-0252051050035010223100501251",
+		}, &proto.Player_Rogue{Rogue: &proto.Rogue{Options: &proto.Rogue_Options{}, Rotation: &proto.Rogue_Rotation{}}}), nil, nil, nil)},
+		{Name: "warrior", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassWarrior,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "302023102331-305053000520310053120500351",
+		}, &proto.Player_Warrior{Warrior: &proto.Warrior{Options: &proto.Warrior_Options{}, Rotation: &proto.Warrior_Rotation{}}}), nil, nil, nil)},
+		{Name: "protwarrior", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassWarrior,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "2500030023-302-053351225000012521030113321",
+		}, &proto.Player_ProtectionWarrior{ProtectionWarrior: &proto.ProtectionWarrior{Options: &proto.ProtectionWarrior_Options{}, Rotation: &proto.ProtectionWarrior_Rotation{}}}), nil, nil, nil)},
+		{Name: "holypally", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassPaladin,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "50350151020013053100515221-50023131203",
+		}, &proto.Player_HolyPaladin{HolyPaladin: &proto.HolyPaladin{Options: &proto.HolyPaladin_Options{}, Rotation: &proto.HolyPaladin_Rotation{}}}), nil, nil, nil)},
+		{Name: "protpally", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassPaladin,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "-05005135200132311333312321-511302012003",
+		}, &proto.Player_ProtectionPaladin{ProtectionPaladin: &proto.ProtectionPaladin{Options: &proto.ProtectionPaladin_Options{}, Rotation: &proto.ProtectionPaladin_Rotation{}}}), nil, nil, nil)},
+		{Name: "ret", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassPaladin,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "050501-05-05232051203331302133231331",
+		}, &proto.Player_RetributionPaladin{RetributionPaladin: &proto.RetributionPaladin{Options: &proto.RetributionPaladin_Options{}, Rotation: &proto.RetributionPaladin_Rotation{}}}), nil, nil, nil)},
+		{Name: "warlock", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassWarlock,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "2350002030023510253500331151--550000051",
+		}, &proto.Player_Warlock{Warlock: &proto.Warlock{Options: &proto.Warlock_Options{}, Rotation: &proto.Warlock_Rotation{}}}), nil, nil, nil)},
+		{Name: "dk", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassDeathknight,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "-320043500002-2300303050032152000150013133051",
+		}, &proto.Player_Deathknight{Deathknight: &proto.Deathknight{Options: &proto.Deathknight_Options{}, Rotation: &proto.Deathknight_Rotation{}}}), nil, nil, nil)},
+		{Name: "tankdk", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassDeathknight,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "005510153330330220102013-3050505100023101-002",
+		}, &proto.Player_TankDeathknight{TankDeathknight: &proto.TankDeathknight{Options: &proto.TankDeathknight_Options{}, Rotation: &proto.TankDeathknight_Rotation{}}}), nil, nil, nil)},
+	}
+
+	ret_db := make(map[string][]int32, 0)
+
+	for _, r := range rotMapping {
+		f := CreateTempAgent(r.Raid).GetCharacter()
+
+		spells := make([]int32, 0, len(f.Spellbook))
+
+		for _, s := range f.Spellbook {
+			if s.SpellID != 0 {
+				spells = append(spells, s.SpellID)
+			}
+		}
+
+		for _, s := range f.GetAuras() {
+			if s.ActionID.SpellID != 0 {
+				spells = append(spells, s.ActionID.SpellID)
+			}
+		}
+
+		ret_db[r.Name] = spells
+	}
+	return ret_db
 }

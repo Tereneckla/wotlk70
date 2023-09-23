@@ -23,11 +23,12 @@ func (shaman *Shaman) newShockSpellConfig(spellID int32, spellSchool core.SpellS
 	case 22395:
 		bonusSpellpower = 30
 	}
+
 	return core.SpellConfig{
 		ActionID:    actionID,
 		SpellSchool: spellSchool,
 		ProcMask:    core.ProcMaskSpellDamage,
-		Flags:       SpellFlagShock,
+		Flags:       SpellFlagShock | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost: baseCost,
@@ -46,8 +47,9 @@ func (shaman *Shaman) newShockSpellConfig(spellID int32, spellSchool core.SpellS
 				Duration: shaman.ShockCD(),
 			},
 		},
+
 		BonusSpellPower: bonusSpellpower,
-		BonusHitRating:  float64(shaman.Talents.ElementalPrecision) * core.SpellHitRatingPerHitChance,
+		BonusHitRating: float64(shaman.Talents.ElementalPrecision) * core.SpellHitRatingPerHitChance,
 		DamageMultiplier: 1 +
 			0.01*float64(shaman.Talents.Concussion) +
 			core.TernaryFloat64(shaman.HasSetBonus(ItemSetThrallsBattlegear, 4), 0.25, 0),
@@ -90,12 +92,12 @@ func (shaman *Shaman) registerFlameShockSpell(shockTimer *core.Timer) {
 	config.Dot = core.DotConfig{
 		Aura: core.Aura{
 			Label: "FlameShock",
-			/*OnGain: func(aura *core.Aura, sim *core.Simulation) {
+			OnGain: func(aura *core.Aura, sim *core.Simulation) {
 				shaman.LavaBurst.BonusCritRating += 100 * core.CritRatingPerCritChance
 			},
 			OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 				shaman.LavaBurst.BonusCritRating -= 100 * core.CritRatingPerCritChance
-			},*/
+			},
 		},
 		NumberOfTicks:       6 + core.TernaryInt32(shaman.HasSetBonus(ItemSetThrallsRegalia, 2), 3, 0),
 		TickLength:          time.Second * 3,

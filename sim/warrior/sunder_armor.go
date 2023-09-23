@@ -32,6 +32,8 @@ func (warrior *Warrior) newSunderArmorSpell(isDevastateEffect bool) *core.Spell 
 
 		ThreatMultiplier: 1,
 		FlatThreatBonus:  360,
+
+		RelatedAuras: []core.AuraArray{warrior.SunderArmorAuras},
 	}
 
 	extraStack := isDevastateEffect && warrior.HasMajorGlyph(proto.WarriorMajorGlyph_GlyphOfDevastate)
@@ -43,6 +45,8 @@ func (warrior *Warrior) newSunderArmorSpell(isDevastateEffect bool) *core.Spell 
 		// In wrath sunder from devastate generates no threat
 		config.ThreatMultiplier = 0
 		config.FlatThreatBonus = 0
+	} else {
+		config.Flags |= core.SpellFlagAPL
 	}
 
 	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {

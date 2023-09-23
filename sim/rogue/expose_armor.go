@@ -25,7 +25,7 @@ func (rogue *Rogue) registerExposeArmorSpell() {
 		ActionID:     core.ActionID{SpellID: 8647},
 		SpellSchool:  core.SpellSchoolPhysical,
 		ProcMask:     core.ProcMaskMeleeMHSpecial,
-		Flags:        core.SpellFlagMeleeMetrics | rogue.finisherFlags(),
+		Flags:        core.SpellFlagMeleeMetrics | rogue.finisherFlags() | core.SpellFlagAPL,
 		MetricSplits: 6,
 
 		EnergyCost: core.EnergyCostOptions{
@@ -49,6 +49,7 @@ func (rogue *Rogue) registerExposeArmorSpell() {
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			rogue.BreakStealth(sim)
 			result := spell.CalcOutcome(sim, target, spell.OutcomeMeleeSpecialHit)
 			if result.Landed() {
 				debuffAura := rogue.ExposeArmorAuras.Get(target)
@@ -60,5 +61,7 @@ func (rogue *Rogue) registerExposeArmorSpell() {
 			}
 			spell.DealOutcome(sim, result)
 		},
+
+		RelatedAuras: []core.AuraArray{rogue.ExposeArmorAuras},
 	})
 }

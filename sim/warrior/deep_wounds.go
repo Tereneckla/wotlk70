@@ -6,13 +6,13 @@ import (
 	"github.com/Tereneckla/wotlk/sim/core"
 )
 
-const munchingWindow = time.Millisecond * 10
-
 func (warrior *Warrior) applyDeepWounds() {
 	if warrior.Talents.DeepWounds == 0 {
 		return
 	}
 
+	const munchingWindow = time.Millisecond * 10
+	
 	warrior.DeepWounds = warrior.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 12867},
 		SpellSchool: core.SpellSchoolPhysical,
@@ -57,7 +57,6 @@ func (warrior *Warrior) applyDeepWounds() {
 				} else {
 					warrior.procDeepWounds(sim, result.Target, spell.IsOH())
 				}
-				warrior.procBloodFrenzy(sim, result, time.Second*6)
 			}
 		},
 	})
@@ -78,9 +77,9 @@ func (warrior *Warrior) procDeepWounds(sim *core.Simulation, target *core.Unit, 
 		adm := warrior.AutoAttacks.MHAuto.AttackerDamageMultiplier(attackTable)
 		tdm := warrior.AutoAttacks.MHAuto.TargetDamageMultiplier(attackTable, false)
 		awd = (warrior.AutoAttacks.MH.CalculateAverageWeaponDamage(dot.Spell.MeleeAttackPower()) + dot.Spell.BonusWeaponDamage()) * adm * tdm
-
 	}
 	newDamage := awd * 0.16 * float64(warrior.Talents.DeepWounds)
+
 	dot.SnapshotBaseDamage = (outstandingDamage + newDamage) / float64(dot.NumberOfTicks)
 	dot.SnapshotAttackerMultiplier = 1
 	warrior.DeepWounds.Cast(sim, target)

@@ -19,7 +19,7 @@ func (rogue *Rogue) registerGarrote() {
 		ActionID:    core.ActionID{SpellID: 26884},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | SpellFlagBuilder,
+		Flags:       core.SpellFlagMeleeMetrics | SpellFlagBuilder | core.SpellFlagAPL,
 
 		EnergyCost: core.EnergyCostOptions{
 			Cost:   rogue.costModifier(50 - 10*float64(rogue.Talents.DirtyDeeds)),
@@ -32,7 +32,7 @@ func (rogue *Rogue) registerGarrote() {
 			IgnoreHaste: true,
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return !rogue.PseudoStats.InFrontOfTarget
+			return !rogue.PseudoStats.InFrontOfTarget && rogue.IsStealthed()
 		},
 
 		DamageMultiplier: 1 +
@@ -60,6 +60,7 @@ func (rogue *Rogue) registerGarrote() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			rogue.BreakStealth(sim)
 			result := spell.CalcOutcome(sim, target, spell.OutcomeMeleeSpecialNoBlockDodgeParryNoCrit)
 			if result.Landed() {
 				rogue.AddComboPoints(sim, 1, spell.ComboPointMetrics())

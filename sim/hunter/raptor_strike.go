@@ -11,7 +11,7 @@ func (hunter *Hunter) registerRaptorStrikeSpell() {
 		ActionID:    core.ActionID{SpellID: 27014},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.04,
@@ -27,7 +27,7 @@ func (hunter *Hunter) registerRaptorStrikeSpell() {
 
 		BonusCritRating:  float64(hunter.Talents.SavageStrikes) * 10 * core.CritRatingPerCritChance,
 		DamageMultiplier: 1,
-		CritMultiplier:   hunter.critMultiplier(false, false),
+		CritMultiplier:   hunter.critMultiplier(false, false, false),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
@@ -41,10 +41,9 @@ func (hunter *Hunter) registerRaptorStrikeSpell() {
 }
 
 // Returns true if the regular melee swing should be used, false otherwise.
-func (hunter *Hunter) TryRaptorStrike(sim *core.Simulation) *core.Spell {
+func (hunter *Hunter) TryRaptorStrike(_ *core.Simulation, mhSwingSpell *core.Spell) *core.Spell {
 	//if hunter.Rotation.Weave == proto.Hunter_Rotation_WeaveAutosOnly || !hunter.RaptorStrike.IsReady(sim) || hunter.CurrentMana() < hunter.RaptorStrike.DefaultCast.Cost {
 	//	return nil
 	//}
-
-	return hunter.RaptorStrike
+	return mhSwingSpell
 }

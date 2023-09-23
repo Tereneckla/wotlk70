@@ -50,12 +50,16 @@ export class TankDeathknightSimUI extends IndividualSimUI<Spec.SpecTankDeathknig
 				Stat.StatSpellHaste,
 				Stat.StatHealth,
 				Stat.StatArmor,
+				Stat.StatBonusArmor,
 				Stat.StatArmorPenetration,
 				Stat.StatDefense,
 				Stat.StatDodge,
 				Stat.StatParry,
 				Stat.StatResilience,
 				Stat.StatSpellHit,
+				Stat.StatNatureResistance,
+				Stat.StatShadowResistance,
+				Stat.StatFrostResistance,
 			],
 			epPseudoStats: [
 				PseudoStat.PseudoStatMainHandDps,
@@ -67,6 +71,7 @@ export class TankDeathknightSimUI extends IndividualSimUI<Spec.SpecTankDeathknig
 			displayStats: [
 				Stat.StatHealth,
 				Stat.StatArmor,
+				Stat.StatBonusArmor,
 				Stat.StatStamina,
 				Stat.StatStrength,
 				Stat.StatAgility,
@@ -82,6 +87,9 @@ export class TankDeathknightSimUI extends IndividualSimUI<Spec.SpecTankDeathknig
 				Stat.StatDodge,
 				Stat.StatParry,
 				Stat.StatResilience,
+				Stat.StatNatureResistance,
+				Stat.StatShadowResistance,
+				Stat.StatFrostResistance,
 			],
 			defaults: {
 				// Default equipped gear.
@@ -89,6 +97,7 @@ export class TankDeathknightSimUI extends IndividualSimUI<Spec.SpecTankDeathknig
 				// Default EP weights for sorting gear in the gear picker.
 				epWeights: Stats.fromMap({
 					[Stat.StatArmor]: 0.05,
+					[Stat.StatBonusArmor]: 0.03,
 					[Stat.StatStamina]: 1,
 					[Stat.StatStrength]: 0.33,
 					[Stat.StatAgility]: 0.6,
@@ -167,12 +176,12 @@ export class TankDeathknightSimUI extends IndividualSimUI<Spec.SpecTankDeathknig
 			otherInputs: {
 				inputs: [
 					OtherInputs.TankAssignment,
+					OtherInputs.HpPercentForDefensives,
 					OtherInputs.IncomingHps,
 					OtherInputs.HealingCadence,
+					OtherInputs.HealingCadenceVariation,
 					OtherInputs.BurstWindow,
 					OtherInputs.InspirationUptime,
-					//OtherInputs.HpPercentForDefensives,
-					//DeathKnightInputs.DefensiveCdDelay,
 					OtherInputs.InFrontOfTarget,
 					DeathKnightInputs.StartingRunicPower,
 				],
@@ -183,9 +192,16 @@ export class TankDeathknightSimUI extends IndividualSimUI<Spec.SpecTankDeathknig
 			},
 
 			presets: {
+				// Preset rotations that the user can quickly select.
+				rotations: [
+					Presets.BLOOD_LEGACY_PRESET_LEGACY_DEFAULT,
+					Presets.BLOOD_IT_SPAM_ROTATION_PRESET_DEFAULT,
+					Presets.BLOOD_AGGRO_ROTATION_PRESET_DEFAULT,
+				],
 				// Preset talents that the user can quickly select.
 				talents: [
 					Presets.BloodTalents,
+					Presets.BloodAggroTalents,
 					Presets.DoubleBuffBloodTalents,
 					Presets.FrostTalents,
 					Presets.DoubleBuffFrostTalents,

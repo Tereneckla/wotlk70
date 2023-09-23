@@ -8,25 +8,18 @@ import (
 )
 
 func (rogue *Rogue) registerEviscerate() {
-	cost := 35.0
-	if rogue.HasSetBonus(ItemSetAssassination, 4) {
-		cost -= 10
-	}
-	deathMantleDamage := core.TernaryFloat64(rogue.HasSetBonus(ItemSetDeathmantle, 2), 40, 0)
-
 	rogue.Eviscerate = rogue.RegisterSpell(core.SpellConfig{
 		ActionID:     core.ActionID{SpellID: 26865},
 		SpellSchool:  core.SpellSchoolPhysical,
 		ProcMask:     core.ProcMaskMeleeMHSpecial,
-		Flags:        core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | rogue.finisherFlags(),
+		Flags:        core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | rogue.finisherFlags() | SpellFlagColdBlooded | core.SpellFlagAPL,
 		MetricSplits: 6,
 
 		EnergyCost: core.EnergyCostOptions{
-			Cost:          cost,
+			Cost:          35,
 			Refund:        0.4 * float64(rogue.Talents.QuickRecovery),
 			RefundMetrics: rogue.QuickRecoveryMetrics,
 		},
-
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
 				GCD: time.Second,
@@ -34,10 +27,6 @@ func (rogue *Rogue) registerEviscerate() {
 			IgnoreHaste: true,
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
 				spell.SetMetricsSplit(spell.Unit.ComboPoints())
-				if rogue.deathmantleActive() {
-					spell.CostMultiplier = 0
-					rogue.DeathmantleProcAura.Deactivate(sim)
-				}
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
@@ -54,9 +43,10 @@ func (rogue *Rogue) registerEviscerate() {
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			rogue.BreakStealth(sim)
 			comboPoints := rogue.ComboPoints()
-			flatBaseDamage := 60 + (185+deathMantleDamage)*float64(comboPoints)
-			// tooltip implies 3..7% AP scaling, but testing show it's fixed at 7% (3.4.0.46158)
+			flatBaseDamage := 60 + 370*float64(comboPoints)
+			// tooltip implies 3..7% AP scaling, but testing shows it's fixed at 7% (3.4.0.46158)
 			apRatio := 0.07 * float64(comboPoints)
 
 			baseDamage := flatBaseDamage +

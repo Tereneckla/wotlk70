@@ -62,7 +62,7 @@ func TestRetribution(t *testing.T) {
 						Rotation: &proto.RetributionPaladin_Rotation{
 							ConsSlack:            500,
 							ExoSlack:             500,
-							UseDivinePlea:        false,
+							UseDivinePlea:        true,
 							DivinePleaPercentage: 0.75,
 							HolyWrathThreshold:   4,
 							SovTargets:           2,
@@ -128,7 +128,7 @@ var StandardGlyphs = &proto.Glyphs{
 var defaultRetRotation = &proto.RetributionPaladin_Rotation{
 	ConsSlack:            500,
 	ExoSlack:             500,
-	UseDivinePlea:        false,
+	UseDivinePlea:        true,
 	DivinePleaPercentage: 0.75,
 	HolyWrathThreshold:   4,
 }
@@ -151,57 +151,93 @@ var FullConsumes = &proto.Consumes{
 	DefaultPotion:   proto.Potions_HastePotion,
 	DefaultConjured: proto.Conjured_ConjuredDarkRune,
 	Food:            proto.Food_FoodRoastedClefthoof,
-	SuperSapper:     true,
+	ThermalSapper:   true,
 }
 
 var Phase1Gear = core.EquipmentSpecFromJsonString(`{"items": [
 	{
-		"id": 34244
+		"id": 40576,
+		"enchant": 3817,
+		"gems": [
+			41398,
+			40037
+		]
 	},
 	{
-		"id": 32260
+		"id": 44664,
+		"gems": [
+			42142
+		]
 	},
 	{
-		"id": 34388
+		"id": 40578,
+		"enchant": 3808,
+		"gems": [
+			49110
+		]
 	},
 	{
-		"id": 34241
+		"id": 40403,
+		"enchant": 3605
 	},
 	{
-		"id": 34369
+		"id": 40574,
+		"enchant": 3832,
+		"gems": [
+			42142,
+			39996
+		]
 	},
 	{
-		"id": 34431
+		"id": 40186,
+		"enchant": 3845,
+		"gems": [
+			0
+		]
 	},
 	{
-		"id": 34378
+		"id": 40541,
+		"enchant": 3604,
+		"gems": [
+			0
+		]
 	},
 	{
-		"id": 34485
+		"id": 40205,
+		"gems": [
+			39996
+		]
 	},
 	{
-		"id": 34188
+		"id": 40577,
+		"enchant": 3823,
+		"gems": [
+			42142,
+			40038
+		]
 	},
 	{
-		"id": 34561
+		"id": 39701,
+		"enchant": 3606
 	},
 	{
-		"id": 32497
+		"id": 40075
 	},
 	{
-		"id": 34361
+		"id": 40474
 	},
 	{
-		"id": 34427
+		"id": 42987
 	},
 	{
-		"id": 32505
+		"id": 40431
 	},
 	{
-		"id": 34989
+		"id": 40384,
+		"enchant": 3789
 	},
 	{},
 	{
-		"id": 37574
+		"id": 42852
 	}
 ]}`)

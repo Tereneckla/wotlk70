@@ -73,16 +73,21 @@ func (shaman *Shaman) applyElementalFocus() {
 	oathBonus := 1 + (0.05 * float64(shaman.Talents.ElementalOath))
 	var affectedSpells []*core.Spell
 
+	// TODO: fix this.
+	// Right now: Set to 3 so that the spell that cast it consumes a charge down to expected 2.
+	// Correct fix would be to figure out how to make 'onCastComplete' fire before 'onspellhitdealt' without breaking all the other things.
+	maxStacks := int32(3)
+
 	clearcastingAura := shaman.RegisterAura(core.Aura{
 		Label:     "Clearcasting",
 		ActionID:  core.ActionID{SpellID: 16246},
 		Duration:  time.Second * 15,
-		MaxStacks: 2,
+		MaxStacks: maxStacks,
 		OnInit: func(aura *core.Aura, sim *core.Simulation) {
 			affectedSpells = core.FilterSlice([]*core.Spell{
 				shaman.LightningBolt,
 				shaman.ChainLightning,
-				//shaman.LavaBurst,
+				shaman.LavaBurst,
 				shaman.FireNova,
 				shaman.EarthShock,
 				shaman.FlameShock,
@@ -134,7 +139,7 @@ func (shaman *Shaman) applyElementalFocus() {
 				return
 			}
 			clearcastingAura.Activate(sim)
-			clearcastingAura.SetStacks(sim, 2)
+			clearcastingAura.SetStacks(sim, maxStacks)
 		},
 	})
 }
@@ -199,16 +204,16 @@ func (shaman *Shaman) registerElementalMasteryCD() {
 		Duration: core.NeverExpires,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			shaman.ChainLightning.CastTimeMultiplier -= 1
-			//shaman.LavaBurst.CastTimeMultiplier -= 1
+			shaman.LavaBurst.CastTimeMultiplier -= 1
 			shaman.LightningBolt.CastTimeMultiplier -= 1
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 			shaman.ChainLightning.CastTimeMultiplier += 1
-			//shaman.LavaBurst.CastTimeMultiplier += 1
+			shaman.LavaBurst.CastTimeMultiplier += 1
 			shaman.LightningBolt.CastTimeMultiplier += 1
 		},
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if spell != shaman.LightningBolt && spell != shaman.ChainLightning {
+			if spell != shaman.LightningBolt && spell != shaman.ChainLightning && spell != shaman.LavaBurst {
 				return
 			}
 			// Remove the buff and put skill on CD
@@ -269,16 +274,16 @@ func (shaman *Shaman) registerNaturesSwiftnessCD() {
 		Duration: core.NeverExpires,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			shaman.ChainLightning.CastTimeMultiplier -= 1
-			//shaman.LavaBurst.CastTimeMultiplier -= 1
+			shaman.LavaBurst.CastTimeMultiplier -= 1
 			shaman.LightningBolt.CastTimeMultiplier -= 1
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 			shaman.ChainLightning.CastTimeMultiplier += 1
-			//shaman.LavaBurst.CastTimeMultiplier += 1
+			shaman.LavaBurst.CastTimeMultiplier += 1
 			shaman.LightningBolt.CastTimeMultiplier += 1
 		},
 		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
-			if spell != shaman.LightningBolt && spell != shaman.ChainLightning {
+			if spell != shaman.LightningBolt && spell != shaman.ChainLightning && spell != shaman.LavaBurst {
 				return
 			}
 
@@ -322,9 +327,6 @@ func (shaman *Shaman) applyFlurry() {
 	bonus := 1.0 + 0.06*float64(shaman.Talents.Flurry)
 
 	if shaman.HasSetBonus(ItemSetEarthshatterBattlegear, 4) {
-		bonus += 0.05
-	}
-	if shaman.HasSetBonus(ItemSetCataclysmHarness, 4) {
 		bonus += 0.05
 	}
 
@@ -438,14 +440,14 @@ func (shaman *Shaman) applyMaelstromWeapon() {
 			aura.Activate(sim)
 		},
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if !spell.ProcMask.Matches(core.ProcMaskMelee) || !result.Landed() {
+			if !result.Landed() {
 				return
 			}
-			if !ppmm.Proc(sim, spell.ProcMask, "Maelstrom Weapon") {
-				return
+
+			if ppmm.Proc(sim, spell.ProcMask, "Maelstrom Weapon") {
+				shaman.MaelstromWeaponAura.Activate(sim)
+				shaman.MaelstromWeaponAura.AddStack(sim)
 			}
-			shaman.MaelstromWeaponAura.Activate(sim)
-			shaman.MaelstromWeaponAura.AddStack(sim)
 		},
 	})
 }
@@ -471,6 +473,14 @@ func (shaman *Shaman) registerManaTideTotemCD() {
 		},
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
 			mttAura.Activate(sim)
+
+			// If healing stream is active, cancel it while mana tide is up.
+			if shaman.HealingStreamTotem.Hot(&shaman.Unit).IsActive() {
+				for _, agent := range shaman.Party.Players {
+					shaman.HealingStreamTotem.Hot(&agent.GetCharacter().Unit).Cancel(sim)
+				}
+			}
+
 			// TODO: Current water totem buff needs to be removed from party/raid.
 			if shaman.Totems.Water != proto.WaterTotem_NoWaterTotem {
 				shaman.NextTotemDrops[WaterTotem] = sim.CurrentTime + time.Second*12

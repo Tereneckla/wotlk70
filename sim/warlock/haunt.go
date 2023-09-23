@@ -8,12 +8,12 @@ import (
 )
 
 func (warlock *Warlock) registerHauntSpell() {
-	actionID := core.ActionID{SpellID: 59161}
-
-	debuffMultiplier := 1.2
-	if warlock.HasMajorGlyph(proto.WarlockMajorGlyph_GlyphOfHaunt) {
-		debuffMultiplier += 0.03
+	if !warlock.Talents.Haunt {
+		return
 	}
+
+	actionID := core.ActionID{SpellID: 59161}
+	debuffMult := core.TernaryFloat64(warlock.HasMajorGlyph(proto.WarlockMajorGlyph_GlyphOfHaunt), 1.23, 1.2)
 
 	warlock.HauntDebuffAuras = warlock.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		return target.GetOrRegisterAura(core.Aura{
@@ -21,10 +21,10 @@ func (warlock *Warlock) registerHauntSpell() {
 			ActionID: actionID,
 			Duration: time.Second * 12,
 			OnGain: func(aura *core.Aura, sim *core.Simulation) {
-				warlock.AttackTables[aura.Unit.UnitIndex].PeriodicShadowDamageTakenMultiplier *= debuffMultiplier
+				warlock.AttackTables[aura.Unit.UnitIndex].HauntSEDamageTakenMultiplier *= debuffMult
 			},
 			OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-				warlock.AttackTables[aura.Unit.UnitIndex].PeriodicShadowDamageTakenMultiplier /= debuffMultiplier
+				warlock.AttackTables[aura.Unit.UnitIndex].HauntSEDamageTakenMultiplier /= debuffMult
 			},
 		})
 	})
@@ -33,6 +33,7 @@ func (warlock *Warlock) registerHauntSpell() {
 		ActionID:     actionID,
 		SpellSchool:  core.SpellSchoolShadow,
 		ProcMask:     core.ProcMaskSpellDamage,
+		Flags:        core.SpellFlagAPL,
 		MissileSpeed: 20,
 
 		ManaCost: core.ManaCostOptions{
@@ -50,8 +51,6 @@ func (warlock *Warlock) registerHauntSpell() {
 			},
 		},
 
-		BonusCritRating: 0 +
-			warlock.masterDemonologistShadowCrit,
 		DamageMultiplierAdditive: 1 +
 			warlock.GrandFirestoneBonus() +
 			0.03*float64(warlock.Talents.ShadowMastery),
@@ -65,6 +64,7 @@ func (warlock *Warlock) registerHauntSpell() {
 				spell.DealDamage(sim, result)
 				if result.Landed() {
 					warlock.HauntDebuffAuras.Get(result.Target).Activate(sim)
+					warlock.everlastingAfflictionRefresh(sim, target)
 				}
 			})
 		},

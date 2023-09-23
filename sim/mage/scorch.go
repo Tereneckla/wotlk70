@@ -20,7 +20,7 @@ func (mage *Mage) registerScorchSpell() {
 		ActionID:    core.ActionID{SpellID: 27074},
 		SpellSchool: core.SpellSchoolFire,
 		ProcMask:    core.ProcMaskSpellDamage,
-		Flags:       SpellFlagMage | HotStreakSpells,
+		Flags:       SpellFlagMage | HotStreakSpells | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost: 0.08,
@@ -51,4 +51,8 @@ func (mage *Mage) registerScorchSpell() {
 			spell.DealDamage(sim, result)
 		},
 	})
+
+	if hasImpScorch {
+		mage.Scorch.RelatedAuras = append(mage.Scorch.RelatedAuras, mage.ScorchAuras)
+	}
 }

@@ -8,14 +8,17 @@ import (
 )
 
 func (paladin *Paladin) registerCrusaderStrikeSpell() {
-	bonusDmg := core.TernaryFloat64(paladin.Equip[proto.ItemSlot_ItemSlotRanged].ID == 31033, 36, 0) + // Libram of Righteous Power
-		core.TernaryFloat64(paladin.Equip[proto.ItemSlot_ItemSlotRanged].ID == 40191, 79, 0) // Libram of Radiance
+	bonusDmg := core.TernaryFloat64(paladin.Ranged().ID == 31033, 36, 0) + // Libram of Righteous Power
+		core.TernaryFloat64(paladin.Ranged().ID == 40191, 79, 0) // Libram of Radiance
+
+	jowAuras := paladin.NewEnemyAuraArray(core.JudgementOfWisdomAura)
+	jolAuras := paladin.NewEnemyAuraArray(core.JudgementOfLightAura)
 
 	paladin.CrusaderStrike = paladin.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 35395},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost: 0.05,
@@ -34,6 +37,7 @@ func (paladin *Paladin) registerCrusaderStrikeSpell() {
 			},
 		},
 
+		BonusCritRating: core.TernaryFloat64(paladin.HasSetBonus(ItemSetAegisBattlegear, 4), 10, 0) * core.CritRatingPerCritChance,
 		DamageMultiplierAdditive: 1 +
 			paladin.getTalentSanctityOfBattleBonus() +
 			paladin.getTalentTheArtOfWarBonus() +
@@ -49,12 +53,12 @@ func (paladin *Paladin) registerCrusaderStrikeSpell() {
 
 			spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 
-			jowAura := target.GetAura(core.JudgementOfWisdomAuraLabel)
+			jowAura := jowAuras.Get(target)
 			if jowAura.IsActive() {
 				jowAura.Refresh(sim)
 			}
 
-			jolAura := target.GetAura(core.JudgementOfLightAuraLabel)
+			jolAura := jolAuras.Get(target)
 			if jolAura.IsActive() {
 				jolAura.Refresh(sim)
 			}

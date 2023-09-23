@@ -8,10 +8,10 @@
 
   .icon-picker-button,
   .icon-dropdown-option {
-    min-width: 2.5rem;
-    width: 2.5rem;
-    height: 2.5rem;
-    border: 1px solid $border-color;
+    min-width: $icon-size-md;
+    width: $icon-size-md;
+    height: $icon-size-md;
+    border: $border-default;
     transition: border-color .15s ease-in-out;
     background-size: cover;
     filter: grayscale(1);
@@ -19,6 +19,10 @@
     &.active {
       border-color: $success;
       filter: none;
+    }
+
+    .gem-socket-container {
+      --gem-width: 0.8rem;
     }
   }
 
@@ -90,8 +94,22 @@
   }
 }
 
-.picker-group.icon-group {
-  &> :not(:last-child) {
-    margin-right: map.get($spacers, 1);
+.picker-group {
+  &.icon-group {
+    display: flex;
+    flex-wrap: wrap;
+
+    &> :not(:last-child) {
+      margin-right: map.get($spacers, 1);
+    }
+
+    &> * {
+      margin-bottom: $block-spacer;
+      flex: 0;
+  
+      &:not(:last-child) {
+        margin-right: $block-spacer;
+      }
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { Spec } from '../core/proto/common.js';
+import { Spec, ItemSlot } from '../core/proto/common.js';
 import { Player } from '../core/player.js';
 import { EventID } from '../core/typed_event.js';
 import { IndividualSimUI } from '../core/individual_sim_ui.js';
@@ -65,29 +65,29 @@ export const RetributionPaladinRotationConsSlackConfig = InputHelpers.makeRotati
 })
 
 
-/*export const RetributionPaladinRotationDivinePleaSelection = InputHelpers.makeRotationBooleanInput<Spec.SpecRetributionPaladin>({
-	fieldName: 'useDivinePlea',
-	label: 'Use Divine Plea',
-	labelTooltip: 'Whether or not to maintain Divine Plea',
-	showWhen: (player: Player<Spec.SpecRetributionPaladin>) => player.getRotation().type == RotationType.Standard,
-});
+// export const RetributionPaladinRotationDivinePleaSelection = InputHelpers.makeRotationBooleanInput<Spec.SpecRetributionPaladin>({
+// 	fieldName: 'useDivinePlea',
+// 	label: 'Use Divine Plea',
+// 	labelTooltip: 'Whether or not to maintain Divine Plea',
+// 	showWhen: (player: Player<Spec.SpecRetributionPaladin>) => player.getRotation().type == RotationType.Standard,
+// });
 
-// Reuse field name, but different tooltip.
-export const RetributionPaladinRotationDivinePleaSelectionAlternate = InputHelpers.makeRotationBooleanInput<Spec.SpecRetributionPaladin>({
-	fieldName: 'useDivinePlea',
-	label: 'Use Divine Plea - Out of Sequence',
-	labelTooltip: 'Whether or not to maintain Divine Plea, this happens OUTSIDE of the cast sequence',
-	showWhen: (player: Player<Spec.SpecRetributionPaladin>) => player.getRotation().type == RotationType.CastSequence
-});
+// // Reuse field name, but different tooltip.
+// export const RetributionPaladinRotationDivinePleaSelectionAlternate = InputHelpers.makeRotationBooleanInput<Spec.SpecRetributionPaladin>({
+// 	fieldName: 'useDivinePlea',
+// 	label: 'Use Divine Plea - Out of Sequence',
+// 	labelTooltip: 'Whether or not to maintain Divine Plea, this happens OUTSIDE of the cast sequence',
+// 	showWhen: (player: Player<Spec.SpecRetributionPaladin>) => player.getRotation().type == RotationType.CastSequence
+// });
 
-export const RetributionPaladinRotationDivinePleaPercentageConfig = InputHelpers.makeRotationNumberInput<Spec.SpecRetributionPaladin>({
-	fieldName: "divinePleaPercentage",
-	label: "Divine Plea Mana Threshold %",
-	labelTooltip: "% of max mana left before beginning to use Divine Plea",
-	percent: true,
-	positive: true,
-})
-*/
+// export const RetributionPaladinRotationDivinePleaPercentageConfig = InputHelpers.makeRotationNumberInput<Spec.SpecRetributionPaladin>({
+// 	fieldName: "divinePleaPercentage",
+// 	label: "Divine Plea Mana Threshold %",
+// 	labelTooltip: "% of max mana left before beginning to use Divine Plea",
+// 	percent: true,
+// 	positive: true,
+// })
+
 export const RetributionPaladinRotationHolyWrathConfig = InputHelpers.makeRotationNumberInput<Spec.SpecRetributionPaladin>({
 	fieldName: "holyWrathThreshold",
 	label: "Holy Wrath Threshold",
@@ -109,14 +109,21 @@ export const RetributionPaladinRotationAvoidClippingConsecration = InputHelpers.
 	fieldName: 'avoidClippingConsecration',
 	label: 'Avoid Clipping Consecration',
 	labelTooltip: 'Avoid clipping consecration at the end of a fight.',
-	showWhen: (player: Player<Spec.SpecRetributionPaladin>) => (player.getRotation().type == RotationType.Standard) || (player.getRotation().type == RotationType.Custom) ,
+	showWhen: (player: Player<Spec.SpecRetributionPaladin>) => (player.getRotation().type == RotationType.Standard) || (player.getRotation().type == RotationType.Custom),
 });
 
 export const RetributionPaladinRotationHoldLastAvengingWrathUntilExecution = InputHelpers.makeRotationBooleanInput<Spec.SpecRetributionPaladin>({
 	fieldName: 'holdLastAvengingWrathUntilExecution',
 	label: 'Hold Avenging Wrath Until Execution',
 	labelTooltip: 'Hold last Avenging Wrath usage until the execution phase. This currently does not work if specific Avenging Wrath CD usage times are specified.',
-	showWhen: (player: Player<Spec.SpecRetributionPaladin>) => (player.getRotation().type == RotationType.Standard) || (player.getRotation().type == RotationType.Custom) ,
+	showWhen: (player: Player<Spec.SpecRetributionPaladin>) => (player.getRotation().type == RotationType.Standard) || (player.getRotation().type == RotationType.Custom),
+});
+
+export const RetributionPaladinRotationCancelChaosBane = InputHelpers.makeRotationBooleanInput<Spec.SpecRetributionPaladin>({
+	fieldName: 'cancelChaosBane',
+	label: 'Cancel Chaos Bane Buff From Shadowmourne',
+	labelTooltip: 'Cancels the buff provided when Shadowmourne soul shard buff reaches 10 stacks.',
+	showWhen: (player: Player<Spec.SpecRetributionPaladin>) => player.getEquippedItem(ItemSlot.ItemSlotMainHand)?.item.name == "Shadowmourne",
 });
 
 export const RetributionPaladinRotationPriorityConfig = InputHelpers.makeCustomRotationInput<Spec.SpecRetributionPaladin, SpellOption>({
@@ -125,12 +132,12 @@ export const RetributionPaladinRotationPriorityConfig = InputHelpers.makeCustomR
 	values: [
 		{ actionId: ActionId.fromSpellId(53408), value: SpellOption.JudgementOfWisdom },
 		{ actionId: ActionId.fromSpellId(53385), value: SpellOption.DivineStorm },
-		{ actionId: ActionId.fromSpellId(27180), value: SpellOption.HammerOfWrath },
-		{ actionId: ActionId.fromSpellId(27173), value: SpellOption.Consecration },
-		{ actionId: ActionId.fromSpellId(27139), value: SpellOption.HolyWrath },
+		{ actionId: ActionId.fromSpellId(48806), value: SpellOption.HammerOfWrath },
+		{ actionId: ActionId.fromSpellId(48819), value: SpellOption.Consecration },
+		{ actionId: ActionId.fromSpellId(48817), value: SpellOption.HolyWrath },
 		{ actionId: ActionId.fromSpellId(35395), value: SpellOption.CrusaderStrike },
-		{ actionId: ActionId.fromSpellId(27138), value: SpellOption.Exorcism },
-		{ actionId: ActionId.fromSpellId(54428), value: SpellOption.DivinePlea }
+		{ actionId: ActionId.fromSpellId(48801), value: SpellOption.Exorcism },
+		//{ actionId: ActionId.fromSpellId(54428), value: SpellOption.DivinePlea }
 	],
 	showWhen: (player: Player<Spec.SpecRetributionPaladin>) => player.getRotation().type == RotationType.Custom,
 });
@@ -141,12 +148,12 @@ export const RetributionPaladinCastSequenceConfig = InputHelpers.makeCustomRotat
 	values: [
 		{ actionId: ActionId.fromSpellId(53408), value: SpellOption.JudgementOfWisdom },
 		{ actionId: ActionId.fromSpellId(53385), value: SpellOption.DivineStorm },
-		{ actionId: ActionId.fromSpellId(27180), value: SpellOption.HammerOfWrath },
-		{ actionId: ActionId.fromSpellId(27173), value: SpellOption.Consecration },
-		{ actionId: ActionId.fromSpellId(27139), value: SpellOption.HolyWrath },
+		{ actionId: ActionId.fromSpellId(48806), value: SpellOption.HammerOfWrath },
+		{ actionId: ActionId.fromSpellId(48819), value: SpellOption.Consecration },
+		{ actionId: ActionId.fromSpellId(48817), value: SpellOption.HolyWrath },
 		{ actionId: ActionId.fromSpellId(35395), value: SpellOption.CrusaderStrike },
-		{ actionId: ActionId.fromSpellId(27138), value: SpellOption.Exorcism },
-		{ actionId: ActionId.fromSpellId(54428), value: SpellOption.DivinePlea }
+		{ actionId: ActionId.fromSpellId(48801), value: SpellOption.Exorcism },
+		//{ actionId: ActionId.fromSpellId(54428), value: SpellOption.DivinePlea }
 	],
 	showWhen: (player: Player<Spec.SpecRetributionPaladin>) => player.getRotation().type == RotationType.CastSequence,
 });

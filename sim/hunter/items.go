@@ -41,17 +41,6 @@ var ItemSetGronnstalker = core.NewItemSet(core.ItemSet{
 	},
 })
 
-var ItemSetBeastLord = core.NewItemSet(core.ItemSet{
-	Name: "Beast Lord Armor",
-	Bonuses: map[int32]core.ApplyEffect{
-		2: func(agent core.Agent) {
-		},
-		4: func(agent core.Agent) {
-			// Handled in kill_command.go
-		},
-	},
-})
-
 func (hunter *Hunter) talonOfAlarActive() float64 {
 	return core.TernaryFloat64(hunter.TalonOfAlarAura != nil && hunter.TalonOfAlarAura.IsActive(), 40, 0)
 }

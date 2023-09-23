@@ -27,13 +27,16 @@ func (hunter *Hunter) registerVolleySpell() {
 
 		DamageMultiplier: 1 *
 			(1 + 0.04*float64(hunter.Talents.Barrage)),
-		CritMultiplier:   hunter.critMultiplier(true, false),
+		CritMultiplier:   hunter.critMultiplier(true, false, false),
 		ThreatMultiplier: 1,
 
 		Dot: core.DotConfig{
 			IsAOE: true,
 			Aura: core.Aura{
 				Label: "Volley",
+				OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+					hunter.AutoAttacks.DelayRangedUntil(sim, sim.CurrentTime+time.Millisecond*500)
+				},
 			},
 			NumberOfTicks:       6,
 			TickLength:          time.Second * 1,
@@ -45,7 +48,7 @@ func (hunter *Hunter) registerVolleySpell() {
 				dot.SnapshotBaseDamage *= sim.Encounter.AOECapMultiplier()
 
 				attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
-				dot.SnapshotCritChance = dot.Spell.PhysicalCritChance(target, attackTable)
+				dot.SnapshotCritChance = dot.Spell.PhysicalCritChance(attackTable)
 				dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
@@ -56,10 +59,8 @@ func (hunter *Hunter) registerVolleySpell() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			channelDoneAt := sim.CurrentTime + hunter.Volley.CurCast.ChannelTime
-			hunter.mayMoveAt = channelDoneAt
-			hunter.AutoAttacks.DelayRangedUntil(sim, channelDoneAt+time.Millisecond*500)
 			spell.AOEDot().Apply(sim)
+			hunter.AutoAttacks.CancelAutoSwing(sim)
 		},
 	})
 }

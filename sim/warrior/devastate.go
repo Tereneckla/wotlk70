@@ -15,12 +15,13 @@ func (warrior *Warrior) registerDevastateSpell() {
 	dynaThreatBonus := core.TernaryFloat64(hasGlyph, 0.1, 0.05)
 
 	weaponMulti := 1.2
+	overallMulti := core.TernaryFloat64(warrior.HasSetBonus(ItemSetWrynnsPlate, 2), 1.05, 1.00)
 
 	warrior.Devastate = warrior.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 30022},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
 			Cost:   15 - float64(warrior.Talents.FocusedRage) - float64(warrior.Talents.Puncture),
@@ -36,14 +37,16 @@ func (warrior *Warrior) registerDevastateSpell() {
 			return warrior.CanApplySunderAura(target)
 		},
 
-		BonusCritRating: 5 * core.CritRatingPerCritChance * float64(warrior.Talents.SwordAndBoard),
+		BonusCritRating: 5*core.CritRatingPerCritChance*float64(warrior.Talents.SwordAndBoard) +
+			core.TernaryFloat64(warrior.HasSetBonus(ItemSetSiegebreakerPlate, 2), 10*core.CritRatingPerCritChance, 0),
 
+		DamageMultiplier: overallMulti,
 		CritMultiplier:   warrior.critMultiplier(mh),
 		ThreatMultiplier: 1,
 		FlatThreatBonus:  flatThreatBonus,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			// Bonus 242 damage / stack of sunder. Counts stacks AFTER cast but only if stacks > 0.
+			// Bonus 134 damage / stack of sunder. Counts stacks AFTER cast but only if stacks > 0.
 			sunderBonus := 0.0
 			saStacks := warrior.SunderArmorAuras.Get(target).GetStacks()
 			if saStacks != 0 {
@@ -64,5 +67,7 @@ func (warrior *Warrior) registerDevastateSpell() {
 				spell.IssueRefund(sim)
 			}
 		},
+
+		RelatedAuras: []core.AuraArray{warrior.SunderArmorAuras},
 	})
 }

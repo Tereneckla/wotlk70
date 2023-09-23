@@ -4,6 +4,7 @@ package proto;
 option go_package = "./proto";
 
 import "api.proto";
+import "apl.proto";
 import "common.proto";
 import "paladin.proto";
 
@@ -38,6 +39,7 @@ message UINPC {
 // Contains all information about an Item needed by the UI.
 // Generally this will include everything needed by the sim, plus some
 // additional data for displaying / filtering.
+// Next tag: 26.
 message UIItem {
 	int32 id = 1;
 	string name = 2;
@@ -76,6 +78,14 @@ message UIItem {
 
 	repeated Suffix suffixes = 30;
 	Suffix suffix = 31;
+
+	enum FactionRestriction {
+		FACTION_RESTRICTION_UNSPECIFIED = 0;
+		FACTION_RESTRICTION_ALLIANCE_ONLY = 1;
+		FACTION_RESTRICTION_HORDE_ONLY = 2;
+	}
+
+	FactionRestriction faction_restriction = 25;
 }
 
 enum Expansion {
@@ -89,6 +99,8 @@ enum DungeonDifficulty {
 	DifficultyUnknown = 0;
 	DifficultyNormal = 1;
 	DifficultyHeroic = 2;
+	DifficultyTitanRuneAlpha = 7;
+	DifficultyTitanRuneBeta = 8;
 	DifficultyRaid10 = 3;
 	DifficultyRaid10H = 4;
 	DifficultyRaid25 = 5;
@@ -181,6 +193,8 @@ enum SourceFilterOption {
 	SourceQuest = 2;
 	SourceDungeon = 3;
 	SourceDungeonH = 4;
+	SourceDungeonTRA = 9;
+	SourceDungeonTRB = 10;
 	SourceRaid10 = 5;
 	SourceRaid10H = 6;
 	SourceRaid25 = 7;
@@ -201,12 +215,14 @@ enum RaidFilterOption {
 	RaidSunwellPlateau = 10;
 }
 
+// Next tag: 20.
 message DatabaseFilters {
 	repeated ArmorType armor_types = 1;
 	repeated WeaponType weapon_types = 2;
 	repeated RangedWeaponType ranged_weapon_types = 16;
 	repeated SourceFilterOption sources = 17;
 	repeated RaidFilterOption raids = 18;
+	UIItem.FactionRestriction faction_restriction = 19;
 
 	double min_mh_weapon_speed = 4;
 	double max_mh_weapon_speed = 5;
@@ -235,6 +251,7 @@ message SimSettings {
 	bool show_threat_metrics = 4;
 	bool show_healing_metrics = 7;
 	bool show_experimental = 5;
+	bool show_ep_values = 11;
 	string language = 9;
 	Faction faction = 6;
 	DatabaseFilters filters = 10;
@@ -245,7 +262,7 @@ message IndividualSimSettings {
 	SimSettings settings = 5;
 	RaidBuffs raid_buffs = 1;
 	Debuffs debuffs = 8;
-	repeated RaidTarget tanks = 7;
+	repeated UnitReference tanks = 7;
 	PartyBuffs party_buffs = 2;
 	Player player = 3;
 	Encounter encounter = 4;
@@ -253,6 +270,10 @@ message IndividualSimSettings {
 	// Deprecate after 2 months (on 2023/02/13)
 	repeated double ep_weights = 6;
 	UnitStats ep_weights_stats = 10;
+	repeated double ep_ratios = 11;
+	Stat dps_ref_stat = 12;
+	Stat heal_ref_stat = 13;
+	Stat tank_ref_stat = 14;
 }
 
 // Local storage data for gear settings.
@@ -273,11 +294,24 @@ message SavedSettings {
 	Race race = 5;
 	Cooldowns cooldowns = 6;
 	string rotation_json = 8;
+	repeated Profession professions = 9;
+
+	int32 reaction_time_ms = 10;
+	int32 channel_clip_delay_ms = 14;
+	bool in_front_of_target = 11;
+	double distance_from_target = 12;
+	HealingModel healing_model = 13;
 }
 
 message SavedTalents {
 	string talents_string = 1;
 	Glyphs glyphs = 2;
+}
+
+message SavedRotation {
+	APLRotation rotation = 1;
+	string spec_rotation_options_json = 2;
+	Cooldowns cooldowns = 3;
 }
 
 message BlessingsAssignment {

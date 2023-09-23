@@ -39,11 +39,11 @@ export const paladinGlyphsConfig: GlyphsConfig = {
 			description: 'Reduces the mana cost of your Crusader Strike ability by 20%.',
 			iconUrl: 'https://wow.zamimg.com/images/wow/icons/large/spell_holy_crusaderstrike.jpg',
 		},
-		/*[PaladinMajorGlyph.GlyphOfDivinePlea]: {
-			name: 'Glyph of Divine Plea',
-			description: 'While Divine Plea is active, you take 3% reduced damage from all sources.',
-			iconUrl: 'https://wow.zamimg.com/images/wow/icons/large/spell_holy_aspiration.jpg',
-		},*/
+		// [PaladinMajorGlyph.GlyphOfDivinePlea]: {
+		// 	name: 'Glyph of Divine Plea',
+		// 	description: 'While Divine Plea is active, you take 3% reduced damage from all sources.',
+		// 	iconUrl: 'https://wow.zamimg.com/images/wow/icons/large/spell_holy_aspiration.jpg',
+		// },
 		[PaladinMajorGlyph.GlyphOfDivineStorm]: {
 			name: 'Glyph of Divine Storm',
 			description: 'Your Divine Storm now heals for an additional 15% of the damage it causes.',
@@ -149,11 +149,11 @@ export const paladinGlyphsConfig: GlyphsConfig = {
 			description: 'Reduces the casting time of your Turn Evil spell by 100%, but increases the cooldown by 8 sec.',
 			iconUrl: 'https://wow.zamimg.com/images/wow/icons/large/spell_holy_turnundead.jpg',
 		},
-		[PaladinMajorGlyph.GlyphOfReckoning]: {
-			name: 'Glyph of Reckoning',
-			description: 'Your Hand of Reckoning spell no longer taunts the target and can deal damage to untauntable targets.',
-			iconUrl: 'https://wow.zamimg.com/images/wow/icons/large/spell_holy_unyieldingfaith.jpg',
-		},
+		// [PaladinMajorGlyph.GlyphOfReckoning]: {
+		// 	name: 'Glyph of Reckoning',
+		// 	description: 'Your Hand of Reckoning spell no longer taunts the target and can deal damage to untauntable targets.',
+		// 	iconUrl: 'https://wow.zamimg.com/images/wow/icons/large/spell_holy_unyieldingfaith.jpg',
+		// },
 	},
 	minorGlyphs: {
 		[PaladinMinorGlyph.GlyphOfBlessingOfKings]: {

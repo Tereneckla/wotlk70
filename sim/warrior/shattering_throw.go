@@ -1,13 +1,16 @@
 package warrior
-
 /*
 import (
 	"time"
 
 	"github.com/Tereneckla/wotlk/sim/core"
+	"github.com/Tereneckla/wotlk/sim/core/proto"
 )
 
 func (warrior *Warrior) RegisterShatteringThrowCD() {
+	hasGlyph := warrior.HasMinorGlyph(proto.WarriorMinorGlyph_GlyphOfShatteringThrow)
+	shattDebuffs := warrior.NewEnemyAuraArray(core.ShatteringThrowAura)
+
 	ShatteringThrowSpell := warrior.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 64382},
 		SpellSchool: core.SpellSchoolPhysical,
@@ -20,26 +23,26 @@ func (warrior *Warrior) RegisterShatteringThrowCD() {
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
 				GCD:      core.GCDDefault,
-				CastTime: time.Millisecond * 1500,
+				CastTime: core.TernaryDuration(hasGlyph, time.Duration(0), time.Millisecond*1500),
 			},
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
 				Duration: time.Minute * 5,
 			},
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
-				if warrior.AutoAttacks.MainhandSwingSpeed() == warrior.AutoAttacks.OffhandSwingSpeed() {
+				if warrior.AutoAttacks.MH.SwingSpeed == warrior.AutoAttacks.OH.SwingSpeed {
 					warrior.AutoAttacks.StopMeleeUntil(sim, sim.CurrentTime+cast.CastTime, true)
 				} else {
 					warrior.AutoAttacks.StopMeleeUntil(sim, sim.CurrentTime+cast.CastTime, false)
 				}
-				if !warrior.StanceMatches(BattleStance) && warrior.BattleStance.IsReady(sim) {
+				if !hasGlyph && !warrior.StanceMatches(BattleStance) && warrior.BattleStance.IsReady(sim) {
 					warrior.BattleStance.Cast(sim, nil)
 				}
 			},
 			IgnoreHaste: true,
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warrior.StanceMatches(BattleStance) || warrior.BattleStance.IsReady(sim)
+			return warrior.StanceMatches(BattleStance) || warrior.BattleStance.IsReady(sim) || hasGlyph
 		},
 
 		DamageMultiplier: 1,
@@ -47,13 +50,14 @@ func (warrior *Warrior) RegisterShatteringThrowCD() {
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-
 			baseDamage := 0.5 * spell.MeleeAttackPower()
 			result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialNoBlockDodgeParry)
 			if result.Landed() {
-				core.ShatteringThrowAura(target).Activate(sim)
+				shattDebuffs.Get(target).Activate(sim)
 			}
 		},
+
+		RelatedAuras: []core.AuraArray{shattDebuffs},
 	})
 
 	warrior.AddMajorCooldown(core.MajorCooldown{

@@ -12,13 +12,14 @@ import (
 func (paladin *Paladin) registerConsecrationSpell() {
 	// TODO: Properly implement max rank consecration.
 	bonusSpellPower := 0 +
-		core.TernaryFloat64(paladin.Equip[proto.ItemSlot_ItemSlotRanged].ID == 27917, 47, 0)
+		core.TernaryFloat64(paladin.Ranged().ID == 27917, 47*0.8, 0) +
+		core.TernaryFloat64(paladin.Ranged().ID == 40337, 141, 0) // Libram of Resurgence
 
 	paladin.Consecration = paladin.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 27173},
 		SpellSchool: core.SpellSchoolHoly,
-		ProcMask:    core.ProcMaskEmpty,
-		Flags:       core.SpellFlagMeleeMetrics,
+		ProcMask:    core.ProcMaskSpellDamage,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.22,
@@ -56,8 +57,8 @@ func (paladin *Paladin) registerConsecrationSpell() {
 				dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(dot.Spell.Unit.AttackTables[target.UnitIndex])
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				for _, aoeTarget := range sim.Encounter.Targets {
-					dot.CalcAndDealPeriodicSnapshotDamage(sim, &aoeTarget.Unit, dot.Spell.OutcomeMagicHit)
+				for _, aoeTarget := range sim.Encounter.TargetUnits {
+					dot.CalcAndDealPeriodicSnapshotDamage(sim, aoeTarget, dot.Spell.OutcomeMagicHit)
 				}
 			},
 		},

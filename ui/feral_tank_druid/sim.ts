@@ -2,19 +2,11 @@ import { RaidBuffs } from '../core/proto/common.js';
 import { PartyBuffs } from '../core/proto/common.js';
 import { IndividualBuffs } from '../core/proto/common.js';
 import { Debuffs } from '../core/proto/common.js';
-import { Class } from '../core/proto/common.js';
-import { Consumes } from '../core/proto/common.js';
-import { Encounter } from '../core/proto/common.js';
-import { ItemSlot } from '../core/proto/common.js';
-import { MobType } from '../core/proto/common.js';
-import { RaidTarget } from '../core/proto/common.js';
 import { Spec } from '../core/proto/common.js';
-import { NO_TARGET } from '../core/proto_utils/utils.js';
 import { Stat, PseudoStat } from '../core/proto/common.js';
 import { TristateEffect } from '../core/proto/common.js'
 import { Stats } from '../core/proto_utils/stats.js';
 import { Player } from '../core/player.js';
-import { Sim } from '../core/sim.js';
 import { IndividualSimUI } from '../core/individual_sim_ui.js';
 import { TypedEvent } from '../core/typed_event.js';
 
@@ -52,10 +44,13 @@ export class FeralTankDruidSimUI extends IndividualSimUI<Spec.SpecFeralTankDruid
 				Stat.StatMeleeCrit,
 				Stat.StatMeleeHaste,
 				Stat.StatArmor,
+				Stat.StatBonusArmor,
 				Stat.StatArmorPenetration,
 				Stat.StatDefense,
 				Stat.StatDodge,
-				Stat.StatResilience,
+				Stat.StatNatureResistance,
+				Stat.StatShadowResistance,
+				Stat.StatFrostResistance,
 			],
 			epPseudoStats: [
 				PseudoStat.PseudoStatMainHandDps,
@@ -66,6 +61,7 @@ export class FeralTankDruidSimUI extends IndividualSimUI<Spec.SpecFeralTankDruid
 			displayStats: [
 				Stat.StatHealth,
 				Stat.StatArmor,
+				Stat.StatBonusArmor,
 				Stat.StatStamina,
 				Stat.StatStrength,
 				Stat.StatAgility,
@@ -79,6 +75,9 @@ export class FeralTankDruidSimUI extends IndividualSimUI<Spec.SpecFeralTankDruid
 				Stat.StatDodge,
 				Stat.StatSpellHit,
 				Stat.StatSpellCrit,
+				Stat.StatNatureResistance,
+				Stat.StatShadowResistance,
+				Stat.StatFrostResistance,
 			],
 
 			defaults: {
@@ -87,6 +86,7 @@ export class FeralTankDruidSimUI extends IndividualSimUI<Spec.SpecFeralTankDruid
 				// Default EP weights for sorting gear in the gear picker.
 				epWeights: Stats.fromMap({
 					[Stat.StatArmor]: 3.5665,
+					[Stat.StatBonusArmor]: 0.5187,
 					[Stat.StatStamina]: 7.3021,
 					[Stat.StatStrength]: 2.3786,
 					[Stat.StatAgility]: 4.4974,
@@ -150,11 +150,11 @@ export class FeralTankDruidSimUI extends IndividualSimUI<Spec.SpecFeralTankDruid
 			rotationInputs: DruidInputs.FeralTankDruidRotationConfig,
 			// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
 			includeBuffDebuffInputs: [
-					IconInputs.HealthBuff,
-					IconInputs.SpellCritBuff,
-					IconInputs.SpellCritDebuff,
-					IconInputs.SpellHitDebuff,
-					IconInputs.SpellDamageDebuff,
+				IconInputs.HealthBuff,
+				IconInputs.SpellCritBuff,
+				IconInputs.SpellCritDebuff,
+				IconInputs.SpellHitDebuff,
+				IconInputs.SpellDamageDebuff,
 			],
 			excludeBuffDebuffInputs: [
 			],
@@ -164,6 +164,7 @@ export class FeralTankDruidSimUI extends IndividualSimUI<Spec.SpecFeralTankDruid
 					OtherInputs.TankAssignment,
 					OtherInputs.IncomingHps,
 					OtherInputs.HealingCadence,
+					OtherInputs.HealingCadenceVariation,
 					OtherInputs.BurstWindow,
 					OtherInputs.InspirationUptime,
 					OtherInputs.HpPercentForDefensives,
@@ -180,6 +181,10 @@ export class FeralTankDruidSimUI extends IndividualSimUI<Spec.SpecFeralTankDruid
 				// Preset talents that the user can quickly select.
 				talents: [
 					Presets.StandardTalents,
+				],
+				// Preset rotations that the user can quickly select.
+				rotations: [
+					Presets.ROTATION_DEFAULT,
 				],
 				// Preset gear configurations that the user can quickly select.
 				gear: [

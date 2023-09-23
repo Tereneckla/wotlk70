@@ -24,7 +24,7 @@ func (druid *Druid) registerSurvivalInstinctsCD() {
 	druid.SurvivalInstinctsAura = druid.RegisterAura(core.Aura{
 		Label:    "Survival Instincts",
 		ActionID: actionID,
-		Duration: time.Second * 20,
+		Duration: time.Second*20 + core.TernaryDuration(druid.HasSetBonus(ItemSetNightsongBattlegear, 4), 8*time.Second, 0),
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			bonusHealth = druid.MaxHealth() * healthFac
 			druid.AddStatsDynamic(sim, stats.Stats{stats.Health: bonusHealth})
@@ -36,7 +36,7 @@ func (druid *Druid) registerSurvivalInstinctsCD() {
 		},
 	})
 
-	druid.SurvivalInstincts = druid.RegisterSpell(core.SpellConfig{
+	druid.SurvivalInstincts = druid.RegisterSpell(Cat|Bear, core.SpellConfig{
 		ActionID: actionID,
 		Flags:    SpellFlagOmenTrigger,
 		Cast: core.CastConfig{
@@ -45,16 +45,13 @@ func (druid *Druid) registerSurvivalInstinctsCD() {
 				Duration: cd,
 			},
 		},
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return druid.InForm(Cat | Bear)
-		},
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			druid.SurvivalInstinctsAura.Activate(sim)
 		},
 	})
 
 	druid.AddMajorCooldown(core.MajorCooldown{
-		Spell: druid.SurvivalInstincts,
+		Spell: druid.SurvivalInstincts.Spell,
 		Type:  core.CooldownTypeSurvival,
 	})
 }

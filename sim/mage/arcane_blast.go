@@ -14,7 +14,7 @@ func (mage *Mage) registerArcaneBlastSpell() {
 	abAuraMultiplierPerStack := core.TernaryFloat64(mage.HasMajorGlyph(proto.MageMajorGlyph_GlyphOfArcaneBlast), .18, .15)
 	mage.ArcaneBlastAura = mage.GetOrRegisterAura(core.Aura{
 		Label:     "Arcane Blast",
-		ActionID:  core.ActionID{SpellID: 36032},
+		ActionID:  core.ActionID{SpellID: 30451},
 		Duration:  time.Second * 8,
 		MaxStacks: 4,
 		OnStacksChange: func(aura *core.Aura, sim *core.Simulation, oldStacks int32, newStacks int32) {
@@ -28,18 +28,18 @@ func (mage *Mage) registerArcaneBlastSpell() {
 		},
 	})
 
-	actionID := core.ActionID{SpellID: 30451}
+	actionID := core.ActionID{SpellID: 36032}
 	spellCoeff := 2.5/3.5 + .03*float64(mage.Talents.ArcaneEmpowerment)
 
 	mage.ArcaneBlast = mage.RegisterSpell(core.SpellConfig{
 		ActionID:    actionID,
 		SpellSchool: core.SpellSchoolArcane,
 		ProcMask:    core.ProcMaskSpellDamage,
-		Flags:       SpellFlagMage | BarrageSpells,
+		Flags:       SpellFlagMage | BarrageSpells | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.07,
-			Multiplier: (1 - .01*float64(mage.Talents.ArcaneFocus)) * core.TernaryFloat64(mage.HasSetBonus(ItemSetTirisfalRegalia, 2), 1.05, 1),
+			Multiplier: 1 - .01*float64(mage.Talents.ArcaneFocus),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -50,9 +50,10 @@ func (mage *Mage) registerArcaneBlastSpell() {
 
 		BonusHitRating: float64(mage.Talents.ArcaneFocus) * core.SpellHitRatingPerHitChance,
 		BonusCritRating: 0 +
-			float64(mage.Talents.Incineration)*2*core.CritRatingPerCritChance,
+			float64(mage.Talents.Incineration)*2*core.CritRatingPerCritChance +
+			core.TernaryFloat64(mage.HasSetBonus(ItemSetKhadgarsRegalia, 4), 5*core.CritRatingPerCritChance, 0),
 		DamageMultiplier: 1 *
-			(1 + .04*float64(mage.Talents.TormentTheWeak)) * core.TernaryFloat64(mage.HasSetBonus(ItemSetTirisfalRegalia, 2), 1.05, 1),
+			(1 + .04*float64(mage.Talents.TormentTheWeak)),
 		DamageMultiplierAdditive: 1 +
 			.02*float64(mage.Talents.SpellImpact),
 		CritMultiplier:   mage.SpellCritMultiplier(1, mage.bonusCritDamage),

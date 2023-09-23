@@ -1,14 +1,12 @@
-import { Conjured, Consumes, WeaponImbue } from '../core/proto/common.js';
+import { Consumes } from '../core/proto/common.js';
 import { CustomRotation, CustomSpell } from '../core/proto/common.js';
 import { EquipmentSpec } from '../core/proto/common.js';
 import { Flask } from '../core/proto/common.js';
 import { Food } from '../core/proto/common.js';
-import { Glyphs } from '../core/proto/common.js';
-import { ItemSpec } from '../core/proto/common.js';
 import { Potions } from '../core/proto/common.js';
 import { Spec } from '../core/proto/common.js';
-import { Faction } from '../core/proto/common.js';
-import { SavedTalents } from '../core/proto/ui.js';
+import { SavedRotation, SavedTalents } from '../core/proto/ui.js';
+import { APLRotation } from '../core/proto/apl.js';
 import { Player } from '../core/player.js';
 
 import {
@@ -21,7 +19,6 @@ import {
 	ProtectionPaladin_Options as ProtectionPaladinOptions,
 } from '../core/proto/paladin.js';
 
-import * as Gems from '../core/proto_utils/gems.js';
 import * as Tooltips from '../core/constants/tooltips.js';
 
 // Preset options for this spec.
@@ -34,11 +31,11 @@ import * as Tooltips from '../core/constants/tooltips.js';
 export const GenericAoeTalents = {
 	name: 'Baseline Example',
 	data: SavedTalents.create({
-		talentsString: '-05005135200132311333312321-5003',
+		talentsString: '-05005135200132311333312321-511302012003',
 		glyphs: {
 			major1: PaladinMajorGlyph.GlyphOfSealOfVengeance,
 			major2: PaladinMajorGlyph.GlyphOfRighteousDefense,
-			major3: PaladinMajorGlyph.PaladinMajorGlyphNone,
+			major3: PaladinMajorGlyph.GlyphOfDivinePlea,
 			minor1: PaladinMinorGlyph.GlyphOfSenseUndead,
 			minor2: PaladinMinorGlyph.GlyphOfLayOnHands,
 			minor3: PaladinMinorGlyph.GlyphOfBlessingOfKings
@@ -65,17 +62,43 @@ export const DefaultRotation = ProtectionPaladinRotation.create({
 	}),
 });
 
+export const ROTATION_DEFAULT = {
+	name: 'Default (969)',
+	rotation: SavedRotation.create({
+		specRotationOptionsJson: ProtectionPaladinRotation.toJsonString(ProtectionPaladinRotation.create({
+		})),
+		rotation: APLRotation.fromJsonString(`{
+			"type": "TypeAPL",
+			"prepullActions": [
+				{"action":{"castSpell":{"spellId":{"spellId":48952}}},"doAtValue":{"const":{"val":"-3s"}}},
+				{"action":{"castSpell":{"spellId":{"spellId":54428}}},"doAtValue":{"const":{"val":"-1500ms"}}},
+				{"action":{"castSpell":{"spellId":{"otherId":"OtherActionPotion"}}},"doAtValue":{"const":{"val":"-1s"}}}
+			],
+			"priorityList": [
+				{"action":{"autocastOtherCooldowns":{}}},
+				{"action":{"condition":{"cmp":{"op":"OpLe","lhs":{"spellTimeToReady":{"spellId":{"spellId":53595}}},"rhs":{"const":{"val":"3s"}}}},"castSpell":{"spellId":{"spellId":61411}}}},
+				{"action":{"condition":{"cmp":{"op":"OpLe","lhs":{"spellTimeToReady":{"spellId":{"spellId":61411}}},"rhs":{"const":{"val":"3s"}}}},"castSpell":{"spellId":{"spellId":53595}}}},
+				{"action":{"castSpell":{"spellId":{"spellId":48806}}}},
+				{"action":{"condition":{"and":{"vals":[{"gcdIsReady":{}},{"not":{"val":{"spellIsReady":{"spellId":{"spellId":61411}}}}},{"not":{"val":{"spellIsReady":{"spellId":{"spellId":53595}}}}},{"cmp":{"op":"OpLe","lhs":{"min":{"vals":[{"spellTimeToReady":{"spellId":{"spellId":61411}}},{"spellTimeToReady":{"spellId":{"spellId":53595}}}]}},"rhs":{"const":{"val":"350ms"}}}}]}},"wait":{"duration":{"min":{"vals":[{"spellTimeToReady":{"spellId":{"spellId":61411}}},{"spellTimeToReady":{"spellId":{"spellId":53595}}}]}}}}},
+				{"action":{"castSpell":{"spellId":{"spellId":48819}}}},
+				{"action":{"castSpell":{"spellId":{"spellId":48952}}}},
+				{"action":{"castSpell":{"spellId":{"spellId":53408}}}},
+				{"action":{"condition":{"and":{"vals":[{"gcdIsReady":{}},{"not":{"val":{"spellIsReady":{"spellId":{"spellId":61411}}}}},{"not":{"val":{"spellIsReady":{"spellId":{"spellId":53595}}}}},{"not":{"val":{"spellIsReady":{"spellId":{"spellId":48819}}}}},{"not":{"val":{"spellIsReady":{"spellId":{"spellId":48952}}}}},{"not":{"val":{"spellIsReady":{"spellId":{"spellId":53408}}}}}]}},"wait":{"duration":{"min":{"vals":[{"spellTimeToReady":{"spellId":{"spellId":61411}}},{"spellTimeToReady":{"spellId":{"spellId":53595}}},{"spellTimeToReady":{"spellId":{"spellId":48819}}},{"spellTimeToReady":{"spellId":{"spellId":48952}}},{"spellTimeToReady":{"spellId":{"spellId":53408}}}]}}}}}
+			]
+		}`),
+	}),
+};
+
 export const DefaultOptions = ProtectionPaladinOptions.create({
 	aura: PaladinAura.RetributionAura,
 	judgement: PaladinJudgement.JudgementOfWisdom,
 });
 
 export const DefaultConsumes = Consumes.create({
-	flask: Flask.FlaskOfFortification,
-	food: Food.FoodFishermansFeast,
-	defaultPotion: Potions.IronshieldPotion,
-	prepopPotion:  Potions.IronshieldPotion,
-	weaponMain: WeaponImbue.ImbueSuperiorWizardOil,
+	flask: Flask.FlaskOfStoneblood,
+	food: Food.FoodDragonfinFilet,
+	defaultPotion: Potions.IndestructiblePotion,
+	prepopPotion: Potions.IndestructiblePotion,
 });
 
 export const PRERAID_PRESET = {
@@ -83,97 +106,23 @@ export const PRERAID_PRESET = {
 	tooltip: Tooltips.BASIC_BIS_DISCLAIMER,
 	enableWhen: (player: Player<Spec.SpecProtectionPaladin>) => true,
 	gear: EquipmentSpec.fromJsonString(`{"items": [
-		{
-			"id": 42549,
-			"enchant": 3818,
-			"gems": [
-				41396,
-				49110
-			]
-		},
-		{
-			"id": 40679
-		},
-		{
-			"id": 37635,
-			"enchant": 3852,
-			"gems": [
-				40015
-			]
-		},
-		{
-			"id": 44188,
-			"enchant": 3605
-		},
-		{
-			"id": 39638,
-			"enchant": 1953,
-			"gems": [
-				36767,
-				40089
-			]
-		},
-		{
-			"id": 37682,
-			"enchant": 3850,
-			"gems": [
-				0
-			]
-		},
-		{
-			"id": 39639,
-			"enchant": 3860,
-			"gems": [
-				36767,
-				0
-			]
-		},
-		{
-			"id": 37379,
-			"enchant": 3601,
-			"gems": [
-				40022,
-				40008
-			]
-		},
-		{
-			"id": 37292,
-			"enchant": 3822,
-			"gems": [
-				40089
-			]
-		},
-		{
-			"id": 44243,
-			"enchant": 3606
-		},
-		{
-			"id": 37186
-		},
-		{
-			"id": 37257
-		},
-		{
-			"id": 44063,
-			"gems": [
-				36767,
-				40015
-			]
-		},
-		{
-			"id": 37220
-		},
-		{
-			"id": 37179,
-			"enchant": 2673
-		},
-		{
-			"id": 43085,
-			"enchant": 3849
-		},
-		{
-			"id": 40707
-		}
+		{"id":42549,"enchant":3818,"gems":[41396,49110]},
+		{"id":40679},
+		{"id":37635,"enchant":3852,"gems":[40015]},
+		{"id":44188,"enchant":3605},
+		{"id":39638,"enchant":1953,"gems":[36767,40089]},
+		{"id":37682,"enchant":3850,"gems":[0]},
+		{"id":39639,"enchant":3860,"gems":[36767,0]},
+		{"id":37379,"enchant":3601,"gems":[40022,40008]},
+		{"id":37292,"enchant":3822,"gems":[40089]},
+		{"id":44243,"enchant":3606},
+		{"id":37186},
+		{"id":37257},
+		{"id":44063,"gems":[36767,40015]},
+		{"id":37220},
+		{"id":37179,"enchant":2673},
+		{"id":43085,"enchant":3849},
+		{"id":40707}
 	]}`),
 };
 
@@ -182,97 +131,23 @@ export const P1_PRESET = {
 	tooltip: Tooltips.BASIC_BIS_DISCLAIMER,
 	enableWhen: (player: Player<Spec.SpecProtectionPaladin>) => true,
 	gear: EquipmentSpec.fromJsonString(`{"items": [
-		{
-			"id": 40581,
-			"enchant": 3818,
-			"gems": [
-				41380,
-				36767
-			]
-		},
-		{
-			"id": 40387
-		},
-		{
-			"id": 40584,
-			"enchant": 3852,
-			"gems": [
-				40008
-			]
-		},
-		{
-			"id": 40410,
-			"enchant": 3605
-		},
-		{
-			"id": 40579,
-			"enchant": 3832,
-			"gems": [
-				36767,
-				40022
-			]
-		},
-		{
-			"id": 39764,
-			"enchant": 3850,
-			"gems": [
-				0
-			]
-		},
-		{
-			"id": 40580,
-			"enchant": 3860,
-			"gems": [
-				40008,
-				0
-			]
-		},
-		{
-			"id": 39759,
-			"enchant": 3601,
-			"gems": [
-				40008,
-				40008
-			]
-		},
-		{
-			"id": 40589,
-			"enchant": 3822
-		},
-		{
-			"id": 39717,
-			"enchant": 3606,
-			"gems": [
-				40089
-			]
-		},
-		{
-			"id": 40718
-		},
-		{
-			"id": 40107
-		},
-		{
-			"id": 44063,
-			"gems": [
-				36767,
-				40089
-			]
-		},
-		{
-			"id": 37220
-		},
-		{
-			"id": 40345,
-			"enchant": 3788
-		},
-		{
-			"id": 40400,
-			"enchant": 3849
-		},
-		{
-			"id": 40707
-		}
+		{"id":40581,"enchant":3818,"gems":[41380,36767]},
+		{"id":40387},
+		{"id":40584,"enchant":3852,"gems":[40008]},
+		{"id":40410,"enchant":3605},
+		{"id":40579,"enchant":3832,"gems":[36767,40022]},
+		{"id":39764,"enchant":3850,"gems":[0]},
+		{"id":40580,"enchant":3860,"gems":[40008,0]},
+		{"id":39759,"enchant":3601,"gems":[40008,40008]},
+		{"id":40589,"enchant":3822},
+		{"id":39717,"enchant":3606,"gems":[40089]},
+		{"id":40718},
+		{"id":40107},
+		{"id":44063,"gems":[36767,40089]},
+		{"id":37220},
+		{"id":40345,"enchant":3788},
+		{"id":40400,"enchant":3849},
+		{"id":40707}
 	]}`),
 };
 
@@ -282,117 +157,26 @@ export const P2_PRESET = {
 	enableWhen: (player: Player<Spec.SpecProtectionPaladin>) => true,
 	gear: EquipmentSpec.fromJsonString(`{
       "items": [
-        {
-          "id": 46175,
-          "enchant": 3818,
-          "gems": [
-            41380,
-            40088
-          ]
-        },
-        {
-          "id": 45485,
-          "gems": [
-            40088
-          ]
-        },
-        {
-          "id": 46177,
-          "enchant": 3852,
-          "gems": [
-            40034
-          ]
-        },
-        {
-          "id": 45496,
-          "enchant": 3605,
-          "gems": [
-            40034
-          ]
-        },
-        {
-          "id": 46039,
-          "enchant": 3832,
-          "gems": [
-            36767,
-            36767
-          ]
-        },
-        {
-          "id": 45111,
-          "enchant": 3850,
-          "gems": [
-            0
-          ]
-        },
-        {
-          "id": 45487,
-          "enchant": 3860,
-          "gems": [
-            40008,
-            40008,
-            0
-          ]
-        },
-        {
-          "id": 45825,
-          "enchant": 3601,
-          "gems": [
-            40008
-          ]
-        },
-        {
-          "id": 45594,
-          "enchant": 3822,
-          "gems": [
-            40034,
-            45880,
-            40088
-          ]
-        },
-        {
-          "id": 45988,
-          "enchant": 3606,
-          "gems": [
-            40008,
-            40008
-          ]
-        },
-        {
-          "id": 45471,
-          "gems": [
-            40088
-          ]
-        },
-        {
-          "id": 45326
-        },
-        {
-          "id": 45158
-        },
-        {
-          "id": 46021
-        },
-        {
-          "id": 45947,
-          "enchant": 3788,
-          "gems": [
-            40088
-          ]
-        },
-        {
-          "id": 45587,
-          "enchant": 3849,
-          "gems": [
-            36767
-          ]
-        },
-        {
-          "id": 45145
-        }
+        {"id":46175,"enchant":3818,"gems":[41380,40088]},
+        {"id":45485,"gems":[40088]},
+        {"id":46177,"enchant":3852,"gems":[40034]},
+        {"id":45496,"enchant":3605,"gems":[40034]},
+        {"id":46039,"enchant":3832,"gems":[36767,36767]},
+        {"id":45111,"enchant":3850,"gems":[0]},
+        {"id":45487,"enchant":3860,"gems":[40008,40008,0]},
+        {"id":45825,"enchant":3601,"gems":[40008]},
+        {"id":45594,"enchant":3822,"gems":[40034,45880,40088]},
+        {"id":45988,"enchant":3606,"gems":[40008,40008]},
+        {"id":45471,"gems":[40088]},
+        {"id":45326},
+        {"id":45158},
+        {"id":46021},
+        {"id":45947,"enchant":3788,"gems":[40088]},
+        {"id":45587,"enchant":3849,"gems":[36767]},
+        {"id":45145}
       ]
     }`),
 };
 
 
-	
+

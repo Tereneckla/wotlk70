@@ -1,7 +1,6 @@
 package mage
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/Tereneckla/wotlk/sim/core"
@@ -9,7 +8,6 @@ import (
 
 // If two spells proc Ignite at almost exactly the same time, the latter
 // overwrites the former.
-const IgniteMunchWindow = time.Millisecond * 10
 const IgniteTicks = 2
 
 func (mage *Mage) applyIgnite() {
@@ -44,8 +42,8 @@ func (mage *Mage) applyIgnite() {
 	mage.Ignite = mage.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 12654},
 		SpellSchool: core.SpellSchoolFire,
-		ProcMask:    core.ProcMaskEmpty,
-		Flags:       SpellFlagMage | core.SpellFlagNoOnCastComplete | core.SpellFlagIgnoreModifiers,
+		ProcMask:    core.ProcMaskProc,
+		Flags:       SpellFlagMage | core.SpellFlagIgnoreModifiers,
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1 - 0.1*float64(mage.Talents.BurningSoul),
@@ -62,8 +60,8 @@ func (mage *Mage) applyIgnite() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			spell.SpellMetrics[target.UnitIndex].Hits++
 			spell.Dot(target).ApplyOrReset(sim)
-			spell.CalcAndDealOutcome(sim, target, spell.OutcomeAlwaysHit)
 		},
 	})
 }

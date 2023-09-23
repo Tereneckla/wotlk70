@@ -152,6 +152,7 @@ export const statOrder: Array<Stat> = [
 	Stat.StatHealth,
 	Stat.StatMana,
 	Stat.StatArmor,
+	Stat.StatBonusArmor,
 	Stat.StatStamina,
 	Stat.StatStrength,
 	Stat.StatAgility,
@@ -183,6 +184,11 @@ export const statOrder: Array<Stat> = [
 	Stat.StatFrostResistance,
 	Stat.StatNatureResistance,
 	Stat.StatShadowResistance,
+	Stat.StatRunicPower,
+	Stat.StatBloodRune,
+	Stat.StatFrostRune,
+	Stat.StatUnholyRune,
+	Stat.StatDeathRune,
 ];
 
 export const statNames: Record<Stat, string> = {
@@ -221,6 +227,11 @@ export const statNames: Record<Stat, string> = {
 	[Stat.StatNatureResistance]: 'Nature Resistance',
 	[Stat.StatShadowResistance]: 'Shadow Resistance',
 	[Stat.StatBonusArmor]: 'Bonus Armor',
+	[Stat.StatRunicPower]: 'Runic Power',
+	[Stat.StatBloodRune]: 'Blood Rune',
+	[Stat.StatFrostRune]: 'Frost Rune',
+	[Stat.StatUnholyRune]: 'Unholy Rune',
+	[Stat.StatDeathRune]: 'Death Rune',
 };
 
 export const pseudoStatOrder: Array<PseudoStat> = [
@@ -312,14 +323,14 @@ export const sourceNames: Record<SourceFilterOption, string> = {
 	[SourceFilterOption.SourceQuest]: 'Quest',
 	[SourceFilterOption.SourceDungeon]: 'Dungeon',
 	[SourceFilterOption.SourceDungeonH]: 'Dungeon (H)',
+	[SourceFilterOption.SourceDungeonTRA]: 'Dungeon (TRA)',
+	[SourceFilterOption.SourceDungeonTRB]: 'Dungeon (TRB)',
 	[SourceFilterOption.SourceRaid10]: 'Raid (10N)',
 	[SourceFilterOption.SourceRaid10H]: 'Raid (10H)',
 	[SourceFilterOption.SourceRaid25]: 'Raid (25N)',
 	[SourceFilterOption.SourceRaid25H]: 'Raid (25H)',
 };
 export const raidNames: Record<RaidFilterOption, string> = {
-	[RaidFilterOption.RaidUnknown]: 'Unknown',
-	[RaidFilterOption.RaidVanilla]: 'Vanilla',
 	[RaidFilterOption.RaidKarazhan]: 'Karazhan',
 	[RaidFilterOption.RaidGruul]: 'Gruul',
 	[RaidFilterOption.RaidMagtheridon]: 'Magtheridon',
@@ -335,6 +346,8 @@ export const difficultyNames: Record<DungeonDifficulty, string> = {
 	[DungeonDifficulty.DifficultyUnknown]: 'Unknown',
 	[DungeonDifficulty.DifficultyNormal]: 'N',
 	[DungeonDifficulty.DifficultyHeroic]: 'H',
+	[DungeonDifficulty.DifficultyTitanRuneAlpha]: 'TRA',
+	[DungeonDifficulty.DifficultyTitanRuneBeta]: 'TRB',
 	[DungeonDifficulty.DifficultyRaid10]: '10N',
 	[DungeonDifficulty.DifficultyRaid10H]: '10H',
 	[DungeonDifficulty.DifficultyRaid25]: '25N',

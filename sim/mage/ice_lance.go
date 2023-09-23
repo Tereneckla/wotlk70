@@ -6,10 +6,10 @@ import (
 
 func (mage *Mage) registerIceLanceSpell() {
 	mage.IceLance = mage.RegisterSpell(core.SpellConfig{
-		ActionID:     core.ActionID{SpellID: 42914},
+		ActionID:     core.ActionID{SpellID: 30455},
 		SpellSchool:  core.SpellSchoolFrost,
 		ProcMask:     core.ProcMaskSpellDamage,
-		Flags:        SpellFlagMage,
+		Flags:        SpellFlagMage | core.SpellFlagAPL,
 		MissileSpeed: 38,
 
 		ManaCost: core.ManaCostOptions{

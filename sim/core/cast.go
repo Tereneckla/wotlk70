@@ -59,6 +59,7 @@ type Cast struct {
 func (cast Cast) EffectiveTime() time.Duration {
 	gcd := cast.GCD
 	if cast.GCD != 0 {
+		// TODO: isn't this wrong for spells like shadowfury, that have a reduced GCD?
 		gcd = MaxDuration(GCDMin, gcd)
 	}
 	fullCastTime := cast.CastTime + cast.ChannelTime + cast.AfterCastDelay
@@ -115,7 +116,7 @@ func (spell *Spell) wrapCastFuncInit(config CastConfig, onCastComplete CastSucce
 	}
 }
 
-func (spell *Spell) wrapCastFuncExtraCond(config CastConfig, onCastComplete CastSuccessFunc) CastSuccessFunc {
+func (spell *Spell) wrapCastFuncExtraCond(_ CastConfig, onCastComplete CastSuccessFunc) CastSuccessFunc {
 	if spell.ExtraCastCondition == nil {
 		return onCastComplete
 	} else {
@@ -132,7 +133,7 @@ func (spell *Spell) wrapCastFuncExtraCond(config CastConfig, onCastComplete Cast
 	}
 }
 
-func (spell *Spell) wrapCastFuncCDsReady(config CastConfig, onCastComplete CastSuccessFunc) CastSuccessFunc {
+func (spell *Spell) wrapCastFuncCDsReady(_ CastConfig, onCastComplete CastSuccessFunc) CastSuccessFunc {
 	if spell.Unit.PseudoStats.GracefulCastCDFailures {
 		return func(sim *Simulation, target *Unit) bool {
 			if spell.IsReady(sim) {
@@ -149,7 +150,7 @@ func (spell *Spell) wrapCastFuncCDsReady(config CastConfig, onCastComplete CastS
 	}
 }
 
-func (spell *Spell) wrapCastFuncResources(config CastConfig, onCastComplete CastFunc) CastSuccessFunc {
+func (spell *Spell) wrapCastFuncResources(_ CastConfig, onCastComplete CastFunc) CastSuccessFunc {
 	if spell.Cost == nil {
 		return func(sim *Simulation, target *Unit) bool {
 			onCastComplete(sim, target)
@@ -183,7 +184,7 @@ func (spell *Spell) wrapCastFuncHaste(config CastConfig, onCastComplete CastFunc
 	}
 }
 
-func (spell *Spell) wrapCastFuncGCD(config CastConfig, onCastComplete CastFunc) CastFunc {
+func (spell *Spell) wrapCastFuncGCD(_ CastConfig, onCastComplete CastFunc) CastFunc {
 	if spell.DefaultCast == emptyCast { // spells that are not actually cast (e.g. auto attacks, procs)
 		return onCastComplete
 	}

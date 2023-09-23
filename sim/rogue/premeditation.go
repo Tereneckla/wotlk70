@@ -15,6 +15,7 @@ func (rogue *Rogue) registerPremeditation() {
 
 	rogue.Premeditation = rogue.RegisterSpell(core.SpellConfig{
 		ActionID: core.ActionID{SpellID: 14183},
+		Flags:    core.SpellFlagAPL,
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -27,6 +28,9 @@ func (rogue *Rogue) registerPremeditation() {
 				Duration: time.Second * 20,
 			},
 		},
+		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
+			return rogue.IsStealthed()
+		},
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
 			rogue.AddComboPoints(sim, 2, comboMetrics)
@@ -38,8 +42,7 @@ func (rogue *Rogue) registerPremeditation() {
 		Type:     core.CooldownTypeDPS,
 		Priority: core.CooldownPriorityLow,
 		ShouldActivate: func(sim *core.Simulation, character *core.Character) bool {
-			thresh := 2
-			return rogue.ComboPoints() <= int32(thresh) && rogue.ShadowDanceAura.IsActive()
+			return rogue.ComboPoints() <= 2 && rogue.ShadowDanceAura.IsActive()
 		},
 	})
 }

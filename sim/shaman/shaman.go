@@ -28,6 +28,8 @@ func NewShaman(character core.Character, talents string, totems *proto.ShamanTot
 		SelfBuffs:           selfBuffs,
 		thunderstormInRange: thunderstormRange,
 	}
+	shaman.waterShieldManaMetrics = shaman.NewManaMetrics(core.ActionID{SpellID: 57960})
+
 	core.FillTalentsProto(shaman.Talents.ProtoReflect(), talents, TalentTreeSizes)
 	shaman.EnableManaBar()
 
@@ -38,16 +40,21 @@ func NewShaman(character core.Character, talents string, totems *proto.ShamanTot
 	// Add Shaman stat dependencies
 	shaman.AddStatDependency(stats.Strength, stats.AttackPower, 1)
 	shaman.AddStatDependency(stats.Agility, stats.AttackPower, 1)
-	shaman.AddStat(stats.AttackPower, -20)
-	shaman.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritRatingPerCritChance/40.0059)
-	shaman.AddStatDependency(stats.Intellect, stats.SpellCrit, (1/80)*core.CritRatingPerCritChance)
+	shaman.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritPerAgiMaxLevel[character.Class]*core.CritRatingPerCritChance)
+	shaman.AddStatDependency(stats.BonusArmor, stats.Armor, 1)
 	// Set proper Melee Haste scaling
 	shaman.PseudoStats.MeleeHasteRatingPerHastePercent /= 1.3
 
 	if selfBuffs.Shield == proto.ShamanShield_WaterShield {
 		shaman.AddStat(stats.MP5, 100)
 	}
-	shaman.FireElemental = shaman.NewFireElemental()
+
+	// When using the tier bonus for snapshotting we do not use the bonus spell
+	if totems.EnhTierTenBonus {
+		totems.BonusSpellpower = 0
+	}
+
+	shaman.FireElemental = shaman.NewFireElemental(float64(totems.BonusSpellpower))
 	return shaman
 }
 
@@ -116,6 +123,7 @@ type Shaman struct {
 
 	MagmaTotem           *core.Spell
 	ManaSpringTotem      *core.Spell
+	HealingStreamTotem   *core.Spell
 	SearingTotem         *core.Spell
 	StrengthOfEarthTotem *core.Spell
 	TotemOfWrath         *core.Spell
@@ -126,6 +134,20 @@ type Shaman struct {
 	FlametongueTotem     *core.Spell
 
 	MaelstromWeaponAura *core.Aura
+
+	// Healing Spells
+	tidalWaveProc          *core.Aura
+	ancestralHealingAmount float64
+	AncestralAwakening     *core.Spell
+	LesserHealingWave      *core.Spell
+	HealingWave            *core.Spell
+	ChainHeal              *core.Spell
+	Riptide                *core.Spell
+	EarthShield            *core.Spell
+
+	waterShieldManaMetrics *core.ResourceMetrics
+
+	hasHeroicPresence bool
 }
 
 // Implemented by each Shaman spec.
@@ -200,19 +222,24 @@ func (shaman *Shaman) AddPartyBuffs(partyBuffs *proto.PartyBuffs) {
 	if shaman.Talents.ManaTideTotem {
 		partyBuffs.ManaTideTotems++
 	}
+
+	shaman.hasHeroicPresence = partyBuffs.HeroicPresence
 }
 
 func (shaman *Shaman) Initialize() {
+	enableSnapshot := shaman.Totems.BonusSpellpower == 0
+
 	shaman.registerChainLightningSpell()
 	shaman.registerFeralSpirit()
 	shaman.registerFireElementalTotem()
 	shaman.registerFireNovaSpell()
-	//shaman.registerLavaBurstSpell()
+	shaman.registerLavaBurstSpell()
 	shaman.registerLavaLashSpell()
 	shaman.registerLightningBoltSpell()
 	shaman.registerLightningShieldSpell()
 	shaman.registerMagmaTotemSpell()
 	shaman.registerManaSpringTotemSpell()
+	shaman.registerHealingStreamTotemSpell()
 	shaman.registerSearingTotemSpell()
 	shaman.registerShocks()
 	shaman.registerStormstrikeSpell()
@@ -225,15 +252,55 @@ func (shaman *Shaman) Initialize() {
 	shaman.registerWindfuryTotemSpell()
 	shaman.registerWrathOfAirTotemSpell()
 
+	// This registration must come after all the totems are registered
+	shaman.registerCallOfTheElements()
+
 	shaman.registerBloodlustCD()
 
-	if shaman.Totems.UseFireElemental {
+	if shaman.Totems.UseFireElemental && enableSnapshot && !shaman.IsUsingAPL {
 		shaman.fireElementalSnapShot = core.NewSnapshotManager(shaman.GetCharacter())
 		shaman.setupProcTrackers()
 	}
 
 	if shaman.Talents.SpiritWeapons {
 		shaman.PseudoStats.ThreatMultiplier -= 0.3
+	}
+
+	// Healing stream totem applies a HoT (aura) and so needs to be handled as a pre-pull action
+	// instead of during init/reset.
+	if shaman.Totems.Water == proto.WaterTotem_HealingStreamTotem {
+		shaman.RegisterPrepullAction(0, func(sim *core.Simulation) {
+			shaman.HealingStreamTotem.Cast(sim, &shaman.Unit)
+		})
+	}
+}
+
+func (shaman *Shaman) RegisterHealingSpells() {
+	shaman.registerAncestralHealingSpell()
+	shaman.registerLesserHealingWaveSpell()
+	shaman.registerHealingWaveSpell()
+	shaman.registerRiptideSpell()
+	shaman.registerEarthShieldSpell()
+	shaman.registerChainHealSpell()
+
+	if shaman.Talents.TidalWaves > 0 {
+		shaman.tidalWaveProc = shaman.GetOrRegisterAura(core.Aura{
+			Label:    "Tidal Wave Proc",
+			ActionID: core.ActionID{SpellID: 53390},
+			Duration: core.NeverExpires,
+			OnReset: func(aura *core.Aura, sim *core.Simulation) {
+				aura.Deactivate(sim)
+			},
+			OnGain: func(aura *core.Aura, sim *core.Simulation) {
+				shaman.HealingWave.CastTimeMultiplier *= 0.7
+				shaman.LesserHealingWave.BonusCritRating += core.CritRatingPerCritChance * 25
+			},
+			OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+				shaman.HealingWave.CastTimeMultiplier /= 0.7
+				shaman.LesserHealingWave.BonusCritRating -= core.CritRatingPerCritChance * 25
+			},
+			MaxStacks: 2,
+		})
 	}
 }
 
@@ -260,19 +327,21 @@ func (shaman *Shaman) Reset(sim *core.Simulation) {
 		case FireTotem:
 			shaman.NextTotemDropType[FireTotem] = int32(shaman.Totems.Fire)
 			if shaman.NextTotemDropType[FireTotem] != int32(proto.FireTotem_NoFireTotem) {
-				if shaman.NextTotemDropType[FireTotem] != int32(proto.FireTotem_TotemOfWrath) {
+				if shaman.NextTotemDropType[FireTotem] != int32(proto.FireTotem_TotemOfWrath) &&
+					shaman.NextTotemDropType[FireTotem] != int32(proto.FireTotem_FlametongueTotem) {
 					if !shaman.Totems.UseFireMcd {
 						shaman.NextTotemDrops[FireTotem] = 0
 					}
 				} else {
 					shaman.NextTotemDrops[FireTotem] = TotemRefreshTime5M
-					shaman.applyToWDebuff(sim)
+					if shaman.NextTotemDropType[FireTotem] == int32(proto.FireTotem_TotemOfWrath) {
+						shaman.applyToWDebuff(sim)
+					}
 				}
 			}
 		case WaterTotem:
-			if shaman.Totems.Water == proto.WaterTotem_ManaSpringTotem {
-				shaman.NextTotemDrops[i] = TotemRefreshTime5M
-			}
+			shaman.NextTotemDropType[i] = int32(shaman.Totems.Water)
+			shaman.NextTotemDrops[i] = TotemRefreshTime5M
 		}
 	}
 
@@ -302,6 +371,16 @@ func (shaman *Shaman) setupProcTrackers() {
 	snapshotManager.AddProc(54572, "Charred Twilight Scale Proc", false)
 	snapshotManager.AddProc(54588, "Charred Twilight Scale H Proc", false)
 	snapshotManager.AddProc(47213, "Abyssal Rune Proc", false)
+	snapshotManager.AddProc(45490, "Pandora's Plea Proc", false)
+	snapshotManager.AddProc(50348, "Dislodged Foreign Object H", false)
+	snapshotManager.AddProc(50353, "Dislodged Foreign Object", false)
+	snapshotManager.AddProc(50360, "Phylactery of the Nameless Lich Proc", false)
+	snapshotManager.AddProc(50365, "Phylactery of the Nameless Lich H Proc", false)
+	snapshotManager.AddProc(50345, "Muradin's Spyglass H Proc", false)
+	snapshotManager.AddProc(50340, "Muradin's Spyglass Proc", false)
+
+	// SP Ring Procs
+	snapshotManager.AddProc(50398, "Ashen Band of Endless Destruction", false)
 
 	//AP Trinket Procs
 	snapshotManager.AddProc(40684, "Mirror of Truth Proc", false)
@@ -325,9 +404,16 @@ func (shaman *Shaman) setupProcTrackers() {
 	snapshotManager.AddProc(71561, "Deathbringer's Will H Agility Proc", false)
 	snapshotManager.AddProc(71492, "Deathbringer's Will AP Proc", false)
 	snapshotManager.AddProc(71561, "Deathbringer's Will H AP Proc", false)
+
+	// Tier Bonus
+	snapshotManager.AddProc(70831, "Maelstrom Power", false)
 }
 
 func (shaman *Shaman) setupFireElementalCooldowns() {
+	if shaman.fireElementalSnapShot == nil {
+		return
+	}
+
 	shaman.fireElementalSnapShot.ClearMajorCooldowns()
 
 	// blood fury (orc)
@@ -370,61 +456,4 @@ func (shaman *Shaman) fireElementalCooldownSync(actionID core.ActionID, isPotion
 func (shaman *Shaman) ElementalCritMultiplier(secondary float64) float64 {
 	critBonus := 0.2*float64(shaman.Talents.ElementalFury) + secondary
 	return shaman.SpellCritMultiplier(1, critBonus)
-}
-
-func init() {
-	const basecrit = 2.921 * core.CritRatingPerCritChance
-	const basespellcrit = 2.2 * core.CritRatingPerCritChance
-	const basehealth = 3380
-	const basemana = 2620
-	const baseap = core.CharacterLevel * 2
-
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceDraenei, Class: proto.Class_ClassShaman}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Strength:    103,
-		stats.Agility:     61,
-		stats.Stamina:     114,
-		stats.Intellect:   108,
-		stats.Spirit:      122,
-		stats.Mana:        basemana,
-		stats.SpellCrit:   basespellcrit,
-		stats.AttackPower: baseap, // TODO: confirm this.
-		stats.MeleeCrit:   basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceOrc, Class: proto.Class_ClassShaman}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Strength:    105,
-		stats.Agility:     61,
-		stats.Stamina:     115,
-		stats.Intellect:   105,
-		stats.Spirit:      122,
-		stats.Mana:        basemana,
-		stats.SpellCrit:   basespellcrit,
-		stats.AttackPower: baseap, // TODO: confirm this.
-		stats.MeleeCrit:   basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceTauren, Class: proto.Class_ClassShaman}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Strength:    107,
-		stats.Agility:     60,
-		stats.Stamina:     115,
-		stats.Intellect:   104,
-		stats.Spirit:      122,
-		stats.Mana:        basemana,
-		stats.SpellCrit:   basespellcrit,
-		stats.AttackPower: baseap, // TODO: confirm this.
-		stats.MeleeCrit:   basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceTroll, Class: proto.Class_ClassShaman}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Strength:    103,
-		stats.Agility:     66,
-		stats.Stamina:     114,
-		stats.Intellect:   104,
-		stats.Spirit:      121,
-		stats.Mana:        basemana,
-		stats.SpellCrit:   basespellcrit,
-		stats.AttackPower: baseap, // TODO: confirm this.
-		stats.MeleeCrit:   basecrit,
-	}
 }

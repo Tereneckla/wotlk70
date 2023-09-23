@@ -40,35 +40,34 @@ func NewFakeElementalShaman(char Character, options *proto.Player) Agent {
 			DamageMultiplier: 1.5,
 			ThreatMultiplier: 1,
 
+			Dot: DotConfig{
+				Aura: Aura{
+					Label: "fakedot",
+				},
+				NumberOfTicks:       6,
+				TickLength:          time.Second * 3,
+				AffectedByCastSpeed: true,
+				OnSnapshot: func(sim *Simulation, target *Unit, dot *Dot, isRollover bool) {
+					dot.SnapshotBaseDamage = 100 + 1*dot.Spell.SpellPower()
+					if !isRollover {
+						attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
+						dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable)
+					}
+				},
+				OnTick: func(sim *Simulation, target *Unit, dot *Dot) {
+					dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+				},
+			},
+
 			ApplyEffects: func(sim *Simulation, target *Unit, spell *Spell) {
 				result := spell.CalcOutcome(sim, target, spell.OutcomeMagicHit)
 				if result.Landed() {
-					fa.Dot.Apply(sim)
+					spell.Dot(target).Apply(sim)
 				}
 				spell.DealOutcome(sim, result)
 			},
 		})
-
-		fa.Dot = NewDot(Dot{
-			Spell: fa.Spell,
-			Aura: fa.CurrentTarget.RegisterAura(Aura{
-				Label:    "fakdot",
-				ActionID: ActionID{SpellID: 42},
-			}),
-			NumberOfTicks:       6,
-			TickLength:          time.Second * 3,
-			AffectedByCastSpeed: true,
-			OnSnapshot: func(sim *Simulation, target *Unit, dot *Dot, isRollover bool) {
-				dot.SnapshotBaseDamage = 100 + 1*dot.Spell.SpellPower()
-				if !isRollover {
-					attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
-					dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable)
-				}
-			},
-			OnTick: func(sim *Simulation, target *Unit, dot *Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
-			},
-		})
+		fa.Dot = fa.Spell.CurDot()
 	}
 
 	return fa
@@ -98,7 +97,7 @@ func SetupFakeSim() *Simulation {
 		},
 		Encounter: &proto.Encounter{
 			Targets: []*proto.Target{
-				{Name: "target", Level: 73, MobType: proto.MobType_MobTypeDemon},
+				{Name: "target", Level: 83, MobType: proto.MobType_MobTypeDemon},
 			},
 			Duration: 180,
 		},
@@ -142,7 +141,7 @@ func TestDotSnapshotSpellPower(t *testing.T) {
 	expectDotTickDamage(t, sim, fa.Dot, 150) // (100) * 1.5
 
 	fa.Dot.Deactivate(sim)
-	fa.Dot.Activate(sim)
+	fa.Dot.Apply(sim)
 	expectDotTickDamage(t, sim, fa.Dot, 300) // (100 + 100) * 1.5
 }
 

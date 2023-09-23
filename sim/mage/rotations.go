@@ -12,6 +12,10 @@ func (mage *Mage) OnGCDReady(sim *core.Simulation) {
 }
 
 func (mage *Mage) tryUseGCD(sim *core.Simulation) {
+	if mage.IsUsingAPL {
+		return
+	}
+
 	spell := mage.chooseSpell(sim)
 	if spell != nil {
 		if success := spell.Cast(sim, mage.CurrentTarget); !success {
@@ -120,7 +124,7 @@ func (mage *Mage) doFireRotation(sim *core.Simulation) *core.Spell {
 	}
 
 	noBomb := mage.LivingBomb != nil && !mage.LivingBomb.Dot(mage.CurrentTarget).IsActive() && sim.GetRemainingDuration() > time.Second*12
-	if noBomb && !mage.heatingUp {
+	if noBomb && mage.hotStreakCritAura.GetStacks() == 0 {
 		return mage.LivingBomb
 	}
 
@@ -141,8 +145,8 @@ func (mage *Mage) doFireRotation(sim *core.Simulation) *core.Spell {
 
 	if mage.Rotation.PrimaryFireSpell == proto.Mage_Rotation_Fireball {
 		return mage.Fireball
-		/*} else if mage.Rotation.PrimaryFireSpell == proto.Mage_Rotation_FrostfireBolt {
-		return mage.FrostfireBolt*/
+	// } else if mage.Rotation.PrimaryFireSpell == proto.Mage_Rotation_FrostfireBolt {
+	// 	return mage.FrostfireBolt
 	} else {
 		return mage.Scorch
 	}

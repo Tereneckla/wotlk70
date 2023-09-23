@@ -60,10 +60,5 @@ export const ShadowPriestRotationConfig = {
 				{ name: 'Mind Blast', value: precastType.PrecastMb },
 			],
 		}),
-		InputHelpers.makeRotationNumberInput<Spec.SpecShadowPriest>({
-			fieldName: 'latency',
-			label: 'Channeling Latency (ms)',
-			labelTooltip: 'Latency after a channel that lasts longer than GCD. 0 to disable. Has a minimum value of 100ms if set.',
-		}),
 	],
 };

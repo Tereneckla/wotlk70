@@ -28,7 +28,7 @@ func (warrior *Warrior) makeStanceSpell(stance Stance, aura *core.Aura, stanceCD
 
 	return warrior.RegisterSpell(core.SpellConfig{
 		ActionID: actionID,
-		Flags:    core.SpellFlagNoOnCastComplete,
+		Flags:    core.SpellFlagNoOnCastComplete | core.SpellFlagAPL,
 
 		Cast: core.CastConfig{
 			CD: core.Cooldown{
@@ -36,14 +36,24 @@ func (warrior *Warrior) makeStanceSpell(stance Stance, aura *core.Aura, stanceCD
 				Duration: time.Second,
 			},
 		},
+		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
+			return warrior.Stance != stance
+		},
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-			if warrior.Stance == stance {
-				panic("Already in stance " + string(stance))
-			}
-
 			if warrior.CurrentRage() > maxRetainedRage {
 				warrior.SpendRage(sim, warrior.CurrentRage()-maxRetainedRage, rageMetrics)
+			}
+
+			if warrior.WarriorInputs.StanceSnapshot {
+				// Delayed, so same-GCD casts are affected by the current aura.
+				//  Alternatively, those casts could just (artificially) happen before the stance change.
+				core.StartDelayedAction(sim, core.DelayedActionOptions{
+					DoAt:     sim.CurrentTime + 10*time.Millisecond,
+					OnAction: aura.Activate,
+				})
+			} else {
+				aura.Activate(sim)
 			}
 
 			warrior.Stance = stance
@@ -55,6 +65,7 @@ func (warrior *Warrior) registerBattleStanceAura() {
 	const threatMult = 0.8
 
 	actionID := core.ActionID{SpellID: 2457}
+	armorPenBonus := core.ArmorPenPerPercentArmor * (10 + core.TernaryFloat64(warrior.HasSetBonus(ItemSetWrynnsBattlegear, 2), 6, 0))
 
 	warrior.BattleStanceAura = warrior.GetOrRegisterAura(core.Aura{
 		Label:    "Battle Stance",
@@ -62,9 +73,11 @@ func (warrior *Warrior) registerBattleStanceAura() {
 		Duration: core.NeverExpires,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			aura.Unit.PseudoStats.ThreatMultiplier *= threatMult
+			aura.Unit.AddStatDynamic(sim, stats.ArmorPenetration, armorPenBonus)
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 			aura.Unit.PseudoStats.ThreatMultiplier /= threatMult
+			aura.Unit.AddStatDynamic(sim, stats.ArmorPenetration, -armorPenBonus)
 		},
 	})
 	warrior.BattleStanceAura.NewExclusiveEffect(stanceEffectCategory, true, core.ExclusiveEffect{})
@@ -147,7 +160,7 @@ func (warrior *Warrior) registerDefensiveStanceAura() {
 
 func (warrior *Warrior) registerBerserkerStanceAura() {
 	threatMult := 0.8 - 0.02*float64(warrior.Talents.ImprovedBerserkerStance)
-	critBonus := core.CritRatingPerCritChance * 3
+	critBonus := core.CritRatingPerCritChance * (3 + core.TernaryFloat64(warrior.HasSetBonus(ItemSetWrynnsBattlegear, 2), 2, 0))
 
 	var dep *stats.StatDependency
 	if warrior.Talents.ImprovedBerserkerStance > 0 {

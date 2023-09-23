@@ -15,13 +15,12 @@ func (rogue *Rogue) registerGhostlyStrikeSpell() {
 	hasGlyph := rogue.HasMajorGlyph(proto.RogueMajorGlyph_GlyphOfGhostlyStrike)
 
 	actionID := core.ActionID{SpellID: 14278}
-	daggerMH := rogue.Equip[proto.ItemSlot_ItemSlotMainHand].WeaponType == proto.WeaponType_WeaponTypeDagger
 
 	rogue.GhostlyStrike = rogue.RegisterSpell(core.SpellConfig{
 		ActionID:    actionID,
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | SpellFlagBuilder,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | SpellFlagBuilder | SpellFlagColdBlooded | core.SpellFlagAPL,
 		EnergyCost: core.EnergyCostOptions{
 			Cost:   40.0,
 			Refund: 0.8,
@@ -40,11 +39,12 @@ func (rogue *Rogue) registerGhostlyStrikeSpell() {
 
 		BonusCritRating: []float64{0, 2, 4, 6}[rogue.Talents.TurnTheTables] * core.CritRatingPerCritChance,
 
-		DamageMultiplier: (core.TernaryFloat64(daggerMH, 1.8, 1.25) + core.TernaryFloat64(hasGlyph, 0.4, 0)) * (1 + 0.02*float64(rogue.Talents.FindWeakness)),
+		DamageMultiplier: core.TernaryFloat64(rogue.HasDagger(core.MainHand), 1.8, 1.25) * core.TernaryFloat64(hasGlyph, 1.4, 1) * (1 + 0.02*float64(rogue.Talents.FindWeakness)),
 		CritMultiplier:   rogue.MeleeCritMultiplier(true),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			rogue.BreakStealth(sim)
 			baseDamage := spell.Unit.MHNormalizedWeaponDamage(sim, spell.MeleeAttackPower())
 
 			result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)

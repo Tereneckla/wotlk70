@@ -22,12 +22,13 @@ func (priest *Priest) registerRenewSpell() {
 			DamageMultiplier: 1 *
 				float64(priest.renewTicks()) *
 				priest.renewHealingMultiplier() *
-				.05 * float64(priest.Talents.EmpoweredRenew),
+				.05 * float64(priest.Talents.EmpoweredRenew) *
+				core.TernaryFloat64(priest.HasSetBonus(ItemSetZabrasRaiment, 4), 1.1, 1),
 			CritMultiplier:   priest.DefaultHealingCritMultiplier(),
 			ThreatMultiplier: 1 - []float64{0, .07, .14, .20}[priest.Talents.SilentResolve],
 
 			ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-				baseHealing := 280 + spellCoeff*spell.HealingPower(target)
+				baseHealing := 222 + spellCoeff*spell.HealingPower(target)
 				spell.CalcAndDealHealing(sim, target, baseHealing, spell.OutcomeHealingCrit)
 			},
 		})
@@ -37,7 +38,7 @@ func (priest *Priest) registerRenewSpell() {
 		ActionID:    actionID,
 		SpellSchool: core.SpellSchoolHoly,
 		ProcMask:    core.ProcMaskSpellHealing,
-		Flags:       core.SpellFlagHelpful,
+		Flags:       core.SpellFlagHelpful | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.17,
@@ -59,7 +60,7 @@ func (priest *Priest) registerRenewSpell() {
 			NumberOfTicks: priest.renewTicks(),
 			TickLength:    time.Second * 3,
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot, _ bool) {
-				dot.SnapshotBaseDamage = 222 + spellCoeff*dot.Spell.HealingPower(target)
+				dot.SnapshotBaseDamage = 280 + spellCoeff*dot.Spell.HealingPower(target)
 				dot.SnapshotAttackerMultiplier = dot.Spell.CasterHealingMultiplier()
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {

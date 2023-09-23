@@ -10,10 +10,6 @@ import (
 )
 
 func (warlock *Warlock) registerInfernoSpell() {
-	if !warlock.Rotation.UseInfernal {
-		return
-	}
-
 	summonInfernalAura := warlock.RegisterAura(core.Aura{
 		Label:    "Summon Infernal",
 		ActionID: core.ActionID{SpellID: 1122},
@@ -24,6 +20,7 @@ func (warlock *Warlock) registerInfernoSpell() {
 		ActionID:    core.ActionID{SpellID: 1122},
 		SpellSchool: core.SpellSchoolFire,
 		ProcMask:    core.ProcMaskEmpty,
+		Flags:       core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost: 0.8,
@@ -46,8 +43,8 @@ func (warlock *Warlock) registerInfernoSpell() {
 			// TODO: add fire spell damage
 			baseDmg := (200 + 1*spell.SpellPower()) * sim.Encounter.AOECapMultiplier()
 
-			for _, aoeTarget := range sim.Encounter.Targets {
-				spell.CalcAndDealDamage(sim, &aoeTarget.Unit, baseDmg, spell.OutcomeMagicHitAndCrit)
+			for _, aoeTarget := range sim.Encounter.TargetUnits {
+				spell.CalcAndDealDamage(sim, aoeTarget, baseDmg, spell.OutcomeMagicHitAndCrit)
 			}
 
 			if warlock.Pet != nil {
@@ -64,6 +61,10 @@ func (warlock *Warlock) registerInfernoSpell() {
 		Spell: warlock.Inferno,
 		Type:  core.CooldownTypeDPS,
 		ShouldActivate: func(sim *core.Simulation, character *core.Character) bool {
+			if !warlock.Rotation.UseInfernal {
+				return false
+			}
+
 			return sim.GetRemainingDuration() <= 61*time.Second
 		},
 	})
@@ -76,35 +77,34 @@ type InfernalPet struct {
 }
 
 func (warlock *Warlock) NewInfernal() *InfernalPet {
-	statInheritance :=
-		func(ownerStats stats.Stats) stats.Stats {
-			ownerHitChance := math.Floor(ownerStats[stats.SpellHit] / core.SpellHitRatingPerHitChance)
+	statInheritance := func(ownerStats stats.Stats) stats.Stats {
+		ownerHitChance := math.Floor(ownerStats[stats.SpellHit] / core.SpellHitRatingPerHitChance)
 
-			// TODO: account for fire spell damage
-			return stats.Stats{
-				stats.Stamina:          ownerStats[stats.Stamina] * 0.75,
-				stats.Intellect:        ownerStats[stats.Intellect] * 0.3,
-				stats.Armor:            ownerStats[stats.Armor] * 0.35,
-				stats.AttackPower:      ownerStats[stats.SpellPower] * 0.57,
-				stats.SpellPower:       ownerStats[stats.SpellPower] * 0.15,
-				stats.SpellPenetration: ownerStats[stats.SpellPenetration],
-				stats.MeleeHit:         ownerHitChance * core.MeleeHitRatingPerHitChance,
-				stats.SpellHit:         ownerHitChance * core.SpellHitRatingPerHitChance,
-				stats.Expertise: (ownerStats[stats.SpellHit] / core.SpellHitRatingPerHitChance) *
-					PetExpertiseScale * core.ExpertisePerQuarterPercentReduction,
-			}
+		// TODO: account for fire spell damage
+		return stats.Stats{
+			stats.Stamina:          ownerStats[stats.Stamina] * 0.75,
+			stats.Intellect:        ownerStats[stats.Intellect] * 0.3,
+			stats.Armor:            ownerStats[stats.Armor] * 0.35,
+			stats.AttackPower:      ownerStats[stats.SpellPower] * 0.57,
+			stats.SpellPower:       ownerStats[stats.SpellPower] * 0.15,
+			stats.SpellPenetration: ownerStats[stats.SpellPenetration],
+			stats.MeleeHit:         ownerHitChance * core.MeleeHitRatingPerHitChance,
+			stats.SpellHit:         ownerHitChance * core.SpellHitRatingPerHitChance,
+			stats.Expertise: (ownerStats[stats.SpellHit] / core.SpellHitRatingPerHitChance) *
+				PetExpertiseScale * core.ExpertisePerQuarterPercentReduction,
 		}
+	}
 
 	infernal := &InfernalPet{
 		Pet: core.NewPet("Infernal", &warlock.Character, stats.Stats{
-			stats.Strength:  331,
-			stats.Agility:   113,
-			stats.Stamina:   361,
-			stats.Intellect: 65,
-			stats.Spirit:    109,
-			stats.Mana:      0,
+			stats.Strength:  153,
+			stats.Agility:   43,
+			stats.Stamina:   280,
+			stats.Intellect: 133,
+			stats.Spirit:    122,
+			stats.Mana:      2880,
 			stats.MeleeCrit: 3.192 * core.CritRatingPerCritChance,
-		}, statInheritance, nil, false, false),
+		}, statInheritance, false, false),
 		owner: warlock,
 	}
 
@@ -122,10 +122,9 @@ func (warlock *Warlock) NewInfernal() *InfernalPet {
 
 	infernal.EnableAutoAttacks(infernal, core.AutoAttackOptions{
 		MainHand: core.Weapon{
-			BaseDamageMin:  330,
-			BaseDamageMax:  494.9,
+			BaseDamageMin:  283,
+			BaseDamageMax:  400,
 			SwingSpeed:     2,
-			SwingDuration:  time.Second * 2,
 			CritMultiplier: 2,
 		},
 		AutoSwingMelee: true,
@@ -176,8 +175,8 @@ func (infernal *InfernalPet) Initialize() {
 				warlockSP := infernal.owner.Unit.GetStat(stats.SpellPower) - infernal.owner.Unit.GetStat(stats.Spirit)*coef
 				baseDmg := (40 + warlockSP*0.2) * sim.Encounter.AOECapMultiplier()
 
-				for _, aoeTarget := range sim.Encounter.Targets {
-					dot.Spell.CalcAndDealDamage(sim, &aoeTarget.Unit, baseDmg, dot.Spell.OutcomeMagicHit)
+				for _, aoeTarget := range sim.Encounter.TargetUnits {
+					dot.Spell.CalcAndDealDamage(sim, aoeTarget, baseDmg, dot.Spell.OutcomeMagicHit)
 				}
 			},
 		},
@@ -188,7 +187,7 @@ func (infernal *InfernalPet) Initialize() {
 	})
 }
 
-func (infernal *InfernalPet) Reset(sim *core.Simulation) {
+func (infernal *InfernalPet) Reset(_ *core.Simulation) {
 }
 
 func (infernal *InfernalPet) OnGCDReady(sim *core.Simulation) {

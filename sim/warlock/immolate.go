@@ -19,6 +19,7 @@ func (warlock *Warlock) registerImmolateSpell() {
 		ActionID:    core.ActionID{SpellID: 27215},
 		SpellSchool: core.SpellSchoolFire,
 		ProcMask:    core.ProcMaskSpellDamage,
+		Flags:       core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.17,
@@ -32,13 +33,13 @@ func (warlock *Warlock) registerImmolateSpell() {
 		},
 
 		BonusCritRating: 0 +
-			warlock.masterDemonologistFireCrit +
 			core.TernaryFloat64(warlock.Talents.Devastation, 5*core.CritRatingPerCritChance, 0),
 		DamageMultiplierAdditive: 1 +
 			warlock.GrandFirestoneBonus() +
 			0.03*float64(warlock.Talents.Emberstorm) +
 			0.1*float64(warlock.Talents.ImprovedImmolate) +
-			core.TernaryFloat64(warlock.HasSetBonus(ItemSetCorruptorRaiment, 4), 0.05, 0),
+			core.TernaryFloat64(warlock.HasSetBonus(ItemSetDeathbringerGarb, 2), 0.1, 0) +
+			core.TernaryFloat64(warlock.HasSetBonus(ItemSetGuldansRegalia, 4), 0.1, 0),
 		CritMultiplier:   warlock.SpellCritMultiplier(1, float64(warlock.Talents.Ruin)/5),
 		ThreatMultiplier: 1 - 0.1*float64(warlock.Talents.DestructiveReach),
 
@@ -46,19 +47,23 @@ func (warlock *Warlock) registerImmolateSpell() {
 			Aura: core.Aura{
 				Label: "Immolate",
 				OnGain: func(aura *core.Aura, sim *core.Simulation) {
-					warlock.ChaosBolt.DamageMultiplierAdditive += fireAndBrimstoneBonus
+					if warlock.Talents.ChaosBolt {
+						warlock.ChaosBolt.DamageMultiplierAdditive += fireAndBrimstoneBonus
+					}
 					warlock.Incinerate.DamageMultiplierAdditive += fireAndBrimstoneBonus
 				},
 				OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-					warlock.ChaosBolt.DamageMultiplierAdditive -= fireAndBrimstoneBonus
+					if warlock.Talents.ChaosBolt {
+						warlock.ChaosBolt.DamageMultiplierAdditive -= fireAndBrimstoneBonus
+					}
 					warlock.Incinerate.DamageMultiplierAdditive -= fireAndBrimstoneBonus
 				},
 			},
-			NumberOfTicks: 5 + warlock.Talents.MoltenCore + core.TernaryInt32(warlock.HasSetBonus(ItemSetVoidheartRaiment, 4), 1, 0),
+			NumberOfTicks: 5 + warlock.Talents.MoltenCore,
 			TickLength:    time.Second * 3,
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot, isRollover bool) {
-				dot.SnapshotBaseDamage = 785/5 + 0.2*(dot.Spell.SpellPower()+core.TernaryFloat64(warlock.HasActiveAura("Shadowflame Hellfire"), 135, 0))
+				dot.SnapshotBaseDamage = 123 + 0.2*(dot.Spell.SpellPower()+core.TernaryFloat64(warlock.HasActiveAura("Shadowflame Hellfire"), 135, 0))
 				attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
 				dot.SnapshotCritChance = dot.Spell.SpellCritChance(target)
 
@@ -72,7 +77,7 @@ func (warlock *Warlock) registerImmolateSpell() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			baseDamage := 460 + 0.2*(spell.SpellPower()+core.TernaryFloat64(warlock.HasActiveAura("Shadowflame Hellfire"), 135, 0))
+			baseDamage := 327 + 0.2*spell.SpellPower()
 			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeMagicHitAndCrit)
 			if result.Landed() {
 				spell.Dot(target).Apply(sim)

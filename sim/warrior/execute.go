@@ -8,8 +8,6 @@ import (
 func (warrior *Warrior) registerExecuteSpell() {
 	const maxRage = 30
 
-	gcd := core.GCDDefault
-
 	var extraRageBonus float64
 	if warrior.HasMajorGlyph(proto.WarriorMajorGlyph_GlyphOfExecution) {
 		extraRageBonus = 10
@@ -20,7 +18,7 @@ func (warrior *Warrior) registerExecuteSpell() {
 		ActionID:    core.ActionID{SpellID: 25236},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
 			Cost: 15 -
@@ -31,7 +29,7 @@ func (warrior *Warrior) registerExecuteSpell() {
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: gcd,
+				GCD: core.GCDDefault,
 			},
 			IgnoreHaste: true,
 		},
@@ -51,7 +49,7 @@ func (warrior *Warrior) registerExecuteSpell() {
 			warrior.SpendRage(sim, extraRage, rageMetrics)
 			rageMetrics.Events--
 
-			baseDamage := 865 + 0.2*spell.MeleeAttackPower() + 21*(extraRage+extraRageBonus)
+			baseDamage := 865 + 0.2*spell.MeleeAttackPower() + 38*(extraRage+extraRageBonus)
 			result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 
 			if !result.Landed() {

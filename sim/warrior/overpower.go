@@ -20,9 +20,16 @@ func (warrior *Warrior) registerOverpowerSpell(cdTimer *core.Timer) {
 		},
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			if result.Outcome.Matches(outcomeMask) {
-				warrior.overpowerValidUntil = sim.CurrentTime + time.Second*5
+				warrior.OverpowerAura.Activate(sim)
+				warrior.lastOverpowerProc = sim.CurrentTime
 			}
 		},
+	})
+
+	warrior.OverpowerAura = warrior.RegisterAura(core.Aura{
+		ActionID: core.ActionID{SpellID: 68051},
+		Label:    "Overpower Aura",
+		Duration: time.Second * 5,
 	})
 
 	cooldownDur := time.Second * 5
@@ -38,7 +45,7 @@ func (warrior *Warrior) registerOverpowerSpell(cdTimer *core.Timer) {
 		ActionID:    core.ActionID{SpellID: 7384},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
 			Cost:   5 - float64(warrior.Talents.FocusedRage),
@@ -54,6 +61,9 @@ func (warrior *Warrior) registerOverpowerSpell(cdTimer *core.Timer) {
 				Duration: cooldownDur,
 			},
 		},
+		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
+			return warrior.OverpowerAura.IsActive() && warrior.StanceMatches(BattleStance)
+		},
 
 		BonusCritRating:  25 * core.CritRatingPerCritChance * float64(warrior.Talents.ImprovedOverpower),
 		DamageMultiplier: 1 + 0.1*float64(warrior.Talents.UnrelentingAssault),
@@ -61,7 +71,7 @@ func (warrior *Warrior) registerOverpowerSpell(cdTimer *core.Timer) {
 		ThreatMultiplier: 0.75,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			warrior.overpowerValidUntil = 0
+			warrior.OverpowerAura.Deactivate(sim)
 
 			baseDamage := 0 +
 				spell.Unit.MHNormalizedWeaponDamage(sim, spell.MeleeAttackPower()) +
@@ -76,7 +86,25 @@ func (warrior *Warrior) registerOverpowerSpell(cdTimer *core.Timer) {
 }
 
 func (warrior *Warrior) ShouldOverpower(sim *core.Simulation) bool {
-	return sim.CurrentTime < warrior.overpowerValidUntil &&
-		warrior.Overpower.IsReady(sim) &&
-		warrior.CurrentRage() >= warrior.Overpower.DefaultCast.Cost && warrior.PrimaryTalentTree == ArmsTree
+	return warrior.OverpowerAura.IsActive() && warrior.Overpower.IsReady(sim) &&
+		warrior.CurrentRage() >= warrior.Overpower.DefaultCast.Cost &&
+		sim.CurrentTime > (warrior.lastOverpowerProc+warrior.reactionTime)
+}
+
+// Queue Overpower to be cast at every 6s if talented for 3/3 TfB
+func (warrior *Warrior) CastFullTfbOverpower(sim *core.Simulation, target *core.Unit) bool {
+	if warrior.Talents.TasteForBlood < 3 {
+		return false
+	}
+
+	core.StartDelayedAction(sim, core.DelayedActionOptions{
+		DoAt: sim.CurrentTime + time.Second*6,
+		OnAction: func(_ *core.Simulation) {
+			if warrior.Overpower.CanCast(sim, target) && warrior.ShouldOverpower(sim) {
+				warrior.CastFullTfbOverpower(sim, target)
+			}
+		},
+	})
+
+	return warrior.Overpower.Cast(sim, target)
 }

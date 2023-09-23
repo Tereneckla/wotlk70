@@ -33,7 +33,7 @@ func (hunter *Hunter) NewHunterPet() *HunterPet {
 	petConfig := PetConfigs[hunter.Options.PetType]
 
 	hp := &HunterPet{
-		Pet:         core.NewPet(petConfig.Name, &hunter.Character, hunterPetBaseStats, hunter.makeStatInheritance(), nil, true, false),
+		Pet:         core.NewPet(petConfig.Name, &hunter.Character, hunterPetBaseStats, hunter.makeStatInheritance(), true, false),
 		config:      petConfig,
 		hunterOwner: hunter,
 
@@ -52,7 +52,6 @@ func (hunter *Hunter) NewHunterPet() *HunterPet {
 			BaseDamageMin:  50,
 			BaseDamageMax:  78,
 			SwingSpeed:     atkSpd,
-			SwingDuration:  core.DurationFromSeconds(atkSpd),
 			CritMultiplier: 2,
 		},
 		AutoSwingMelee: true,
@@ -64,8 +63,7 @@ func (hunter *Hunter) NewHunterPet() *HunterPet {
 	// Pet family bonus is now the same for all pets.
 	hp.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] *= 1.05
 
-	hp.AddStatDependency(stats.Strength, stats.AttackPower, 1)
-	hp.AddStat(stats.AttackPower, -20)
+	hp.AddStatDependency(stats.Strength, stats.AttackPower, 2)
 	hp.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritRatingPerCritChance/30)
 	core.ApplyPetConsumeEffects(&hp.Character, hunter.Consumes)
 
@@ -90,7 +88,7 @@ func (hp *HunterPet) Initialize() {
 	hp.focusDump = hp.NewPetAbility(hp.config.FocusDump, false)
 }
 
-func (hp *HunterPet) Reset(sim *core.Simulation) {
+func (hp *HunterPet) Reset(_ *core.Simulation) {
 	hp.uptimePercent = core.MinFloat(1, core.MaxFloat(0, hp.hunterOwner.Options.PetUptime))
 }
 

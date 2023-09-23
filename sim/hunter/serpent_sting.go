@@ -8,6 +8,7 @@ import (
 )
 
 func (hunter *Hunter) registerSerpentStingSpell() {
+	canCrit := hunter.HasSetBonus(ItemSetWindrunnersPursuit, 2)
 	noxiousStingsMultiplier := 1 + 0.01*float64(hunter.Talents.NoxiousStings)
 	huntersWithGlyphOfSteadyShot := hunter.GetAllHuntersWithGlyphOfSteadyShot()
 
@@ -28,9 +29,15 @@ func (hunter *Hunter) registerSerpentStingSpell() {
 			IgnoreHaste: true, // Hunter GCD is locked at 1.5s
 		},
 
+		// Need to specially apply LethalShots here, because this spell uses an empty proc mask
+		BonusCritRating: 1 * core.CritRatingPerCritChance * float64(hunter.Talents.LethalShots),
+
 		DamageMultiplierAdditive: 1 +
-			0.1*float64(hunter.Talents.ImprovedStings),
-		CritMultiplier:   hunter.critMultiplier(false, false),
+			0.1*float64(hunter.Talents.ImprovedStings) +
+			core.TernaryFloat64(hunter.HasSetBonus(ItemSetScourgestalkerBattlegear, 2), .1, 0),
+		// according to in-game testing (which happens to match the wowhead 60% mortal shots flag on wowhead)
+		// serpent-sting gets 60% crit modifier instead of 30% crit modifier from mortal shots
+		CritMultiplier:   hunter.critMultiplier(true, false, true),
 		ThreatMultiplier: 1,
 
 		Dot: core.DotConfig{
@@ -62,18 +69,23 @@ func (hunter *Hunter) registerSerpentStingSpell() {
 				dot.SnapshotBaseDamage = 132 + 0.04*dot.Spell.RangedAttackPower(target)
 				if !isRollover {
 					attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
-					dot.SnapshotCritChance = dot.Spell.PhysicalCritChance(target, attackTable)
+					dot.SnapshotCritChance = dot.Spell.PhysicalCritChance(attackTable)
 					dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable)
 				}
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+				if canCrit {
+					dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeSnapshotCrit)
+				} else {
+					dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+				}
 			},
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			result := spell.CalcOutcome(sim, target, spell.OutcomeRangedHit)
 			if result.Landed() {
+				spell.SpellMetrics[target.UnitIndex].Hits--
 				spell.Dot(target).Apply(sim)
 			}
 			spell.DealOutcome(sim, result)

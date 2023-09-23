@@ -37,8 +37,8 @@ func NewEnhancementShaman(character core.Character, options *proto.Player) *Enha
 	}
 
 	totems := &proto.ShamanTotems{}
-	if enhOptions.Rotation.Totems != nil {
-		totems = enhOptions.Rotation.Totems
+	if enhOptions.Options.Totems != nil {
+		totems = enhOptions.Options.Totems
 	}
 
 	enh := &EnhancementShaman{
@@ -53,17 +53,18 @@ func NewEnhancementShaman(character core.Character, options *proto.Player) *Enha
 		MainHand:       enh.WeaponFromMainHand(enh.DefaultMeleeCritMultiplier()),
 		OffHand:        enh.WeaponFromOffHand(enh.DefaultMeleeCritMultiplier()),
 		AutoSwingMelee: true,
-		SyncType:       int32(enhOptions.Options.SyncType),
 	})
+
+	enh.ApplySyncType(enhOptions.Options.SyncType)
 
 	if enh.Totems.UseFireElemental && enhOptions.Rotation.EnableItemSwap {
 		enh.EnableItemSwap(enhOptions.Rotation.ItemSwap, enh.DefaultMeleeCritMultiplier(), enh.DefaultMeleeCritMultiplier(), 0)
 	}
 
 	if enhOptions.Rotation.LightningboltWeave {
-		enh.maelstromweaponMinStack = enhOptions.Rotation.MaelstromweaponMinStack
+		enh.maelstromWeaponMinStack = enhOptions.Rotation.MaelstromweaponMinStack
 	} else {
-		enh.maelstromweaponMinStack = 5
+		enh.maelstromWeaponMinStack = 5
 	}
 
 	if !enh.HasMHWeapon() {
@@ -74,15 +75,9 @@ func NewEnhancementShaman(character core.Character, options *proto.Player) *Enha
 		enh.SelfBuffs.ImbueOH = proto.ShamanImbue_NoImbue
 	}
 
-	enh.RegisterFlametongueImbue(
-		enh.SelfBuffs.ImbueMH == proto.ShamanImbue_FlametongueWeapon,
-		enh.SelfBuffs.ImbueOH == proto.ShamanImbue_FlametongueWeapon)
-	enh.RegisterFlametongueDownrankImbue(
-		enh.SelfBuffs.ImbueMH == proto.ShamanImbue_FlametongueWeaponDownrank,
-		enh.SelfBuffs.ImbueOH == proto.ShamanImbue_FlametongueWeaponDownrank)
-	enh.RegisterWindfuryImbue(
-		enh.SelfBuffs.ImbueMH == proto.ShamanImbue_WindfuryWeapon,
-		enh.SelfBuffs.ImbueOH == proto.ShamanImbue_WindfuryWeapon)
+	enh.RegisterFlametongueImbue(enh.getImbueProcMask(proto.ShamanImbue_FlametongueWeapon), false)
+	enh.RegisterFlametongueImbue(enh.getImbueProcMask(proto.ShamanImbue_FlametongueWeaponDownrank), true)
+	enh.RegisterWindfuryImbue(enh.getImbueProcMask(proto.ShamanImbue_WindfuryWeapon))
 
 	enh.SpiritWolves = &shaman.SpiritWolves{
 		SpiritWolf1: enh.NewSpiritWolf(1),
@@ -94,11 +89,25 @@ func NewEnhancementShaman(character core.Character, options *proto.Player) *Enha
 	return enh
 }
 
+func (enh *EnhancementShaman) getImbueProcMask(imbue proto.ShamanImbue) core.ProcMask {
+	var mask core.ProcMask
+	if enh.SelfBuffs.ImbueMH == imbue {
+		mask |= core.ProcMaskMeleeMH
+	}
+	if enh.SelfBuffs.ImbueOH == imbue {
+		mask |= core.ProcMaskMeleeOH
+	}
+	return mask
+}
+
 type EnhancementShaman struct {
 	*shaman.Shaman
 
 	rotation                Rotation
-	maelstromweaponMinStack int32
+	maelstromWeaponMinStack int32
+
+	// for weaving Lava Burst or Lightning Bolt
+	previousSwingAt time.Duration
 
 	scheduler common.GCDScheduler
 }
@@ -109,37 +118,67 @@ func (enh *EnhancementShaman) GetShaman() *shaman.Shaman {
 
 func (enh *EnhancementShaman) Initialize() {
 	enh.Shaman.Initialize()
-
-	enh.RegisterFrostbrandImbue(
-		enh.SelfBuffs.ImbueMH == proto.ShamanImbue_FrostbrandWeapon,
-		enh.SelfBuffs.ImbueOH == proto.ShamanImbue_FrostbrandWeapon)
+	// In the Initialize due to frost brand adding the aura to the enemy
+	enh.RegisterFrostbrandImbue(enh.getImbueProcMask(proto.ShamanImbue_FrostbrandWeapon))
 
 	if enh.ItemSwap.IsEnabled() {
 		mh := enh.ItemSwap.GetItem(proto.ItemSlot_ItemSlotMainHand)
 		enh.ApplyFlametongueImbueToItem(mh, true)
 		oh := enh.ItemSwap.GetItem(proto.ItemSlot_ItemSlotOffHand)
 		enh.ApplyFlametongueImbueToItem(oh, false)
-		enh.RegisterOnItemSwap(func(s *core.Simulation) {
-			mh := enh.GetMHWeapon()
-			oh := enh.GetOHWeapon()
-
-			if mh == nil || oh == nil || mh.SwingSpeed != oh.SwingSpeed {
-				enh.AutoAttacks.SyncType = int32(proto.ShamanSyncType_NoSync)
-			} else {
-				enh.AutoAttacks.SyncType = int32(proto.ShamanSyncType_SyncMainhandOffhandSwings)
-			}
+		enh.RegisterOnItemSwap(func(_ *core.Simulation) {
+			enh.ApplySyncType(proto.ShamanSyncType_Auto)
 		})
 	}
 	enh.DelayDPSCooldowns(3 * time.Second)
 }
 
 func (enh *EnhancementShaman) Reset(sim *core.Simulation) {
+	enh.previousSwingAt = 0
 	enh.Shaman.Reset(sim)
 	enh.ItemSwap.SwapItems(sim, []proto.ItemSlot{proto.ItemSlot_ItemSlotMainHand, proto.ItemSlot_ItemSlotOffHand}, false)
 }
 
+func (enh *EnhancementShaman) AutoSyncWeapons() proto.ShamanSyncType {
+	if mh, oh := enh.MainHand(), enh.OffHand(); mh.SwingSpeed != oh.SwingSpeed {
+		return proto.ShamanSyncType_NoSync
+	}
+	return proto.ShamanSyncType_SyncMainhandOffhandSwings
+}
+
+func (enh *EnhancementShaman) ApplySyncType(syncType proto.ShamanSyncType) {
+	const FlurryICD = time.Millisecond * 500
+
+	if syncType == proto.ShamanSyncType_Auto {
+		syncType = enh.AutoSyncWeapons()
+	}
+
+	switch syncType {
+	case proto.ShamanSyncType_SyncMainhandOffhandSwings:
+		enh.AutoAttacks.ReplaceMHSwing = func(sim *core.Simulation, mhSwingSpell *core.Spell) *core.Spell {
+			if aa := &enh.AutoAttacks; aa.OffhandSwingAt-sim.CurrentTime > FlurryICD {
+				if nextMHSwingAt := sim.CurrentTime + aa.MainhandSwingSpeed(); nextMHSwingAt > aa.OffhandSwingAt {
+					aa.OffhandSwingAt = nextMHSwingAt
+				}
+			}
+			return mhSwingSpell
+		}
+	case proto.ShamanSyncType_DelayOffhandSwings:
+		enh.AutoAttacks.ReplaceMHSwing = func(sim *core.Simulation, mhSwingSpell *core.Spell) *core.Spell {
+			if aa := &enh.AutoAttacks; aa.OffhandSwingAt-sim.CurrentTime > FlurryICD {
+				if nextMHSwingAt := sim.CurrentTime + aa.MainhandSwingSpeed() + 100*time.Millisecond; nextMHSwingAt > aa.OffhandSwingAt {
+					aa.OffhandSwingAt = nextMHSwingAt
+				}
+			}
+			return mhSwingSpell
+		}
+	default:
+		enh.AutoAttacks.ReplaceMHSwing = nil
+	}
+}
+
 func (enh *EnhancementShaman) CastLightningBoltWeave(sim *core.Simulation, reactionTime time.Duration) bool {
-	previousAttack := sim.CurrentTime - enh.AutoAttacks.PreviousSwingAt
+	previousAttack := sim.CurrentTime - enh.previousSwingAt
 	reactionTime = core.TernaryDuration(previousAttack < reactionTime, reactionTime-previousAttack, 0)
 
 	//calculate cast times for weaving
@@ -166,12 +205,29 @@ func (enh *EnhancementShaman) CastLightningBoltWeave(sim *core.Simulation, react
 }
 
 func (enh *EnhancementShaman) CastLavaBurstWeave(sim *core.Simulation, reactionTime time.Duration) bool {
-	previousAttack := sim.CurrentTime - enh.AutoAttacks.PreviousSwingAt
+	previousAttack := sim.CurrentTime - enh.previousSwingAt
 	reactionTime = core.TernaryDuration(previousAttack < reactionTime, reactionTime-previousAttack, 0)
 
 	//calculate cast times for weaving
-	//lvbCastTime := enh.ApplyCastSpeed(enh.LavaBurst.DefaultCast.CastTime) + reactionTime
+	lvbCastTime := enh.ApplyCastSpeed(enh.LavaBurst.DefaultCast.CastTime) + reactionTime
 	//calculate swing times for weaving
+	timeUntilSwing := enh.AutoAttacks.NextAttackAt() - sim.CurrentTime
+
+	if lvbCastTime < timeUntilSwing {
+		if reactionTime > 0 {
+			reactionTime += sim.CurrentTime
+
+			enh.HardcastWaitUntil(sim, reactionTime, func(_ *core.Simulation, _ *core.Unit) {
+				enh.GCD.Reset()
+				enh.LavaBurst.Cast(sim, enh.CurrentTarget)
+			})
+
+			enh.WaitUntil(sim, reactionTime)
+			return true
+		}
+
+		return enh.LavaBurst.Cast(sim, enh.CurrentTarget)
+	}
 
 	return false
 }

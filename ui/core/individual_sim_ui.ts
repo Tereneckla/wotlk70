@@ -1,5 +1,5 @@
-import { simLaunchStatuses } from './launched_sims';
-import { Player } from './player';
+import { aplLaunchStatuses, LaunchStatus, simLaunchStatuses } from './launched_sims';
+import { Player, AutoRotationGenerator, SimpleRotationGenerator } from './player';
 import { SimUI, SimWarning } from './sim_ui';
 import { EventID, TypedEvent } from './typed_event';
 
@@ -7,18 +7,17 @@ import { CharacterStats, StatMods } from './components/character_stats';
 import { ContentBlock } from './components/content_block';
 import { EmbeddedDetailedResults } from './components/detailed_results';
 import { EncounterPickerConfig } from './components/encounter_picker';
-import { EnumPicker } from './components/enum_picker';
-import { IconEnumPicker } from './components/icon_enum_picker';
-import { LogRunner } from './components/log_runner';
 import { addRaidSimAction, RaidSimResultsManager } from './components/raid_sim_action';
-import { SavedDataConfig, SavedDataManager } from './components/saved_data_manager';
+import { SavedDataConfig } from './components/saved_data_manager';
 import { addStatWeightsAction } from './components/stat_weights_action';
 
+import { BulkTab } from './components/individual_sim_ui/bulk_tab';
 import { GearTab } from './components/individual_sim_ui/gear_tab';
 import { SettingsTab } from './components/individual_sim_ui/settings_tab';
+import { RotationTab } from './components/individual_sim_ui/rotation_tab';
+import { TalentsTab } from './components/individual_sim_ui/talents_tab';
 
 import {
-	Class,
 	Consumes,
 	Debuffs,
 	Encounter as EncounterProto,
@@ -36,7 +35,7 @@ import {
 	Stat,
 } from './proto/common';
 
-import { IndividualSimSettings, SavedTalents } from './proto/ui';
+import { IndividualSimSettings, SavedRotation, SavedTalents } from './proto/ui';
 import { StatWeightsResult } from './proto/api';
 
 import { Gear } from './proto_utils/gear';
@@ -52,9 +51,6 @@ import {
 	specToEligibleRaces,
 	specToLocalStorageKey,
 } from './proto_utils/utils';
-
-import { HunterPetTalentsPicker, makePetTypeInputConfig } from './talents/hunter_pet';
-import { newGlyphsPicker, newTalentsPicker } from './talents/factory';
 
 import * as Exporters from './components/exporters';
 import * as Importers from './components/importers';
@@ -138,8 +134,11 @@ export interface IndividualSimUIConfig<SpecType extends Spec> {
 	presets: {
 		gear: Array<PresetGear>,
 		talents: Array<SavedDataConfig<Player<any>, SavedTalents>>,
-		rotation?: Array<SavedDataConfig<Player<any>, string>>,
+		rotations?: Array<PresetRotation>,
 	},
+
+	autoRotation?: AutoRotationGenerator<SpecType>,
+	simpleRotation?: SimpleRotationGenerator<SpecType>,
 }
 
 export interface GearAndStats {
@@ -150,6 +149,13 @@ export interface GearAndStats {
 export interface PresetGear {
 	name: string;
 	gear: EquipmentSpec;
+	tooltip?: string;
+	enableWhen?: (obj: Player<any>) => boolean;
+}
+
+export interface PresetRotation {
+	name: string;
+	rotation: SavedRotation;
 	tooltip?: string;
 	enableWhen?: (obj: Player<any>) => boolean;
 }
@@ -172,6 +178,11 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 
 	prevEpIterations: number;
 	prevEpSimResult: StatWeightsResult | null;
+	dpsRefStat?: Stat;
+	healRefStat?: Stat;
+	tankRefStat?: Stat;
+
+	readonly bt: BulkTab;
 
 	constructor(parentElem: HTMLElement, player: Player<SpecType>, config: IndividualSimUIConfig<SpecType>) {
 		super(parentElem, player.sim, {
@@ -180,6 +191,7 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 			spec: player.spec,
 			knownIssues: config.knownIssues,
 			launchStatus: simLaunchStatuses[player.spec],
+			noticeText: aplLaunchStatuses[player.spec] == LaunchStatus.Alpha ? 'Rotation settings have been moved to the \'Rotation\' tab, where experimental APL options are also available. Try them out!' : undefined,
 		});
 		this.rootElem.classList.add('individual-sim-ui');
 		this.player = player;
@@ -188,10 +200,20 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 		this.prevEpIterations = 0;
 		this.prevEpSimResult = null;
 
+		if (aplLaunchStatuses[player.spec] >= LaunchStatus.Beta) {
+			if (!config.autoRotation) {
+				throw new Error('autoRotation is required for APL beta');
+			}
+			player.setAutoRotationGenerator(config.autoRotation);
+		}
+		if (aplLaunchStatuses[player.spec] == LaunchStatus.Launched && config.simpleRotation) {
+			player.setSimpleRotationGenerator(config.simpleRotation);
+		}
+
 		this.addWarning({
 			updateOn: this.player.gearChangeEmitter,
 			getContent: () => {
-				if (!this.player.getGear().hasInactiveMetaGem()) {
+				if (!this.player.getGear().hasInactiveMetaGem(this.player.isBlacksmithing())) {
 					return '';
 				}
 
@@ -213,7 +235,7 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 		this.addWarning({
 			updateOn: this.player.gearChangeEmitter,
 			getContent: () => {
-				const jcGems = this.player.getGear().getJCGems();
+				const jcGems = this.player.getGear().getJCGems(this.player.isBlacksmithing());
 				if (jcGems.length <= 3) {
 					return '';
 				}
@@ -267,12 +289,15 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 
 		this.addSidebarComponents();
 		this.addGearTab();
+		this.bt = this.addBulkTab();
 		this.addSettingsTab();
 		this.addTalentsTab();
+		if (aplLaunchStatuses[this.player.spec] != LaunchStatus.Unlaunched) {
+			this.addRotationTab();
+		}
 
 		if (!this.isWithinRaidSim) {
 			this.addDetailedResultsTab();
-			this.addLogTab();
 		}
 
 		this.addTopbarComponents();
@@ -344,93 +369,25 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 		gearTab.rootElem.classList.add('active', 'show');
 	}
 
+	private addBulkTab(): BulkTab {
+		let bulkTab = new BulkTab(this.simTabContentsContainer, this);
+		bulkTab.navLink.hidden = !this.sim.getShowExperimental()
+		this.sim.showExperimentalChangeEmitter.on(() => {
+			bulkTab.navLink.hidden = !this.sim.getShowExperimental();
+		});
+		return bulkTab;
+	}
 
 	private addSettingsTab() {
 		new SettingsTab(this.simTabContentsContainer, this);
 	}
 
 	private addTalentsTab() {
-		this.addTab('Talents', 'talents-tab', `
-			<div class="talents-content tab-pane-content-container">
-				<div class="talents-tab-content tab-panel-left">
-					<div class="player-pet-toggle hide"></div>
-					<div class="talents-picker"></div>
-					<div class="glyphs-picker">
-						<span>Glyphs</span>
-					</div>
-					<div class="pet-talents-picker hide"></div>
-				</div>
-				<div class="saved-talents-manager tab-panel-right"></div>
-			</div>
-		`);
+		new TalentsTab(this.simTabContentsContainer, this);
+	}
 
-		const talentsPicker = newTalentsPicker(this.rootElem.getElementsByClassName('talents-picker')[0] as HTMLElement, this.player);
-		const glyphsPicker = newGlyphsPicker(this.rootElem.getElementsByClassName('glyphs-picker')[0] as HTMLElement, this.player);
-
-		this.rootElem.querySelector('#talents-tab-tab')?.classList.add('sim-tab');
-
-		const savedTalentsManager = new SavedDataManager<Player<any>, SavedTalents>(
-			this.rootElem.getElementsByClassName('saved-talents-manager')[0] as HTMLElement, this, this.player, {
-				label: 'Talents',
-				header: {title: 'Saved Talents'},
-				storageKey: this.getSavedTalentsStorageKey(),
-				getData: (player: Player<any>) => SavedTalents.create({
-					talentsString: player.getTalentsString(),
-					glyphs: player.getGlyphs(),
-				}),
-				setData: (eventID: EventID, player: Player<any>, newTalents: SavedTalents) => {
-					TypedEvent.freezeAllAndDo(() => {
-						player.setTalentsString(eventID, newTalents.talentsString);
-						player.setGlyphs(eventID, newTalents.glyphs || Glyphs.create());
-					});
-				},
-				changeEmitters: [this.player.talentsChangeEmitter, this.player.glyphsChangeEmitter],
-				equals: (a: SavedTalents, b: SavedTalents) => SavedTalents.equals(a, b),
-				toJson: (a: SavedTalents) => SavedTalents.toJson(a),
-				fromJson: (obj: any) => SavedTalents.fromJson(obj),
-			}
-		);
-
-		this.sim.waitForInit().then(() => {
-			savedTalentsManager.loadUserData();
-			this.individualConfig.presets.talents.forEach(config => {
-				config.isPreset = true;
-				savedTalentsManager.addSavedData({
-					name: config.name,
-					isPreset: true,
-					data: config.data,
-				});
-			});
-
-			if (this.player.getClass() == Class.ClassHunter) {
-				const petTalentsPicker = new HunterPetTalentsPicker(
-					this.rootElem.getElementsByClassName('pet-talents-picker')[0] as HTMLElement, this, this.player as Player<Spec.SpecHunter>
-				);
-
-				let curShown = 0;
-				const updateToggle = () => {
-					this.rootElem.querySelector('.talents-picker')?.classList.toggle('hide');
-					this.rootElem.querySelector('.glyphs-picker')?.classList.toggle('hide');
-					this.rootElem.querySelector('.pet-talents-picker')?.classList.toggle('hide');
-				}
-
-				const toggleContainer = this.rootElem.getElementsByClassName('player-pet-toggle')[0] as HTMLElement;
-				toggleContainer.classList.remove('hide');
-				const playerPetToggle = new EnumPicker(toggleContainer, this, {
-					values: [
-						{ name: 'Player', value: 0 },
-						{ name: 'Pet', value: 1 },
-					],
-					changedEvent: sim => new TypedEvent(),
-					getValue: sim => curShown,
-					setValue: (eventID, sim, newValue) => {
-						curShown = newValue;
-						updateToggle();
-					},
-				});
-				const petTypeToggle = new IconEnumPicker(toggleContainer, this.player as Player<Spec.SpecHunter>, makePetTypeInputConfig(false));
-			}
-		});
+	private addRotationTab() {
+		new RotationTab(this.simTabContentsContainer, this);
 	}
 
 	private addDetailedResultsTab() {
@@ -440,15 +397,6 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 		`);
 
 		const detailedResults = new EmbeddedDetailedResults(this.rootElem.getElementsByClassName('detailed-results')[0] as HTMLElement, this, this.raidSimResultsManager!);
-	}
-
-	private addLogTab() {
-		this.addTab('Log', 'log-tab', `
-			<div class="log-runner">
-			</div>
-		`);
-
-		const logRunner = new LogRunner(this.rootElem.getElementsByClassName('log-runner')[0] as HTMLElement, this);
 	}
 
 	private addTopbarComponents() {
@@ -462,6 +410,7 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 		this.simHeader.addExportLink('WoWHead', _parent => new Exporters.IndividualWowheadGearPlannerExporter(this.rootElem, this), false);
 		this.simHeader.addExportLink('80U EP', _parent => new Exporters.Individual80UEPExporter(this.rootElem, this), false);
 		this.simHeader.addExportLink('Pawn EP', _parent => new Exporters.IndividualPawnEPExporter(this.rootElem, this), false);
+		this.simHeader.addExportLink("CLI", _parent => new Exporters.IndividualCLIExporter(this.rootElem, this), true);
 	}
 
 	applyDefaults(eventID: EventID) {
@@ -470,15 +419,19 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 			const healingSpec = isHealingSpec(this.player.spec);
 
 			//Special case for Totem of Wrath keeps buff and debuff sync'd
-			const towEnabled =  this.individualConfig.defaults.raidBuffs.totemOfWrath || this.individualConfig.defaults.debuffs.totemOfWrath
+			const towEnabled = this.individualConfig.defaults.raidBuffs.totemOfWrath || this.individualConfig.defaults.debuffs.totemOfWrath
 			this.individualConfig.defaults.raidBuffs.totemOfWrath = towEnabled;
 			this.individualConfig.defaults.debuffs.totemOfWrath = towEnabled;
-			
+
 			this.player.applySharedDefaults(eventID);
 			this.player.setRace(eventID, specToEligibleRaces[this.player.spec][0]);
 			this.player.setGear(eventID, this.sim.db.lookupEquipmentSpec(this.individualConfig.defaults.gear));
 			this.player.setConsumes(eventID, this.individualConfig.defaults.consumes);
-			this.player.setRotation(eventID, this.individualConfig.defaults.rotation);
+			if (aplLaunchStatuses[this.player.spec] < LaunchStatus.Beta) {
+				this.player.setRotation(eventID, this.individualConfig.defaults.rotation);
+			} else if (aplLaunchStatuses[this.player.spec] == LaunchStatus.Beta) {
+				this.player.setRotation(eventID, this.player.specTypeFunctions.rotationCreate());
+			}
 			this.player.setTalentsString(eventID, this.individualConfig.defaults.talents.talentsString);
 			this.player.setGlyphs(eventID, this.individualConfig.defaults.talents.glyphs || Glyphs.create());
 			this.player.setSpecOptions(eventID, this.individualConfig.defaults.specOptions);
@@ -486,6 +439,8 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 			this.player.getParty()!.setBuffs(eventID, this.individualConfig.defaults.partyBuffs);
 			this.player.getRaid()!.setBuffs(eventID, this.individualConfig.defaults.raidBuffs);
 			this.player.setEpWeights(eventID, this.individualConfig.defaults.epWeights);
+			const defaultRatios = this.player.getDefaultEpRatios(tankSpec, healingSpec)
+			this.player.setEpRatios(eventID, defaultRatios);
 			this.player.setProfession1(eventID, this.individualConfig.defaults.other?.profession1 || Profession.Engineering);
 			this.player.setProfession2(eventID, this.individualConfig.defaults.other?.profession2 || Profession.Jewelcrafting);
 			this.player.setDistanceFromTarget(eventID, this.individualConfig.defaults.other?.distanceFromTarget || 0);
@@ -499,7 +454,7 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 				this.sim.applyDefaults(eventID, tankSpec, healingSpec);
 
 				if (tankSpec) {
-					this.sim.raid.setTanks(eventID, [this.player.makeRaidTarget()]);
+					this.sim.raid.setTanks(eventID, [this.player.makeUnitReference()]);
 				} else {
 					this.sim.raid.setTanks(eventID, []);
 				}
@@ -540,6 +495,10 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 			partyBuffs: this.player.getParty()?.getBuffs() || PartyBuffs.create(),
 			encounter: this.sim.encounter.toProto(),
 			epWeightsStats: this.player.getEpWeights().toProto(),
+			epRatios: this.player.getEpRatios(),
+			dpsRefStat: this.dpsRefStat,
+			healRefStat: this.healRefStat,
+			tankRefStat: this.tankRefStat,
 			targetDummies: this.sim.raid.getTargetDummies(),
 		});
 	}
@@ -572,6 +531,27 @@ export abstract class IndividualSimUI<SpecType extends Spec> extends SimUI {
 			} else {
 				this.player.setEpWeights(eventID, this.individualConfig.defaults.epWeights);
 			}
+
+			const tankSpec = isTankSpec(this.player.spec);
+			const healingSpec = isHealingSpec(this.player.spec);
+			const defaultRatios = this.player.getDefaultEpRatios(tankSpec, healingSpec);
+			if (settings.epRatios) {
+				const missingRatios = new Array<number>(defaultRatios.length - settings.epRatios.length).fill(0);
+				this.player.setEpRatios(eventID, settings.epRatios.concat(missingRatios));
+			} else {
+				this.player.setEpRatios(eventID, defaultRatios);
+			}
+
+			if (settings.dpsRefStat) {
+				this.dpsRefStat = settings.dpsRefStat;
+			}
+			if (settings.healRefStat) {
+				this.healRefStat = settings.healRefStat;
+			}
+			if (settings.tankRefStat) {
+				this.tankRefStat = settings.tankRefStat;
+			}
+
 			this.sim.raid.setBuffs(eventID, settings.raidBuffs || RaidBuffs.create());
 			this.sim.raid.setDebuffs(eventID, settings.debuffs || Debuffs.create());
 			this.sim.raid.setTanks(eventID, settings.tanks || []);

@@ -1,11 +1,10 @@
 package core
 
 import (
-	"math/bits"
-	"strconv"
-
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/core/stats"
+	"math/bits"
+	"strconv"
 )
 
 type ProcMask uint32
@@ -56,6 +55,10 @@ const (
 	ProcMaskRangedSpecial
 	ProcMaskSpellDamage
 	ProcMaskSpellHealing
+	// Special mask for procs that can trigger things
+	ProcMaskProc
+	// Mask for FT weapon and rogue poisons, seems to be spell procs from a weapon imbue
+	ProcMaskWeaponProc
 )
 
 const (
@@ -78,21 +81,11 @@ const (
 
 	ProcMaskDirect = ProcMaskMelee | ProcMaskRanged | ProcMaskSpellDamage
 
-	ProcMaskTwoRoll = ProcMaskRanged | ProcMaskMeleeSpecial
-
 	ProcMaskSpecial = ProcMaskMeleeOrRangedSpecial | ProcMaskSpellDamage
-)
 
-func GetMeleeProcMaskForHands(mh bool, oh bool) ProcMask {
-	mask := ProcMaskUnknown
-	if mh {
-		mask |= ProcMaskMeleeMH
-	}
-	if oh {
-		mask |= ProcMaskMeleeOH
-	}
-	return mask
-}
+	ProcMaskMeleeOrProc = ProcMaskMelee | ProcMaskProc
+	ProcMaskSpellOrProc = ProcMaskSpellDamage | ProcMaskProc
+)
 
 // Possible outcomes of any hit/damage roll.
 type HitOutcome uint16
@@ -185,6 +178,7 @@ const (
 	SpellFlagBinary                                         // Does not do partial resists and could need a different hit roll.
 	SpellFlagChanneled                                      // Spell is channeled
 	SpellFlagDisease                                        // Spell is categorized as disease
+	SpellFlagHauntSE                                        // Spell benefits from haunt/SE effects
 	SpellFlagHelpful                                        // For healing spells / buffs.
 	SpellFlagMeleeMetrics                                   // Marks a spell as a melee ability for metrics.
 	SpellFlagNoOnCastComplete                               // Disables the OnCastComplete callback.
@@ -192,6 +186,10 @@ const (
 	SpellFlagNoLogs                                         // Disables logs for a spell.
 	SpellFlagAPL                                            // Indicates this spell can be used from an APL rotation.
 	SpellFlagMCD                                            // Indicates this spell is a MajorCooldown.
+	SpellFlagNoOnDamageDealt                                // Disables OnSpellHitDealt and OnPeriodicDamageDealt aura callbacks for this spell.
+	SpellFlagPrepullOnly                                    // Indicates this spell should only be used during prepull. Not enforced, just a signal for the APL UI.
+	SpellFlagPrepullPotion                                  // Indicates this spell is the prepull potion.
+	SpellFlagCombatPotion                                   // Indicates this spell is the combat potion.
 
 	// Used to let agents categorize their spells.
 	SpellFlagAgentReserved1

@@ -3,6 +3,7 @@ import {
 	Consumes,
 	Cooldowns,
 	Debuffs,
+	HealingModel,
 	IndividualBuffs,
 	ItemSlot,
 	PartyBuffs,
@@ -12,13 +13,14 @@ import {
 	Stat
 } from "../../proto/common";
 import { ActionId } from "../../proto_utils/action_id";
-import { nameToShattFaction, professionNames, raceNames } from "../../proto_utils/names";
+import {nameToShattFaction, professionNames, raceNames } from "../../proto_utils/names";
 import { specToEligibleRaces } from "../../proto_utils/utils";
 import { Encounter } from '../../encounter';
 import { SavedEncounter, SavedSettings } from "../../proto/ui";
 import { EventID, TypedEvent } from "../../typed_event";
 import { getEnumValues } from "../../utils";
 import { Player } from "../../player";
+import { aplLaunchStatuses, LaunchStatus } from '../../launched_sims';
 
 import { ContentBlock } from "../content_block";
 import { EncounterPicker } from '../encounter_picker.js';
@@ -41,22 +43,22 @@ import * as Tooltips from '../../constants/tooltips.js';
 import { ItemSwapPicker } from "../item_swap_picker";
 
 export class SettingsTab extends SimTab {
-  protected simUI: IndividualSimUI<Spec>;
+	protected simUI: IndividualSimUI<Spec>;
 
-  readonly leftPanel: HTMLElement;
-  readonly rightPanel: HTMLElement;
+	readonly leftPanel: HTMLElement;
+	readonly rightPanel: HTMLElement;
 
 	readonly column1: HTMLElement = this.buildColumn(1, 'settings-left-col');
 	readonly column2: HTMLElement = this.buildColumn(2, 'settings-left-col');
 	readonly column3: HTMLElement = this.buildColumn(3, 'settings-left-col');
 	readonly column4?: HTMLElement;
 
-  constructor(parentElem: HTMLElement, simUI: IndividualSimUI<Spec>) {
-    super(parentElem, simUI, {identifier: 'settings-tab', title: 'Settings'});
-    this.simUI = simUI;
+	constructor(parentElem: HTMLElement, simUI: IndividualSimUI<Spec>) {
+		super(parentElem, simUI, { identifier: 'settings-tab', title: 'Settings' });
+		this.simUI = simUI;
 
-    this.leftPanel = document.createElement('div');
-    this.leftPanel.classList.add('settings-tab-left', 'tab-panel-left');
+		this.leftPanel = document.createElement('div');
+		this.leftPanel.classList.add('settings-tab-left', 'tab-panel-left');
 
 		this.leftPanel.appendChild(this.column1);
 		this.leftPanel.appendChild(this.column2);
@@ -69,25 +71,29 @@ export class SettingsTab extends SimTab {
 		}
 
 		this.rightPanel = document.createElement('div');
-    this.rightPanel.classList.add('settings-tab-right', 'tab-panel-right', 'within-raid-sim-hide');
+		this.rightPanel.classList.add('settings-tab-right', 'tab-panel-right', 'within-raid-sim-hide');
 
-    this.contentContainer.appendChild(this.leftPanel);
-    this.contentContainer.appendChild(this.rightPanel);
+		this.contentContainer.appendChild(this.leftPanel);
+		this.contentContainer.appendChild(this.rightPanel);
 
-    this.buildTabContent();
-  }
+		this.buildTabContent();
+	}
 
-  protected buildTabContent() {
+	protected buildTabContent() {
 		if (!this.simUI.isWithinRaidSim) {
-    	this.buildEncounterSettings();
+			this.buildEncounterSettings();
 		}
 
-		this.buildRotationSettings();
+		if (aplLaunchStatuses[this.simUI.player.spec] == LaunchStatus.Unlaunched) {
+			this.buildRotationSettings();
+		}
 
 		this.buildPlayerSettings();
 		this.buildCustomSettingsSections();
 		this.buildConsumesSection();
-		this.buildCooldownSettings();
+		if (aplLaunchStatuses[this.simUI.player.spec] == LaunchStatus.Unlaunched) {
+			this.buildCooldownSettings();
+		}
 		this.buildOtherSettings();
 
 		if (!this.simUI.isWithinRaidSim) {
@@ -96,22 +102,22 @@ export class SettingsTab extends SimTab {
 		}
 
 		if (!this.simUI.isWithinRaidSim) {
-    	this.buildSavedDataPickers();
+			this.buildSavedDataPickers();
 		}
-  }
+	}
 
-  private buildEncounterSettings() {
-    const contentBlock = new ContentBlock(this.column1, 'encounter-settings', {
-      header: {title: 'Encounter'}
-    });
+	private buildEncounterSettings() {
+		const contentBlock = new ContentBlock(this.column1, 'encounter-settings', {
+			header: { title: 'Encounter' }
+		});
 
-    new EncounterPicker(contentBlock.bodyElement, this.simUI.sim.encounter, this.simUI.individualConfig.encounterPicker, this.simUI);
-  }
+		new EncounterPicker(contentBlock.bodyElement, this.simUI.sim.encounter, this.simUI.individualConfig.encounterPicker, this.simUI);
+	}
 
 	private buildRotationSettings() {
 		const contentBlock = new ContentBlock(this.column1, 'rotation-settings', {
-      header: {title: 'Rotation'}
-    });
+			header: { title: 'Rotation' }
+		});
 
 		const rotationIconGroup = Input.newGroupContainer();
 		rotationIconGroup.classList.add('rotation-icon-group', 'icon-group');
@@ -133,8 +139,9 @@ export class SettingsTab extends SimTab {
 	}
 
 	private buildPlayerSettings() {
-		const contentBlock = new ContentBlock(this.column2, 'player-settings', {
-			header: {title: 'Player'}
+		const column = aplLaunchStatuses[this.simUI.player.spec] == LaunchStatus.Unlaunched ? this.column2 : this.column1;
+		const contentBlock = new ContentBlock(column, 'player-settings', {
+			header: { title: 'Player' }
 		});
 
 		const playerIconGroup = Input.newGroupContainer();
@@ -208,7 +215,6 @@ export class SettingsTab extends SimTab {
 			showWhen: (player: Player<any>) => this.simUI.player.getEquippedItem(ItemSlot.ItemSlotNeck)?.item.id == 34678 || this.simUI.player.getEquippedItem(ItemSlot.ItemSlotNeck)?.item.id == 34679,
 		});
 	}
-
 	
 
 	private buildCustomSettingsSections() {
@@ -221,7 +227,7 @@ export class SettingsTab extends SimTab {
 	private buildConsumesSection() {
 		const column = this.simUI.isWithinRaidSim ? this.column3 : this.column2;
 		const contentBlock = new ContentBlock(column, 'consumes-settings', {
-			header: {title: 'Consumables'}
+			header: { title: 'Consumables' }
 		});
 
 		new ConsumesPicker(contentBlock.bodyElement, this, this.simUI);
@@ -230,7 +236,7 @@ export class SettingsTab extends SimTab {
 	private buildCooldownSettings() {
 		const column = (this.simUI.isWithinRaidSim ? this.column4 : this.column2) as HTMLElement;
 		const contentBlock = new ContentBlock(column, 'cooldown-settings', {
-			header: {title: 'Cooldowns', tooltip: Tooltips.COOLDOWNS_SECTION}
+			header: { title: 'Cooldowns', tooltip: Tooltips.COOLDOWNS_SECTION }
 		});
 
 		new CooldownsPicker(contentBlock.bodyElement, this.simUI.player);
@@ -244,7 +250,7 @@ export class SettingsTab extends SimTab {
 
 		if (settings.length > 0) {
 			const contentBlock = new ContentBlock(this.column2, 'other-settings', {
-				header: {title: 'Other'}
+				header: { title: 'Other' }
 			});
 
 			this.configureInputSection(contentBlock.bodyElement, this.simUI.individualConfig.otherInputs);
@@ -257,7 +263,7 @@ export class SettingsTab extends SimTab {
 
 	private buildBuffsSettings() {
 		const contentBlock = new ContentBlock(this.column3, 'buffs-settings', {
-			header: {title: 'Raid Buffs', tooltip: Tooltips.BUFFS_SECTION}
+			header: { title: 'Raid Buffs', tooltip: Tooltips.BUFFS_SECTION }
 		});
 
 		const buffOptions = this.simUI.splitRelevantOptions([
@@ -278,6 +284,7 @@ export class SettingsTab extends SimTab {
 			{ item: IconInputs.HastePercentBuff, stats: [Stat.StatMeleeHaste, Stat.StatSpellHaste] },
 			{ item: IconInputs.DamagePercentBuff, stats: [Stat.StatAttackPower, Stat.StatRangedAttackPower, Stat.StatSpellPower] },
 			{ item: IconInputs.DamageReductionPercentBuff, stats: [Stat.StatArmor] },
+			{ item: IconInputs.ResistanceBuff, stats: [Stat.StatNatureResistance, Stat.StatShadowResistance, Stat.StatFrostResistance] },
 			{ item: IconInputs.DefensiveCooldownBuff, stats: [Stat.StatArmor] },
 			{ item: IconInputs.MP5Buff, stats: [Stat.StatMP5] },
 			{ item: IconInputs.ReplenishmentBuff, stats: [Stat.StatMP5] },
@@ -310,12 +317,11 @@ export class SettingsTab extends SimTab {
 		const miscBuffOptions = this.simUI.splitRelevantOptions([
 			{ item: IconInputs.HeroicPresence, stats: [Stat.StatMeleeHit, Stat.StatSpellHit] },
 			{ item: IconInputs.BraidedEterniumChain, stats: [Stat.StatMeleeCrit, Stat.StatSpellCrit] },
-			{ item: IconInputs.ChainOfTheTwilightOwl, stats: [Stat.StatMeleeCrit, Stat.StatSpellCrit] },
+			{ item: IconInputs.ChainOfTheTwilightOwl, stats: [Stat.StatSpellCrit, Stat.StatMeleeCrit] },
 			{ item: IconInputs.FocusMagic, stats: [Stat.StatSpellCrit] },
 			{ item: IconInputs.EyeOfTheNight, stats: [Stat.StatSpellPower] },
 			{ item: IconInputs.Thorns, stats: [Stat.StatArmor] },
 			{ item: IconInputs.RetributionAura, stats: [Stat.StatArmor] },
-			{ item: IconInputs.ShadowProtection, stats: [Stat.StatStamina] },
 			{ item: IconInputs.ManaTideTotem, stats: [Stat.StatMP5] },
 			{ item: IconInputs.Innervate, stats: [Stat.StatMP5] },
 			{ item: IconInputs.PowerInfusion, stats: [Stat.StatMP5, Stat.StatSpellPower] },
@@ -331,7 +337,7 @@ export class SettingsTab extends SimTab {
 
 	private buildDebuffsSettings() {
 		const contentBlock = new ContentBlock(this.column3, 'debuffs-settings', {
-			header: {title: 'Debuffs', tooltip: Tooltips.DEBUFFS_SECTION}
+			header: { title: 'Debuffs', tooltip: Tooltips.DEBUFFS_SECTION }
 		});
 
 		const debuffOptions = this.simUI.splitRelevantOptions([
@@ -361,7 +367,6 @@ export class SettingsTab extends SimTab {
 
 		const miscDebuffOptions = this.simUI.splitRelevantOptions([
 			{ item: IconInputs.JudgementOfLight, stats: [Stat.StatStamina] },
-			{ item: IconInputs.ShatteringThrow, stats: [Stat.StatArmorPenetration] },
 			{ item: IconInputs.GiftOfArthas, stats: [Stat.StatAttackPower, Stat.StatRangedAttackPower] },
 		] as Array<StatOption<IconPickerConfig<Player<any>, any>>>);
 		if (miscDebuffOptions.length > 0) {
@@ -374,9 +379,9 @@ export class SettingsTab extends SimTab {
 	}
 
 	private buildSavedDataPickers() {
-    const savedEncounterManager = new SavedDataManager<Encounter, SavedEncounter>(this.rightPanel, this.simUI, this.simUI.sim.encounter, {
+		const savedEncounterManager = new SavedDataManager<Encounter, SavedEncounter>(this.rightPanel, this.simUI, this.simUI.sim.encounter, {
 			label: 'Encounter',
-      header: {title: 'Saved Encounters'},
+			header: { title: 'Saved Encounters' },
 			storageKey: this.simUI.getSavedEncounterStorageKey(),
 			getData: (encounter: Encounter) => SavedEncounter.create({ encounter: encounter.toProto() }),
 			setData: (eventID: EventID, encounter: Encounter, newEncounter: SavedEncounter) => encounter.fromProto(eventID, newEncounter.encounter!),
@@ -386,9 +391,9 @@ export class SettingsTab extends SimTab {
 			fromJson: (obj: any) => SavedEncounter.fromJson(obj),
 		});
 
-    const savedSettingsManager = new SavedDataManager<IndividualSimUI<any>, SavedSettings>(this.rightPanel, this.simUI, this.simUI, {
+		const savedSettingsManager = new SavedDataManager<IndividualSimUI<any>, SavedSettings>(this.rightPanel, this.simUI, this.simUI, {
 			label: 'Settings',
-      header: {title: 'Saved Settings'},
+			header: { title: 'Saved Settings' },
 			storageKey: this.simUI.getSavedSettingsStorageKey(),
 			getData: (simUI: IndividualSimUI<any>) => {
 				const player = simUI.player;
@@ -399,8 +404,14 @@ export class SettingsTab extends SimTab {
 					debuffs: simUI.sim.raid.getDebuffs(),
 					consumes: player.getConsumes(),
 					race: player.getRace(),
-					cooldowns: player.getCooldowns(),
-					rotationJson: JSON.stringify(player.specTypeFunctions.rotationToJson(player.getRotation())),
+					professions: player.getProfessions(),
+					reactionTimeMs: player.getReactionTime(),
+					channelClipDelayMs: player.getChannelClipDelay(),
+					inFrontOfTarget: player.getInFrontOfTarget(),
+					distanceFromTarget: player.getDistanceFromTarget(),
+					healingModel: player.getHealingModel(),
+					cooldowns: aplLaunchStatuses[simUI.player.spec] == LaunchStatus.Unlaunched ? player.getCooldowns() : undefined,
+					rotationJson: aplLaunchStatuses[simUI.player.spec] == LaunchStatus.Unlaunched ? JSON.stringify(player.specTypeFunctions.rotationToJson(player.getRotation())) : undefined,
 				});
 			},
 			setData: (eventID: EventID, simUI: IndividualSimUI<any>, newSettings: SavedSettings) => {
@@ -414,9 +425,17 @@ export class SettingsTab extends SimTab {
 					simUI.player.setBuffs(eventID, newSettings.playerBuffs || IndividualBuffs.create());
 					simUI.player.setConsumes(eventID, newSettings.consumes || Consumes.create());
 					simUI.player.setRace(eventID, newSettings.race);
-					simUI.player.setCooldowns(eventID, newSettings.cooldowns || Cooldowns.create());
-					if (newSettings.rotationJson) {
-						simUI.player.setRotation(eventID, simUI.player.specTypeFunctions.rotationFromJson(JSON.parse(newSettings.rotationJson)));
+					simUI.player.setProfessions(eventID, newSettings.professions);
+					simUI.player.setReactionTime(eventID, newSettings.reactionTimeMs);
+					simUI.player.setChannelClipDelay(eventID, newSettings.channelClipDelayMs);
+					simUI.player.setInFrontOfTarget(eventID, newSettings.inFrontOfTarget);
+					simUI.player.setDistanceFromTarget(eventID, newSettings.distanceFromTarget);
+					simUI.player.setHealingModel(eventID, newSettings.healingModel || HealingModel.create());
+					if (aplLaunchStatuses[simUI.player.spec] == LaunchStatus.Unlaunched) {
+						simUI.player.setCooldowns(eventID, newSettings.cooldowns || Cooldowns.create());
+						if (newSettings.rotationJson) {
+							simUI.player.setRotation(eventID, simUI.player.specTypeFunctions.rotationFromJson(JSON.parse(newSettings.rotationJson)));
+						}
 					}
 				});
 			},
@@ -427,9 +446,15 @@ export class SettingsTab extends SimTab {
 				this.simUI.player.buffsChangeEmitter,
 				this.simUI.player.consumesChangeEmitter,
 				this.simUI.player.raceChangeEmitter,
+				this.simUI.player.professionChangeEmitter,
+				this.simUI.player.miscOptionsChangeEmitter,
+				this.simUI.player.inFrontOfTargetChangeEmitter,
+				this.simUI.player.distanceFromTargetChangeEmitter,
+				this.simUI.player.healingModelChangeEmitter,
+			].concat(aplLaunchStatuses[this.simUI.player.spec] == LaunchStatus.Unlaunched ? [
 				this.simUI.player.cooldownsChangeEmitter,
 				this.simUI.player.rotationChangeEmitter,
-			],
+			] : []),
 			equals: (a: SavedSettings, b: SavedSettings) => SavedSettings.equals(a, b),
 			toJson: (a: SavedSettings) => SavedSettings.toJson(a),
 			fromJson: (obj: any) => SavedSettings.fromJson(obj),
@@ -439,19 +464,19 @@ export class SettingsTab extends SimTab {
 			savedEncounterManager.loadUserData();
 			savedSettingsManager.loadUserData();
 		});
-  }
+	}
 
 	private configureInputSection(sectionElem: HTMLElement, sectionConfig: InputSection) {
 		sectionConfig.inputs.forEach(inputConfig => {
 			if (inputConfig.type == 'number') {
 				new NumberPicker(sectionElem, this.simUI.player, inputConfig);
 			} else if (inputConfig.type == 'boolean') {
-				new BooleanPicker(sectionElem, this.simUI.player, {...inputConfig, ...{cssScheme: this.simUI.cssScheme}});
+				new BooleanPicker(sectionElem, this.simUI.player, { ...inputConfig, ...{ cssScheme: this.simUI.cssScheme } });
 			} else if (inputConfig.type == 'enum') {
 				new EnumPicker(sectionElem, this.simUI.player, inputConfig);
 			} else if (inputConfig.type == 'customRotation') {
 				new CustomRotationPicker(sectionElem, this.simUI, this.simUI.player, inputConfig);
-			} else if (inputConfig.type == 'itemSwap'){
+			} else if (inputConfig.type == 'itemSwap') {
 				new ItemSwapPicker(sectionElem, this.simUI, this.simUI.player, inputConfig)
 			}
 		});

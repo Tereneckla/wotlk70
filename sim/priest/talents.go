@@ -85,24 +85,17 @@ func (priest *Priest) applyDivineAegis() {
 		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagHelpful,
 
 		DamageMultiplier: 1 *
-			(0.1 * float64(priest.Talents.DivineAegis)),
+			(0.1 * float64(priest.Talents.DivineAegis)) *
+			core.TernaryFloat64(priest.HasSetBonus(ItemSetZabrasRaiment, 4), 1.1, 1),
 		ThreatMultiplier: 1,
-	})
 
-	shields := make([]*core.Shield, len(priest.Env.AllUnits))
-	for _, unit := range priest.Env.AllUnits {
-		if !priest.IsOpponent(unit) {
-			shield := core.NewShield(core.Shield{
-				Spell: divineAegis,
-				Aura: unit.GetOrRegisterAura(core.Aura{
-					Label:    "Divine Aegis",
-					ActionID: divineAegis.ActionID,
-					Duration: time.Second * 12,
-				}),
-			})
-			shields[unit.UnitIndex] = shield
-		}
-	}
+		Shield: core.ShieldConfig{
+			Aura: core.Aura{
+				Label:    "Divine Aegis",
+				Duration: time.Second * 12,
+			},
+		},
+	})
 
 	priest.RegisterAura(core.Aura{
 		Label:    "Divine Aegis Talent",
@@ -112,8 +105,7 @@ func (priest *Priest) applyDivineAegis() {
 		},
 		OnHealDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			if result.Outcome.Matches(core.OutcomeCrit) {
-				shield := shields[result.Target.UnitIndex]
-				shield.Apply(sim, result.Damage)
+				divineAegis.Shield(result.Target).Apply(sim, result.Damage)
 			}
 		},
 	})
@@ -264,10 +256,10 @@ func (priest *Priest) applyHolyConcentration() {
 		ActionID: core.ActionID{SpellID: 34860},
 		Duration: time.Second * 8,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
-			priest.MultiplyCastSpeed(multiplier)
+			priest.PseudoStats.SpiritRegenMultiplier *= multiplier
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-			priest.MultiplyCastSpeed(1 / multiplier)
+			priest.PseudoStats.SpiritRegenMultiplier /= multiplier
 		},
 	})
 
@@ -328,6 +320,12 @@ func (priest *Priest) applySurgeOfLight() {
 		return
 	}
 
+	procHandler := func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+		if spell == priest.Smite || spell == priest.FlashHeal {
+			aura.Deactivate(sim)
+		}
+	}
+
 	priest.SurgeOfLightProcAura = priest.RegisterAura(core.Aura{
 		Label:    "Surge of Light Proc",
 		ActionID: core.ActionID{SpellID: 33154},
@@ -356,17 +354,22 @@ func (priest *Priest) applySurgeOfLight() {
 				priest.FlashHeal.BonusCritRating += 100 * core.CritRatingPerCritChance
 			}
 		},
-		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if spell == priest.Smite || spell == priest.FlashHeal {
-				aura.Deactivate(sim)
-			}
-		},
+		OnSpellHitDealt: procHandler,
+		OnHealDealt:     procHandler,
 	})
 
 	procChance := 0.25 * float64(priest.Talents.SurgeOfLight)
 	icd := core.Cooldown{
 		Timer:    priest.NewTimer(),
 		Duration: time.Second * 6,
+	}
+	priest.SurgeOfLightProcAura.Icd = &icd
+
+	handler := func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+		if icd.IsReady(sim) && result.Outcome.Matches(core.OutcomeCrit) && sim.RandomFloat("SurgeOfLight") < procChance {
+			icd.Use(sim)
+			priest.SurgeOfLightProcAura.Activate(sim)
+		}
 	}
 
 	priest.RegisterAura(core.Aura{
@@ -375,12 +378,8 @@ func (priest *Priest) applySurgeOfLight() {
 		OnReset: func(aura *core.Aura, sim *core.Simulation) {
 			aura.Activate(sim)
 		},
-		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if icd.IsReady(sim) && result.Outcome.Matches(core.OutcomeCrit) && sim.RandomFloat("SurgeOfLight") < procChance {
-				icd.Use(sim)
-				priest.SurgeOfLightProcAura.Activate(sim)
-			}
-		},
+		OnSpellHitDealt: handler,
+		OnHealDealt:     handler,
 	})
 }
 
@@ -389,7 +388,20 @@ func (priest *Priest) applyMisery() {
 		return
 	}
 
-	priest.MiseryAura = core.MiseryAura(priest.CurrentTarget, priest.Talents.Misery)
+	miseryAuras := priest.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
+		return core.MiseryAura(target, priest.Talents.Misery)
+	})
+	priest.Env.RegisterPreFinalizeEffect(func() {
+		priest.ShadowWordPain.RelatedAuras = append(priest.ShadowWordPain.RelatedAuras, miseryAuras)
+		if priest.VampiricTouch != nil {
+			priest.VampiricTouch.RelatedAuras = append(priest.VampiricTouch.RelatedAuras, miseryAuras)
+		}
+		if priest.MindFlay[1] != nil {
+			priest.MindFlay[1].RelatedAuras = append(priest.MindFlay[1].RelatedAuras, miseryAuras)
+			priest.MindFlay[2].RelatedAuras = append(priest.MindFlay[2].RelatedAuras, miseryAuras)
+			priest.MindFlay[3].RelatedAuras = append(priest.MindFlay[3].RelatedAuras, miseryAuras)
+		}
+	})
 
 	priest.RegisterAura(core.Aura{
 		Label:    "Priest Shadow Effects",
@@ -403,7 +415,7 @@ func (priest *Priest) applyMisery() {
 			}
 
 			if spell == priest.ShadowWordPain || spell == priest.VampiricTouch || spell.ActionID.SpellID == priest.MindFlay[1].ActionID.SpellID {
-				priest.MiseryAura.Activate(sim)
+				miseryAuras.Get(result.Target).Activate(sim)
 			}
 		},
 	})
@@ -478,7 +490,7 @@ func (priest *Priest) registerInnerFocus() {
 
 	priest.InnerFocus = priest.RegisterSpell(core.SpellConfig{
 		ActionID: actionID,
-		Flags:    core.SpellFlagNoOnCastComplete,
+		Flags:    core.SpellFlagNoOnCastComplete | core.SpellFlagAPL,
 
 		Cast: core.CastConfig{
 			CD: core.Cooldown{

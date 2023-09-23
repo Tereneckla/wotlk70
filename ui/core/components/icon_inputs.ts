@@ -1,5 +1,5 @@
 import { ActionId } from '../proto_utils/action_id.js';
-import { BattleElixir} from '../proto/common.js';
+import { BattleElixir } from '../proto/common.js';
 import { WeaponImbue } from '../proto/common.js';
 import { Explosive } from '../proto/common.js';
 import { Flask } from '../proto/common.js';
@@ -19,9 +19,6 @@ import { TristateEffect } from '../proto/common.js';
 import { Party } from '../party.js';
 import { Player } from '../player.js';
 import { Raid } from '../raid.js';
-import { Sim } from '../sim.js';
-import { Target } from '../target.js';
-import { Encounter } from '../encounter.js';
 import { EventID, TypedEvent } from '../typed_event.js';
 
 import { IconPicker, IconPickerConfig } from './icon_picker.js';
@@ -90,7 +87,6 @@ export const AttackPowerBuff = InputHelpers.makeMultiIconInput([
 ], 'AP');
 
 export const AttackPowerPercentBuff = InputHelpers.makeMultiIconInput([
-	makeBooleanRaidBuffInput(ActionId.fromSpellId(53138), 'abominationsMight'),
 	makeBooleanRaidBuffInput(ActionId.fromSpellId(30809), 'unleashedRage'),
 	makeBooleanRaidBuffInput(ActionId.fromSpellId(19506), 'trueshotAura'),
 ], 'Atk Pwr %');
@@ -128,7 +124,6 @@ export const MeleeCritBuff = InputHelpers.makeMultiIconInput([
 ], 'Melee Crit');
 
 export const MeleeHasteBuff = InputHelpers.makeMultiIconInput([
-	makeBooleanRaidBuffInput(ActionId.fromSpellId(55610), 'icyTalons'),
 	makeTristateRaidBuffInput(ActionId.fromSpellId(65990), ActionId.fromSpellId(29193), 'windfuryTotem'),
 ], 'Melee Haste');
 
@@ -212,7 +207,6 @@ export const CritDebuff = InputHelpers.makeMultiIconInput([
 
 export const MeleeAttackSpeedDebuff = InputHelpers.makeMultiIconInput([
 	makeTristateDebuffInput(ActionId.fromSpellId(25264), ActionId.fromSpellId(12666), 'thunderClap'),
-	makeTristateDebuffInput(ActionId.fromSpellId(55095), ActionId.fromSpellId(51456), 'frostFever'),
 	makeBooleanDebuffInput(ActionId.fromSpellId(53696), 'judgementsOfTheJust'),
 	makeBooleanDebuffInput(ActionId.fromSpellId(48485), 'infectedWounds'),
 ], 'Atk Speed');
@@ -239,7 +233,6 @@ export const SpellHitDebuff = InputHelpers.makeMultiIconInput([
 ], 'Spell Hit');
 
 export const SpellDamageDebuff = InputHelpers.makeMultiIconInput([
-	makeBooleanDebuffInput(ActionId.fromSpellId(51161), 'ebonPlaguebringer'),
 	makeBooleanDebuffInput(ActionId.fromSpellId(48511), 'earthAndMoon'),
 	makeBooleanDebuffInput(ActionId.fromSpellId(27228), 'curseOfElements'),
 ], 'Spell Dmg');
@@ -247,7 +240,6 @@ export const SpellDamageDebuff = InputHelpers.makeMultiIconInput([
 export const HuntersMark = withLabel(makeQuadstateDebuffInput(ActionId.fromSpellId(14325), ActionId.fromSpellId(19423), ActionId.fromItemId(42907), 'huntersMark'), 'Mark');
 export const JudgementOfWisdom = withLabel(makeBooleanDebuffInput(ActionId.fromSpellId(53408), 'judgementOfWisdom'), 'JoW');
 export const JudgementOfLight = makeBooleanDebuffInput(ActionId.fromSpellId(20271), 'judgementOfLight');
-export const ShatteringThrow = makeMultistateIndividualBuffInput(ActionId.fromSpellId(64382), 20, 'shatteringThrows');
 export const GiftOfArthas = makeBooleanDebuffInput(ActionId.fromSpellId(11374), 'giftOfArthas');
 
 // Consumes
@@ -445,7 +437,6 @@ export const makeFlasksInput = makeConsumeInputFactory({
 		{ actionId: ActionId.fromItemId(13512), value: Flask.FlaskOfSupremePower },
 		{ actionId: ActionId.fromItemId(22851), value: Flask.FlaskOfFortification },
 		{ actionId: ActionId.fromItemId(33208), value: Flask.FlaskOfChromaticWonder },
-		{ actionId: ActionId.fromItemId(13511), value: Flask.FlaskOfDistilledWisdom },
 	] as Array<IconEnumValueConfig<Player<any>, Flask>>,
 	onSet: (eventID: EventID, player: Player<any>, newValue: Flask) => {
 		if (newValue) {
@@ -520,6 +511,20 @@ export const makeGuardianElixirsInput = makeConsumeInputFactory({
 export const makeFoodInput = makeConsumeInputFactory({
 	consumesFieldName: 'food',
 	allOptions: [
+		{ actionId: ActionId.fromItemId(43015), value: Food.FoodFishFeast },
+		{ actionId: ActionId.fromItemId(34753), value: Food.FoodGreatFeast },
+		{ actionId: ActionId.fromItemId(42999), value: Food.FoodBlackenedDragonfin },
+		{ actionId: ActionId.fromItemId(42995), value: Food.FoodHeartyRhino },
+		{ actionId: ActionId.fromItemId(34754), value: Food.FoodMegaMammothMeal },
+		{ actionId: ActionId.fromItemId(34756), value: Food.FoodSpicedWormBurger },
+		{ actionId: ActionId.fromItemId(42994), value: Food.FoodRhinoliciousWormsteak },
+		{ actionId: ActionId.fromItemId(34769), value: Food.FoodImperialMantaSteak },
+		{ actionId: ActionId.fromItemId(42996), value: Food.FoodSnapperExtreme },
+		{ actionId: ActionId.fromItemId(34758), value: Food.FoodMightyRhinoDogs },
+		{ actionId: ActionId.fromItemId(34767), value: Food.FoodFirecrackerSalmon },
+		{ actionId: ActionId.fromItemId(42998), value: Food.FoodCuttlesteak },
+		{ actionId: ActionId.fromItemId(43000), value: Food.FoodDragonfinFilet },
+
 		{ actionId: ActionId.fromItemId(27657), value: Food.FoodBlackenedBasilisk },
 		{ actionId: ActionId.fromItemId(27664), value: Food.FoodGrilledMudfish },
 		{ actionId: ActionId.fromItemId(27655), value: Food.FoodRavagerDog },
@@ -531,6 +536,8 @@ export const makeFoodInput = makeConsumeInputFactory({
 });
 
 export const FillerExplosiveInput = makeConsumeInput('fillerExplosive', [
+	{ actionId: ActionId.fromItemId(41119), value: Explosive.ExplosiveSaroniteBomb },
+	{ actionId: ActionId.fromItemId(40771), value: Explosive.ExplosiveCobaltFragBomb },
 	{ actionId: ActionId.fromItemId(23826), value: Explosive.ExplosiveBiggerOne },
 	{ actionId: ActionId.fromItemId(23737), value: Explosive.ExplosiveAdamantiteGrenade },
 	{ actionId: ActionId.fromItemId(23736), value: Explosive.ExplosiveFelIronBomb },

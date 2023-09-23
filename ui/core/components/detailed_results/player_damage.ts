@@ -5,9 +5,7 @@ import { ColumnSortType, MetricsTable } from './metrics_table.js';
 import { ResultComponent, ResultComponentConfig, SimResultData } from './result_component.js';
 import { ResultsFilter } from './results_filter.js';
 import { SourceChart } from './source_chart.js';
-
-declare var $: any;
-declare var tippy: any;
+import tippy from 'tippy.js';
 
 export class PlayerDamageMetricsTable extends MetricsTable<UnitMetrics> {
 	private readonly resultsFilter: ResultsFilter;
@@ -38,6 +36,7 @@ export class PlayerDamageMetricsTable extends MetricsTable<UnitMetrics> {
 					tippy(rowElem, {
 						content: 'Loading...',
 						placement: 'bottom',
+						ignoreAttributes: true,
 						onShow(instance: any) {
 							if (!chart) {
 								chart = makeChart();
@@ -51,7 +50,7 @@ export class PlayerDamageMetricsTable extends MetricsTable<UnitMetrics> {
 							<span>${(player.dps.avg / this.raidDps * 100).toFixed(2)}%</span>
 						</div>
 						<div class="player-damage-bar-container">
-							<div class="player-damage-bar" style="background-color:${player.classColor}; width:${player.dps.avg / this.maxDps * 100}%"></div>
+							<div class="player-damage-bar bg-${player.classColor}" style="width:${player.dps.avg / this.maxDps * 100}%"></div>
 						</div>
 						<div class="player-damage-total">
 							<span>${(player.totalDamage / 1000).toFixed(1)}k</span>

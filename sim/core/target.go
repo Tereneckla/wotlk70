@@ -19,7 +19,7 @@ type Encounter struct {
 	ExecuteProportion_35 float64
 
 	EndFightAtHealth float64
-	// DamgeTaken is used to track health fights instead of duration fights.
+	// DamageTaken is used to track health fights instead of duration fights.
 	//  Once primary target has taken its health worth of damage, fight ends.
 	DamageTaken float64
 	// In health fight: set to true until we get something to base on
@@ -150,7 +150,7 @@ func NewTarget(options *proto.Target, targetIndex int32) *Target {
 	target.PseudoStats.CanParry = true
 	target.PseudoStats.ParryHaste = options.ParryHaste
 	target.PseudoStats.InFrontOfTarget = true
-	target.PseudoStats.TightEnemyDamage = options.TightEnemyDamage
+	target.PseudoStats.DamageSpread = options.DamageSpread
 
 	preset := GetPresetTargetWithID(options.Id)
 	if preset != nil && preset.AI != nil {
@@ -176,8 +176,8 @@ func (target *Target) Reset(sim *Simulation) {
 	}
 }
 
-func (target *Target) Advance(sim *Simulation, elapsedTime time.Duration) {
-	target.Unit.advance(sim, elapsedTime)
+func (target *Target) Advance(sim *Simulation) {
+	target.Unit.advance(sim)
 }
 
 func (target *Target) doneIteration(sim *Simulation) {
@@ -216,11 +216,11 @@ type AttackTable struct {
 	GlanceMultiplier float64
 	CritSuppression  float64
 
-	DamageDealtMultiplier               float64 // attacker buff, applied in applyAttackerModifiers()
-	DamageTakenMultiplier               float64 // defender debuff, applied in applyTargetModifiers()
-	NatureDamageTakenMultiplier         float64
-	PeriodicShadowDamageTakenMultiplier float64
-	HealingDealtMultiplier              float64
+	DamageDealtMultiplier        float64 // attacker buff, applied in applyAttackerModifiers()
+	DamageTakenMultiplier        float64 // defender debuff, applied in applyTargetModifiers()
+	NatureDamageTakenMultiplier  float64
+	HauntSEDamageTakenMultiplier float64
+	HealingDealtMultiplier       float64
 }
 
 func NewAttackTable(attacker *Unit, defender *Unit) *AttackTable {
@@ -228,11 +228,11 @@ func NewAttackTable(attacker *Unit, defender *Unit) *AttackTable {
 		Attacker: attacker,
 		Defender: defender,
 
-		DamageDealtMultiplier:               1,
-		DamageTakenMultiplier:               1,
-		NatureDamageTakenMultiplier:         1,
-		PeriodicShadowDamageTakenMultiplier: 1,
-		HealingDealtMultiplier:              1,
+		DamageDealtMultiplier:        1,
+		DamageTakenMultiplier:        1,
+		NatureDamageTakenMultiplier:  1,
+		HauntSEDamageTakenMultiplier: 1,
+		HealingDealtMultiplier:       1,
 	}
 
 	if defender.Type == EnemyUnit {

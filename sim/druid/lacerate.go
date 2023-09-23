@@ -8,21 +8,25 @@ import (
 
 func (druid *Druid) registerLacerateSpell() {
 	tickDamage := 155.0 / 5
-
-	if druid.HasSetBonus(ItemSetNordrassilHarness, 4) {
-		tickDamage += 15
-	}
-	initialDamage := 88.0
-	if druid.Equip[core.ItemSlotRanged].ID == 27744 { // Idol of Ursoc
+	initialDamage := 31.0
+	if druid.Ranged().ID == 27744 { // Idol of Ursoc
 		tickDamage += 8
 		initialDamage += 8
 	}
 
-	druid.Lacerate = druid.RegisterSpell(core.SpellConfig{
+	initialDamageMul := 1 *
+		core.TernaryFloat64(druid.HasSetBonus(ItemSetLasherweaveBattlegear, 2), 1.2, 1) *
+		core.TernaryFloat64(druid.HasSetBonus(ItemSetDreamwalkerBattlegear, 2), 1.05, 1)
+
+	tickDamageMul := 1 *
+		core.TernaryFloat64(druid.HasSetBonus(ItemSetLasherweaveBattlegear, 2), 1.2, 1) *
+		core.TernaryFloat64(druid.HasSetBonus(ItemSetMalfurionsBattlegear, 2), 1.05, 1)
+
+	druid.Lacerate = druid.RegisterSpell(Bear, core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 33745},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
 			Cost:   15 - float64(druid.Talents.ShreddingAttacks),
@@ -34,7 +38,8 @@ func (druid *Druid) registerLacerateSpell() {
 			},
 			IgnoreHaste: true,
 		},
-		DamageMultiplier: 1,
+
+		DamageMultiplier: initialDamageMul,
 		CritMultiplier:   druid.MeleeCritMultiplier(Bear),
 		ThreatMultiplier: 0.5,
 		// FlatThreatBonus:  515.5, // Handled below
@@ -54,8 +59,8 @@ func (druid *Druid) registerLacerateSpell() {
 
 				if !isRollover {
 					attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
-					dot.Spell.DamageMultiplier = 1
-					dot.SnapshotCritChance = dot.Spell.PhysicalCritChance(target, attackTable)
+					dot.Spell.DamageMultiplier = tickDamageMul
+					dot.SnapshotCritChance = dot.Spell.PhysicalCritChance(attackTable)
 					dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable)
 				}
 			},
@@ -76,9 +81,9 @@ func (druid *Druid) registerLacerateSpell() {
 
 			// Hack so that FlatThreatBonus only applies to the initial portion.
 			spell.FlatThreatBonus = 515.5
+			spell.DamageMultiplier = initialDamageMul
 			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 			spell.FlatThreatBonus = 0
-			spell.DamageMultiplier = 1
 
 			if result.Landed() {
 				dot := spell.Dot(target)
@@ -87,7 +92,7 @@ func (druid *Druid) registerLacerateSpell() {
 					dot.AddStack(sim)
 					dot.TakeSnapshot(sim, true)
 				} else {
-					dot.Activate(sim)
+					dot.Apply(sim)
 					dot.SetStacks(sim, 1)
 					dot.TakeSnapshot(sim, true)
 				}

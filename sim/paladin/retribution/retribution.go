@@ -31,22 +31,25 @@ func NewRetributionPaladin(character core.Character, options *proto.Player) *Ret
 	pal := paladin.NewPaladin(character, options.TalentsString)
 
 	ret := &RetributionPaladin{
-		Paladin:   pal,
-		Rotation:  retOptions.Rotation,
-		Judgement: retOptions.Options.Judgement,
-		Seal:      retOptions.Options.Seal,
-		//UseDivinePlea:                       retOptions.Rotation.UseDivinePlea,
+		Paladin:                             pal,
+		Rotation:                            retOptions.Rotation,
+		Judgement:                           retOptions.Options.Judgement,
+		Seal:                                retOptions.Options.Seal,
+		UseDivinePlea:                       retOptions.Rotation.UseDivinePlea,
 		AvoidClippingConsecration:           retOptions.Rotation.AvoidClippingConsecration,
 		HoldLastAvengingWrathUntilExecution: retOptions.Rotation.HoldLastAvengingWrathUntilExecution,
-		//DivinePleaPercentage:                retOptions.Rotation.DivinePleaPercentage,
-		ExoSlack:           retOptions.Rotation.ExoSlack,
-		ConsSlack:          retOptions.Rotation.ConsSlack,
-		HolyWrathThreshold: retOptions.Rotation.HolyWrathThreshold,
-		MaxSoVTargets:      retOptions.Rotation.SovTargets,
+		DivinePleaPercentage:                retOptions.Rotation.DivinePleaPercentage,
+		CancelChaosBane:                     retOptions.Rotation.CancelChaosBane,
+		ExoSlack:                            retOptions.Rotation.ExoSlack,
+		ConsSlack:                           retOptions.Rotation.ConsSlack,
+		HolyWrathThreshold:                  retOptions.Rotation.HolyWrathThreshold,
+		MaxSoVTargets:                       retOptions.Rotation.SovTargets,
+		HasLightswornBattlegear2Pc:          character.HasSetBonus(paladin.ItemSetLightswornBattlegear, 2),
 	}
 
 	pal.AvoidClippingConsecration = retOptions.Rotation.AvoidClippingConsecration
 	pal.HoldLastAvengingWrathUntilExecution = retOptions.Rotation.HoldLastAvengingWrathUntilExecution
+	pal.CancelChaosBane = retOptions.Rotation.CancelChaosBane
 
 	ret.PaladinAura = retOptions.Options.Aura
 
@@ -76,17 +79,18 @@ func NewRetributionPaladin(character core.Character, options *proto.Player) *Ret
 type RetributionPaladin struct {
 	*paladin.Paladin
 
-	Judgement proto.PaladinJudgement
-	Seal      proto.PaladinSeal
-	//UseDivinePlea                       bool
+	Judgement                           proto.PaladinJudgement
+	Seal                                proto.PaladinSeal
+	UseDivinePlea                       bool
 	AvoidClippingConsecration           bool
 	HoldLastAvengingWrathUntilExecution bool
+	CancelChaosBane                     bool
 
-	//DivinePleaPercentage float64
-	ExoSlack           int32
-	ConsSlack          int32
-	HolyWrathThreshold int32
-	MaxSoVTargets      int32
+	DivinePleaPercentage float64
+	ExoSlack             int32
+	ConsSlack            int32
+	HolyWrathThreshold   int32
+	MaxSoVTargets        int32
 
 	HasLightswornBattlegear2Pc bool
 
@@ -141,13 +145,13 @@ func (ret *RetributionPaladin) Reset(sim *core.Simulation) {
 				ret.RotationInput = append(ret.RotationInput, ret.CrusaderStrike)
 			case int32(proto.RetributionPaladin_Rotation_Exorcism):
 				ret.RotationInput = append(ret.RotationInput, ret.Exorcism)
-				//case int32(proto.RetributionPaladin_Rotation_DivinePlea):
-				//	ret.RotationInput = append(ret.RotationInput, ret.DivinePlea)
+			case int32(proto.RetributionPaladin_Rotation_DivinePlea):
+				ret.RotationInput = append(ret.RotationInput, ret.DivinePlea)
 			}
 		}
 	}
 
-	sim.RegisterExecutePhaseCallback(func(sim *core.Simulation, isExecute int) {
+	sim.RegisterExecutePhaseCallback(func(sim *core.Simulation, isExecute int32) {
 		if isExecute == 20 {
 			ret.OnGCDReady(sim)
 		}
@@ -167,6 +171,8 @@ func (ret *RetributionPaladin) Reset(sim *core.Simulation) {
 		ret.SealOfRighteousnessAura.Activate(sim)
 	}
 
-	//ret.DivinePleaAura.Activate(sim)
-	//ret.DivinePlea.CD.Use(sim)
+	if !ret.IsUsingAPL {
+		ret.DivinePleaAura.Activate(sim)
+		ret.DivinePlea.CD.Use(sim)
+	}
 }

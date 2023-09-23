@@ -1,6 +1,7 @@
 package elemental
 
 import (
+	"github.com/Tereneckla/wotlk/sim/common/wotlk"
 	"github.com/Tereneckla/wotlk/sim/core"
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/shaman"
@@ -32,8 +33,8 @@ func NewElementalShaman(character core.Character, options *proto.Player) *Elemen
 	}
 
 	totems := &proto.ShamanTotems{}
-	if eleShamOptions.Rotation.Totems != nil {
-		totems = eleShamOptions.Rotation.Totems
+	if eleShamOptions.Options.Totems != nil {
+		totems = eleShamOptions.Options.Totems
 		totems.UseFireMcd = true // Control fire totems as MCD.
 	}
 
@@ -44,6 +45,8 @@ func NewElementalShaman(character core.Character, options *proto.Player) *Elemen
 		rotation = NewAdaptiveRotation(eleShamOptions.Rotation)
 	case proto.ElementalShaman_Rotation_Manual:
 		rotation = NewManualRotation(eleShamOptions.Rotation)
+	default:
+		rotation = NewAdaptiveRotation(eleShamOptions.Rotation)
 	}
 
 	ele := &ElementalShaman{
@@ -53,12 +56,12 @@ func NewElementalShaman(character core.Character, options *proto.Player) *Elemen
 	}
 	ele.EnableResumeAfterManaWait(ele.tryUseGCD)
 
-	if ele.HasMHWeapon() {
-		ele.ApplyFlametongueImbueToItem(ele.GetMHWeapon(), false)
+	if mh := ele.GetMHWeapon(); mh != nil {
+		ele.ApplyFlametongueImbueToItem(mh, false)
 	}
 
-	if ele.HasOHWeapon() {
-		ele.ApplyFlametongueImbueToItem(ele.GetOHWeapon(), false)
+	if oh := ele.GetOHWeapon(); oh != nil {
+		ele.ApplyFlametongueImbueToItem(oh, false)
 	}
 
 	if ele.Talents.FeralSpirit {
@@ -73,6 +76,7 @@ func NewElementalShaman(character core.Character, options *proto.Player) *Elemen
 		}
 	}
 
+	wotlk.ConstructValkyrPets(&ele.Character)
 	return ele
 }
 

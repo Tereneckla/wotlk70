@@ -21,15 +21,15 @@ func (hunter *Hunter) registerAspectOfTheHawkSpell() {
 			ActionID: core.ActionID{SpellID: 19556},
 			Duration: time.Second * 12,
 			OnGain: func(aura *core.Aura, sim *core.Simulation) {
-				aura.Unit.PseudoStats.RangedSpeedMultiplier *= improvedHawkBonus
+				aura.Unit.MultiplyRangedSpeed(sim, improvedHawkBonus)
 			},
 			OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-				aura.Unit.PseudoStats.RangedSpeedMultiplier /= improvedHawkBonus
+				aura.Unit.MultiplyRangedSpeed(sim, 1/improvedHawkBonus)
 			},
 		})
 	}
 
-	actionID := core.ActionID{SpellID: 61847}
+	actionID := core.ActionID{SpellID: 27044}
 	hunter.AspectOfTheHawkAura = hunter.NewTemporaryStatsAuraWrapped(
 		"Aspect of the Hawk",
 		actionID,
@@ -38,14 +38,6 @@ func (hunter *Hunter) registerAspectOfTheHawkSpell() {
 		},
 		core.NeverExpires,
 		func(aura *core.Aura) {
-			if hunter.Talents.AspectMastery {
-				aura.ApplyOnGain(func(aura *core.Aura, sim *core.Simulation) {
-					aura.Unit.PseudoStats.DamageTakenMultiplier *= 0.95
-				})
-				aura.ApplyOnExpire(func(aura *core.Aura, sim *core.Simulation) {
-					aura.Unit.PseudoStats.DamageTakenMultiplier /= 0.95
-				})
-			}
 
 			aura.OnSpellHitDealt = func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 				if spell != hunter.AutoAttacks.RangedAuto {
@@ -57,7 +49,7 @@ func (hunter *Hunter) registerAspectOfTheHawkSpell() {
 				}
 			}
 		})
-	hunter.applySharedAspectConfig(true, hunter.AspectOfTheHawkAura)
+	hunter.applySharedAspectConfig(true, hunter.AspectOfTheDragonhawkAura)
 
 	hunter.AspectOfTheHawk = hunter.RegisterSpell(core.SpellConfig{
 		ActionID: actionID,
@@ -82,11 +74,16 @@ func (hunter *Hunter) registerAspectOfTheViperSpell() {
 	manaPerOHHitMultiplier := baseManaRegenMultiplier * hunter.AutoAttacks.OH.SwingSpeed
 	var tickPA *core.PendingAction
 
+	hasCryptstalker4pc := hunter.HasSetBonus(ItemSetCryptstalkerBattlegear, 4)
+
 	auraConfig := core.Aura{
 		Label:    "Aspect of the Viper",
 		ActionID: actionID,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			aura.Unit.PseudoStats.DamageDealtMultiplier *= damagePenalty
+			if hasCryptstalker4pc {
+				aura.Unit.MultiplyRangedSpeed(sim, 1.2)
+			}
 
 			tickPA = core.StartPeriodicAction(sim, core.PeriodicActionOptions{
 				Period: time.Second * 3,
@@ -97,6 +94,9 @@ func (hunter *Hunter) registerAspectOfTheViperSpell() {
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 			aura.Unit.PseudoStats.DamageDealtMultiplier /= damagePenalty
+			if hasCryptstalker4pc {
+				aura.Unit.MultiplyRangedSpeed(sim, 1/1.2)
+			}
 			tickPA.Cancel(sim)
 			tickPA = nil
 		},

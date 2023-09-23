@@ -1,5 +1,5 @@
 import { EmbeddedDetailedResults } from "../core/components/detailed_results.js";
-import { LogRunner } from "../core/components/log_runner.js";
+import { LogRunner } from "../core/components/detailed_results/log_runner.js";
 import { addRaidSimAction, RaidSimResultsManager, ReferenceData } from "../core/components/raid_sim_action.js";
 
 import { Player } from "../core/player.js";
@@ -29,6 +29,7 @@ export interface RaidSimConfig {
 }
 
 const extraKnownIssues: Array<string> = [
+	//'We\'re still missing implementations for many specs. If you\'d like to help us out, check out our <a href="https://github.com/Tereneckla/wotlk">Github project</a> or <a href="https://discord.gg/jJMPr9JWwx">join our discord</a>!',
 ];
 
 export class RaidSimUI extends SimUI {
@@ -69,7 +70,6 @@ export class RaidSimUI extends SimUI {
 		this.addRaidTab();
 		this.addSettingsTab();
 		this.addDetailedResultsTab();
-		this.addLogTab();
 	}
 
 	private loadSettings() {
@@ -127,15 +127,6 @@ export class RaidSimUI extends SimUI {
 		`);
 
 		const detailedResults = new EmbeddedDetailedResults(this.rootElem.getElementsByClassName('detailed-results')[0] as HTMLElement, this, this.raidSimResultsManager!);
-	}
-
-	private addLogTab() {
-		this.addTab('Log', 'log-tab', `
-			<div class="log-runner">
-			</div>
-		`);
-
-		const logRunner = new LogRunner(this.rootElem.getElementsByClassName('log-runner')[0] as HTMLElement, this);
 	}
 
 	private recomputeSettingsLayout() {

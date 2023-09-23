@@ -14,7 +14,8 @@ func (druid *Druid) registerEnrageSpell() {
 	instantRage := []float64{20, 24, 27, 30}[druid.Talents.Intensity]
 
 	dmgBonus := 0.05 * float64(druid.Talents.KingOfTheJungle)
-	armorLoss := druid.ScaleBaseArmor(0.16 * druid.TotalBearArmorMultiplier())
+
+	t10_4p := druid.HasSetBonus(ItemSetLasherweaveBattlegear, 4)
 
 	druid.EnrageAura = druid.RegisterAura(core.Aura{
 		Label:    "Enrage Aura",
@@ -22,16 +23,25 @@ func (druid *Druid) registerEnrageSpell() {
 		Duration: 10 * time.Second,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			druid.PseudoStats.DamageDealtMultiplier *= 1.0 + dmgBonus
-			druid.AddStatDynamic(sim, stats.Armor, -armorLoss)
+			if !t10_4p {
+				druid.ApplyDynamicEquipScaling(sim, stats.Armor, 0.84)
+			} else {
+				druid.PseudoStats.DamageTakenMultiplier *= 0.88
+			}
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 			druid.PseudoStats.DamageDealtMultiplier /= 1.0 + dmgBonus
-			druid.AddStatDynamic(sim, stats.Armor, armorLoss)
+			if !t10_4p {
+				druid.RemoveDynamicEquipScaling(sim, stats.Armor, 0.84)
+			} else {
+				druid.PseudoStats.DamageTakenMultiplier /= 0.88
+			}
 		},
 	})
 
-	spell := druid.RegisterSpell(core.SpellConfig{
+	druid.Enrage = druid.RegisterSpell(Bear, core.SpellConfig{
 		ActionID: actionID,
+		Flags:    core.SpellFlagAPL,
 
 		Cast: core.CastConfig{
 			CD: core.Cooldown{
@@ -58,5 +68,8 @@ func (druid *Druid) registerEnrageSpell() {
 		},
 	})
 
-	druid.Enrage = spell
+	druid.AddMajorCooldown(core.MajorCooldown{
+		Spell: druid.Enrage.Spell,
+		Type:  core.CooldownTypeDPS,
+	})
 }

@@ -15,9 +15,6 @@ func (rogue *Rogue) registerSliceAndDice() {
 	if rogue.HasMajorGlyph(proto.RogueMajorGlyph_GlyphOfSliceAndDice) {
 		durationBonus += time.Second * 3
 	}
-	if rogue.HasSetBonus(ItemSetNetherblade, 2) {
-		durationBonus += time.Second * 3
-	}
 	rogue.sliceAndDiceDurations = [6]time.Duration{
 		0,
 		time.Duration(float64(time.Second*9+durationBonus) * durationMultiplier),
@@ -28,7 +25,7 @@ func (rogue *Rogue) registerSliceAndDice() {
 	}
 
 	hasteBonus := 1.4
-	if rogue.HasSetBonus(ItemSetSlayers, 2) {
+	if rogue.HasSetBonus(Tier6, 2) {
 		hasteBonus += 0.05
 	}
 	inverseHasteBonus := 1.0 / hasteBonus
@@ -46,7 +43,7 @@ func (rogue *Rogue) registerSliceAndDice() {
 
 	rogue.SliceAndDice = rogue.RegisterSpell(core.SpellConfig{
 		ActionID:     actionID,
-		Flags:        SpellFlagFinisher,
+		Flags:        SpellFlagFinisher | core.SpellFlagAPL,
 		MetricSplits: 6,
 
 		EnergyCost: core.EnergyCostOptions{
@@ -59,10 +56,6 @@ func (rogue *Rogue) registerSliceAndDice() {
 			IgnoreHaste: true,
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
 				spell.SetMetricsSplit(spell.Unit.ComboPoints())
-				if rogue.deathmantleActive() {
-					spell.CostMultiplier = 0
-					rogue.DeathmantleProcAura.Deactivate(sim)
-				}
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {

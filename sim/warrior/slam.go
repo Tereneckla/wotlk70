@@ -11,7 +11,7 @@ func (warrior *Warrior) registerSlamSpell() {
 		ActionID:    core.ActionID{SpellID: 25242},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
 			Cost:   15 - float64(warrior.Talents.FocusedRage),
@@ -25,7 +25,8 @@ func (warrior *Warrior) registerSlamSpell() {
 			IgnoreHaste: true,
 		},
 
-		DamageMultiplier: 1 + 0.02*float64(warrior.Talents.UnendingFury),
+		BonusCritRating:  core.TernaryFloat64(warrior.HasSetBonus(ItemSetWrynnsBattlegear, 4), 5, 0) * core.CritRatingPerCritChance,
+		DamageMultiplier: 1 + 0.02*float64(warrior.Talents.UnendingFury) + core.TernaryFloat64(warrior.HasSetBonus(ItemSetDreadnaughtBattlegear, 2), 0.1, 0),
 		CritMultiplier:   warrior.critMultiplier(mh),
 		ThreatMultiplier: 1,
 		FlatThreatBonus:  140,

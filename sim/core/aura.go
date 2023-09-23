@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"golang.org/x/exp/constraints"
 	"math"
 	"strconv"
 	"time"
@@ -44,7 +45,10 @@ type Aura struct {
 	// For easily grouping auras.
 	Tag string
 
-	ActionID ActionID // If set, metrics will be tracked for this aura.
+	ActionID        ActionID // If set, metrics will be tracked for this aura.
+	ActionIDForProc ActionID // If set, indicates that this aura is a trigger aura for the specified proc.
+
+	Icd *Cooldown // The internal cooldown if any
 
 	Duration time.Duration // Duration of aura, upon being applied.
 
@@ -322,6 +326,25 @@ func (at *auraTracker) GetAura(label string) *Aura {
 	}
 	return nil
 }
+func (at *auraTracker) GetAuras() []*Aura {
+	return at.auras
+}
+func (at *auraTracker) GetAuraByID(actionID ActionID) *Aura {
+	for _, aura := range at.auras {
+		if aura.ActionID.SameAction(actionID) {
+			return aura
+		}
+	}
+	return nil
+}
+func (at *auraTracker) GetIcdAuraByID(actionID ActionID) *Aura {
+	for _, aura := range at.auras {
+		if (aura.ActionID.SameAction(actionID) || aura.ActionIDForProc.SameAction(actionID)) && aura.Icd != nil {
+			return aura
+		}
+	}
+	return nil
+}
 func (at *auraTracker) HasAura(label string) bool {
 	aura := at.GetAura(label)
 	return aura != nil
@@ -348,6 +371,7 @@ func (at *auraTracker) registerAura(unit *Unit, aura Aura) *Aura {
 	newAura := &Aura{}
 	*newAura = aura
 	newAura.Unit = unit
+	newAura.Icd = aura.Icd
 	newAura.metrics.ID = aura.ActionID
 	newAura.activeIndex = Inactive
 	newAura.onCastCompleteIndex = Inactive
@@ -376,6 +400,7 @@ func (unit *Unit) GetOrRegisterAura(aura Aura) *Aura {
 	if curAura == nil {
 		return unit.RegisterAura(aura)
 	} else {
+		curAura.Icd = aura.Icd
 		curAura.OnCastComplete = aura.OnCastComplete
 		curAura.OnSpellHitDealt = aura.OnSpellHitDealt
 		curAura.OnSpellHitTaken = aura.OnSpellHitTaken
@@ -725,7 +750,7 @@ func (aura *Aura) Deactivate(sim *Simulation) {
 }
 
 // Constant-time removal from slice by swapping with the last element before removing.
-func removeBySwappingToBack(arr []*Aura, removeIdx int32) []*Aura {
+func removeBySwappingToBack[T any, U constraints.Integer](arr []T, removeIdx U) []T {
 	arr[removeIdx] = arr[len(arr)-1]
 	return arr[:len(arr)-1]
 }

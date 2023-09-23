@@ -9,6 +9,95 @@ import (
 )
 
 // Keep these in alphabetical order.
+var ItemSetWrathOfSpellFire = core.NewItemSet(core.ItemSet{
+	Name: "Wrath of Spellfire",
+	Bonuses: map[int32]core.ApplyEffect{
+		3: func(agent core.Agent) {
+			character := agent.GetCharacter()
+			character.AddStatDependency(stats.Intellect, stats.SpellPower, 0.07)
+		},
+	},
+})
+
+var ItemSetNetherstrike = core.NewItemSet(core.ItemSet{
+	Name: "Netherstrike Armor",
+	Bonuses: map[int32]core.ApplyEffect{
+		3: func(agent core.Agent) {
+			agent.GetCharacter().AddStat(stats.SpellPower, 23)
+		},
+	},
+})
+
+var ItemSetRagesteel = core.NewItemSet(core.ItemSet{
+	Name: "Burning Rage",
+	Bonuses: map[int32]core.ApplyEffect{
+		2: func(agent core.Agent) {
+			agent.GetCharacter().AddStat(stats.MeleeHit, 20)
+			agent.GetCharacter().AddStat(stats.SpellHit, 20)
+		},
+	},
+})
+
+var ItemSetTwinStars = core.NewItemSet(core.ItemSet{
+	Name: "The Twin Stars",
+	Bonuses: map[int32]core.ApplyEffect{
+		2: func(agent core.Agent) {
+			agent.GetCharacter().AddStat(stats.SpellPower, 15)
+		},
+	},
+})
+
+var ItemSetSpellstrike = core.NewItemSet(core.ItemSet{
+	Name: "Spellstrike Infusion",
+	Bonuses: map[int32]core.ApplyEffect{
+		2: func(agent core.Agent) {
+			character := agent.GetCharacter()
+			procAura := character.NewTemporaryStatsAura("Spellstrike Proc", core.ActionID{SpellID: 32106}, stats.Stats{stats.SpellPower: 92}, time.Second*10)
+
+			character.RegisterAura(core.Aura{
+				Label:    "Spellstrike",
+				Duration: core.NeverExpires,
+				OnReset: func(aura *core.Aura, sim *core.Simulation) {
+					aura.Activate(sim)
+				},
+				OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
+					if sim.RandomFloat("spellstrike") > 0.05 {
+						return
+					}
+					procAura.Activate(sim)
+				},
+			})
+		},
+	},
+})
+
+var ItemSetManaEtched = core.NewItemSet(core.ItemSet{
+	Name: "Mana-Etched Regalia",
+	Bonuses: map[int32]core.ApplyEffect{
+		2: func(agent core.Agent) {
+			agent.GetCharacter().AddStat(stats.SpellHit, 35)
+		},
+
+		4: func(agent core.Agent) {
+			character := agent.GetCharacter()
+			procAura := character.NewTemporaryStatsAura("Mana-Etched Insight Proc", core.ActionID{SpellID: 37619}, stats.Stats{stats.SpellPower: 110}, time.Second*15)
+
+			character.RegisterAura(core.Aura{
+				Label:    "Mana-Etched Insight",
+				Duration: core.NeverExpires,
+				OnReset: func(aura *core.Aura, sim *core.Simulation) {
+					aura.Activate(sim)
+				},
+				OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
+					if sim.RandomFloat("Mana-Etched Insight") > 0.02 {
+						return
+					}
+					procAura.Activate(sim)
+				},
+			})
+		},
+	},
+})
 
 var ItemSetFistsOfFury = core.NewItemSet(core.ItemSet{
 	Name: "The Fists of Fury",
@@ -30,7 +119,7 @@ var ItemSetFistsOfFury = core.NewItemSet(core.ItemSet{
 				},
 			})
 
-			ppmm := character.AutoAttacks.NewPPMManager(2, core.ProcMaskMelee)
+			ppmm := character.AutoAttacks.NewPPMManager(2.0, core.ProcMaskMelee)
 
 			character.RegisterAura(core.Aura{
 				Label:    "Fists of Fury",
@@ -39,14 +128,13 @@ var ItemSetFistsOfFury = core.NewItemSet(core.ItemSet{
 					aura.Activate(sim)
 				},
 				OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-					if !result.Landed() || !spell.ProcMask.Matches(core.ProcMaskMelee) {
-						return
-					}
-					if !ppmm.Proc(sim, spell.ProcMask, "The Fists of Fury") {
+					if !result.Landed() {
 						return
 					}
 
-					procSpell.Cast(sim, result.Target)
+					if ppmm.Proc(sim, spell.ProcMask, "The Fists of Fury") {
+						procSpell.Cast(sim, result.Target)
+					}
 				},
 			})
 		},
@@ -65,6 +153,16 @@ var ItemSetPrimalIntent = core.NewItemSet(core.ItemSet{
 
 var ItemSetFelstalker = core.NewItemSet(core.ItemSet{
 	Name: "Felstalker Armor",
+	Bonuses: map[int32]core.ApplyEffect{
+		3: func(agent core.Agent) {
+			agent.GetCharacter().AddStat(stats.MeleeHit, 20)
+			agent.GetCharacter().AddStat(stats.SpellHit, 20)
+		},
+	},
+})
+
+var ItemSetEbonNetherscale = core.NewItemSet(core.ItemSet{
+	Name: "Netherscale Armor",
 	Bonuses: map[int32]core.ApplyEffect{
 		3: func(agent core.Agent) {
 			agent.GetCharacter().AddStat(stats.MeleeHit, 20)
@@ -234,11 +332,9 @@ var ItemSetStormshroud = core.NewItemSet(core.ItemSet{
 					if !result.Landed() || !spell.ProcMask.Matches(core.ProcMaskMelee) {
 						return
 					}
-					chance := 0.05
-					if sim.RandomFloat("Stormshroud Armor 2pc") > chance {
-						return
+					if sim.RandomFloat("Stormshroud Armor 2pc") < 0.05 {
+						proc.Cast(sim, result.Target)
 					}
-					proc.Cast(sim, result.Target)
 				},
 			})
 		},
@@ -266,11 +362,9 @@ var ItemSetStormshroud = core.NewItemSet(core.ItemSet{
 					if !result.Landed() || !spell.ProcMask.Matches(core.ProcMaskMelee) {
 						return
 					}
-					chance := 0.02
-					if sim.RandomFloat("Stormshroud Armor 2pc") > chance {
-						return
+					if sim.RandomFloat("Stormshroud Armor 3pc") < 0.02 {
+						proc.Cast(sim, result.Target)
 					}
-					proc.Cast(sim, result.Target)
 				},
 			})
 
@@ -309,20 +403,14 @@ var ItemSetTwinBladesOfAzzinoth = core.NewItemSet(core.ItemSet{
 						return
 					}
 
-					// https://wotlk.wowhead.com/spell=41434/the-twin-blades-of-azzinoth, proc mask = 20.
-					if !spell.ProcMask.Matches(core.ProcMaskMelee) {
-						return
-					}
-
 					if !icd.IsReady(sim) {
 						return
 					}
 
-					if !ppmm.Proc(sim, spell.ProcMask, "Twin Blades of Azzinoth") {
-						return
+					if ppmm.Proc(sim, spell.ProcMask, "Twin Blades of Azzinoth") {
+						icd.Use(sim)
+						procAura.Activate(sim)
 					}
-					icd.Use(sim)
-					procAura.Activate(sim)
 				},
 			})
 		},

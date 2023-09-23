@@ -12,11 +12,11 @@ func (druid *Druid) registerTyphoonSpell() {
 		return
 	}
 
-	druid.Typhoon = druid.RegisterSpell(core.SpellConfig{
+	druid.Typhoon = druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 53225},
 		SpellSchool: core.SpellSchoolNature,
 		ProcMask:    core.ProcMaskSpellDamage,
-		Flags:       SpellFlagOmenTrigger,
+		Flags:       SpellFlagOmenTrigger | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.25,
@@ -41,8 +41,8 @@ func (druid *Druid) registerTyphoonSpell() {
 			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 				baseDamage := 735 + 0.193*spell.SpellPower()
 				baseDamage *= sim.Encounter.AOECapMultiplier()
-				for _, aoeTarget := range sim.Encounter.Targets {
-					spell.CalcAndDealDamage(sim, &aoeTarget.Unit, baseDamage, spell.OutcomeMagicHitAndCrit)
+				for _, aoeTarget := range sim.Encounter.TargetUnits {
+					spell.CalcAndDealDamage(sim, aoeTarget, baseDamage, spell.OutcomeMagicHitAndCrit)
 				}
 			})
 		},

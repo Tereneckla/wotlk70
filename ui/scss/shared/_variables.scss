@@ -4,7 +4,14 @@
 // See bootstrap/scss/_variables.scss for a complete list of definitions, or
 // individual component pages in the Bootstrap 5.2 docs for relevant variable usage.
 
+//////////////////////////
+//// Custom variables ////
+//////////////////////////
+
 // Custom theme color mapping
+$brand: #e0a335;
+$success: #1eff00;
+
 $death-knight: rgb(194, 46, 70);
 $druid:        rgb(255, 125, 10);
 $hunter:       rgb(171, 212, 115);
@@ -23,25 +30,18 @@ $class-colors: (
   "mage":         $mage,
   "paladin":      $paladin,
   "priest":       $priest,
-  "raid":         $primary,
+  "raid":         $brand,
   "rogue":        $rogue,
   "shaman":       $shaman,
   "warlock":      $warlock,
   "warrior":      $warrior,
 );
 
-$theme-colors: map-merge($theme-colors, $class-colors);
-
-$brand: #e0a335;
-$success: #1eff00;
-
 $custom-colors: (
   "brand": $brand,
   "primary": $primary,
   "success": $success,
 );
-
-$theme-colors: map-merge($theme-colors, $custom-colors);
 
 $custom-breakpoints: (
   xxxl: 1600px,
@@ -50,18 +50,9 @@ $custom-breakpoints: (
   4k: 3800px,
 );
 
-$grid-breakpoints: map-merge($grid-breakpoints, $custom-breakpoints);
-
-//////////////////////////
-//// Custom variables ////
-//////////////////////////
-
-// Spacers
-$block-spacer: .75rem;
-$table-cell-padding: .5rem;
-$content-font-size: .75rem;
-$gap-width: 1.5rem;
-$gap-width-sm: .5rem;
+// Borders
+$border-color: dimgrey;
+$border-default: 1px solid $border-color;
 
 // Colors
 $item-quality-junk:      #9d9d9d;
@@ -70,6 +61,8 @@ $item-quality-uncommon:  #1eff00;
 $item-quality-rare:      #0070dd;
 $item-quality-epic:      #a335ee;
 $item-quality-legendary: #ff8000;
+$item-quality-artifact:  #e5cc80;
+$item-quality-heirloom:  #0cf;
 
 $item-qualities: (
   junk:      $item-quality-junk,
@@ -77,7 +70,9 @@ $item-qualities: (
   uncommon:  $item-quality-uncommon,
   rare:      $item-quality-rare,
   epic:      $item-quality-epic,
-  legendary: $item-quality-legendary
+  legendary: $item-quality-legendary,
+  artifact:  $item-quality-artifact,
+  heirloom:  $item-quality-heirloom
 );
 
 $link-danger-color:  #ef9eaa;
@@ -88,13 +83,32 @@ $table-row-odd-bg: #2d2f35;
 
 $wrath-blue: #7FCBD8;
 
+// Spacers
+$block-spacer: .75rem;
+$table-cell-padding: .5rem;
+$content-font-size: .75rem;
+$gap-width: 1.5rem;
+$gap-width-sm: .5rem;
+
+// Sizing
+$icon-size-sm: 1rem;
+$icon-size-md: 2.5rem;
+
+// Z-index variables
+$header-z-index: 100;
+$sidebar-z-index: 200;
+
 /////////////////////////////////////////////
 //// Global Bootstrap variable overrides ////
 /////////////////////////////////////////////
 
+// Map overrides
+$theme-colors: map-merge($theme-colors, $class-colors);
+$theme-colors: map-merge($theme-colors, $custom-colors);
+$grid-breakpoints: map-merge($grid-breakpoints, $custom-breakpoints);
+
 $body-bg: #15171e;
 $body-color: white;
-$border-color: dimgrey;
 $font-size-root: 16px;
 $grid-gutter-width: .75rem;
 

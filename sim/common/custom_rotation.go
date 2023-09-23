@@ -79,7 +79,7 @@ func NewCustomRotation(crProto *proto.CustomRotation, character *core.Character,
 	}
 }
 
-func (cr *CustomRotation) reset(sim *core.Simulation) {
+func (cr *CustomRotation) reset(_ *core.Simulation) {
 	for i := range cr.spells {
 		cr.spells[i].casts = 0
 	}
@@ -120,10 +120,14 @@ func (cs *CustomSpell) CPM(sim *core.Simulation) float64 {
 }
 
 func (cr *CustomRotation) Cast(sim *core.Simulation) bool {
+	if cr == nil {
+		panic("Custom Rotation is empty")
+	}
+
 	spell := cr.ChooseSpell(sim)
 
 	if spell == nil {
-		cr.character.WaitUntil(sim, sim.CurrentTime+time.Millisecond*500)
+		cr.character.WaitUntil(sim, sim.CurrentTime+time.Millisecond*100)
 		return false
 	}
 

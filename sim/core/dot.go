@@ -30,7 +30,7 @@ type DotConfig struct {
 type Dot struct {
 	Spell *Spell
 
-	// Embed Aura so we can use IsActive/Refresh/etc directly.
+	// Embed Aura, so we can use IsActive/Refresh/etc directly.
 	*Aura
 
 	NumberOfTicks int32         // number of ticks over the whole duration
@@ -53,26 +53,35 @@ type Dot struct {
 	TickCount int32
 
 	lastTickTime time.Duration
+	isChanneled  bool
 }
 
-// TickPeriod is how fast the snapshotted dot ticks.
+// TickPeriod is how fast the snapshot dot ticks.
 func (dot *Dot) TickPeriod() time.Duration {
 	return dot.tickPeriod
 }
 
+func (dot *Dot) NextTickAt() time.Duration {
+	return dot.lastTickTime + dot.tickPeriod
+}
+
 func (dot *Dot) TimeUntilNextTick(sim *Simulation) time.Duration {
-	return dot.lastTickTime + dot.tickPeriod - sim.CurrentTime
+	return dot.NextTickAt() - sim.CurrentTime
+}
+
+func (dot *Dot) MaxTicksRemaining() int32 {
+	return dot.NumberOfTicks - dot.TickCount
 }
 
 func (dot *Dot) NumTicksRemaining(sim *Simulation) int {
-	maxTicksRemaining := dot.NumberOfTicks - dot.TickCount
+	maxTicksRemaining := dot.MaxTicksRemaining()
 	finalTickAt := dot.lastTickTime + dot.tickPeriod*time.Duration(maxTicksRemaining)
 	return MaxInt(0, int((finalTickAt-sim.CurrentTime)/dot.tickPeriod)+1)
 }
 
 // Roll over = gets carried over with everlasting refresh and doesn't get applied if triggered when the spell is already up.
 // - Example: critical strike rating, internal % damage modifiers: buffs or debuffs on player
-// Nevermelting Ice, Shadow Mastery (ISB), Trick of the Trades, Deaths Embrace, Thadius Polarity, Hera Spores, Crit on weapons from swapping
+// Nevermelting Ice, Shadow Mastery (ISB), Trick of the Trades, Deaths Embrace, Thaddius Polarity, Hera Spores, Crit on weapons from swapping
 
 // Snapshot = calculation happens at refresh and application (stays up even if buff falls of, until new refresh or application)
 // - Example: Spell power, Haste rating
@@ -83,8 +92,8 @@ func (dot *Dot) NumTicksRemaining(sim *Simulation) int {
 // Haunt, Curse of Shadow, Shadow Embrace
 
 // Rollover is used to reset the duration of a dot from an external spell (not casting the dot itself)
-// This keeps the snapshotted crit and %dmg modifiers.
-// However sp and haste are recalculated.
+// This keeps the snapshot crit and %dmg modifiers.
+// However, sp and haste are recalculated.
 func (dot *Dot) Rollover(sim *Simulation) {
 	dot.TakeSnapshot(sim, true)
 
@@ -103,6 +112,8 @@ func (dot *Dot) Rollover(sim *Simulation) {
 }
 
 func (dot *Dot) Apply(sim *Simulation) {
+	dot.TakeSnapshot(sim, false)
+
 	dot.Cancel(sim)
 	dot.TickCount = 0
 	dot.RecomputeAuraDuration()
@@ -138,6 +149,8 @@ func (dot *Dot) ApplyOrReset(sim *Simulation) {
 
 // Like Apply(), but does not reset the tick timer.
 func (dot *Dot) ApplyOrRefresh(sim *Simulation) {
+	dot.TakeSnapshot(sim, false)
+
 	dot.TickCount = 0
 	dot.RecomputeAuraDuration()
 	dot.Aura.Activate(sim)
@@ -177,6 +190,29 @@ func (dot *Dot) TakeSnapshot(sim *Simulation, doRollover bool) {
 func (dot *Dot) TickOnce(sim *Simulation) {
 	dot.lastTickTime = sim.CurrentTime
 	dot.OnTick(sim, dot.Unit, dot)
+
+	if dot.isChanneled && dot.Spell.Unit.IsUsingAPL {
+		if dot.MaxTicksRemaining() == 0 {
+			// If this was the last tick, wait 0ms to call the APL after the channel aura fully fades.
+			dot.Spell.Unit.WaitUntil(sim, sim.CurrentTime+dot.Spell.Unit.ChannelClipDelay)
+		} else {
+			// Give the APL settings a chance to interrupt the channel.
+			dot.Spell.Unit.Rotation.DoNextAction(sim)
+		}
+	}
+}
+
+// ManualTick forces the dot forward one tick
+// Will cancel the dot if it is out of ticks.
+func (dot *Dot) ManualTick(sim *Simulation) {
+	if dot.lastTickTime != sim.CurrentTime {
+		dot.TickCount++
+		if dot.NumTicksRemaining(sim) <= 0 {
+			dot.Cancel(sim)
+		} else {
+			dot.TickOnce(sim)
+		}
+	}
 }
 
 func (dot *Dot) basePeriodicOptions() PeriodicActionOptions {
@@ -201,7 +237,7 @@ func (dot *Dot) basePeriodicOptions() PeriodicActionOptions {
 	}
 }
 
-func NewDot(config Dot) *Dot {
+func newDot(config Dot) *Dot {
 	dot := &Dot{}
 	*dot = config
 
@@ -210,17 +246,24 @@ func NewDot(config Dot) *Dot {
 
 	dot.Aura.ApplyOnGain(func(aura *Aura, sim *Simulation) {
 		dot.lastTickTime = sim.CurrentTime
-		dot.TakeSnapshot(sim, false)
-
 		periodicOptions := dot.basePeriodicOptions()
 		periodicOptions.Period = dot.tickPeriod
 		dot.tickAction = NewPeriodicAction(sim, periodicOptions)
 		sim.AddPendingAction(dot.tickAction)
+		if dot.isChanneled {
+			dot.Spell.Unit.ChanneledDot = dot
+		}
 	})
 	dot.Aura.ApplyOnExpire(func(aura *Aura, sim *Simulation) {
 		if dot.tickAction != nil {
 			dot.tickAction.Cancel(sim)
 			dot.tickAction = nil
+		}
+		if dot.isChanneled {
+			dot.Spell.Unit.ChanneledDot = nil
+			if dot.Spell.Unit.IsUsingAPL {
+				dot.Spell.Unit.Rotation.interruptChannelIf = nil
+			}
 		}
 	})
 
@@ -250,6 +293,8 @@ func (spell *Spell) createDots(config DotConfig, isHot bool) {
 
 		OnSnapshot: config.OnSnapshot,
 		OnTick:     config.OnTick,
+
+		isChanneled: config.Spell.Flags.Matches(SpellFlagChanneled),
 	}
 
 	auraConfig := config.Aura
@@ -260,7 +305,7 @@ func (spell *Spell) createDots(config DotConfig, isHot bool) {
 	caster := dot.Spell.Unit
 	if config.IsAOE || config.SelfOnly {
 		dot.Aura = caster.GetOrRegisterAura(auraConfig)
-		spell.aoeDot = NewDot(dot)
+		spell.aoeDot = newDot(dot)
 	} else {
 		auraConfig.Label += "-" + strconv.Itoa(int(caster.UnitIndex))
 		if spell.dots == nil {
@@ -269,7 +314,7 @@ func (spell *Spell) createDots(config DotConfig, isHot bool) {
 		for _, target := range caster.Env.AllUnits {
 			if isHot != caster.IsOpponent(target) {
 				dot.Aura = target.GetOrRegisterAura(auraConfig)
-				spell.dots[target.UnitIndex] = NewDot(dot)
+				spell.dots[target.UnitIndex] = newDot(dot)
 			}
 		}
 	}

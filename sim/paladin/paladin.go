@@ -24,29 +24,30 @@ type Paladin struct {
 	CurrentJudgement *core.Aura
 
 	//DivinePlea            *core.Spell
-	DivineStorm          *core.Spell
-	HolyWrath            *core.Spell
-	Consecration         *core.Spell
-	CrusaderStrike       *core.Spell
-	Exorcism             *core.Spell
-	HolyShield           *core.Spell
-	HammerOfTheRighteous *core.Spell
-	//ShieldOfRighteousness *core.Spell
-	AvengersShield      *core.Spell
-	JudgementOfWisdom   *core.Spell
-	JudgementOfLight    *core.Spell
-	HammerOfWrath       *core.Spell
-	SealOfVengeance     *core.Spell
-	SealOfRighteousness *core.Spell
-	SealOfCommand       *core.Spell
-	AvengingWrath       *core.Spell
-	DivineProtection    *core.Spell
-	SovDotSpell         *core.Spell
+	DivineStorm           *core.Spell
+	HolyWrath             *core.Spell
+	Consecration          *core.Spell
+	CrusaderStrike        *core.Spell
+	Exorcism              *core.Spell
+	HolyShield            *core.Spell
+	HammerOfTheRighteous  *core.Spell
+	HandOfReckoning       *core.Spell
+	ShieldOfRighteousness *core.Spell
+	AvengersShield        *core.Spell
+	JudgementOfWisdom     *core.Spell
+	JudgementOfLight      *core.Spell
+	HammerOfWrath         *core.Spell
+	SealOfVengeance       *core.Spell
+	SealOfRighteousness   *core.Spell
+	SealOfCommand         *core.Spell
+	AvengingWrath         *core.Spell
+	DivineProtection      *core.Spell
+	SovDotSpell           *core.Spell
 	// SealOfWisdom        *core.Spell
 	// SealOfLight         *core.Spell
 
-	HolyShieldAura *core.Aura
-	// RighteousFuryAura       *core.Aura
+	HolyShieldAura          *core.Aura
+	RighteousFuryAura       *core.Aura
 	//DivinePleaAura          *core.Aura
 	JudgementOfWisdomAura   *core.Aura
 	JudgementOfLightAura    *core.Aura
@@ -56,6 +57,7 @@ type Paladin struct {
 	AvengingWrathAura       *core.Aura
 	DivineProtectionAura    *core.Aura
 	ForbearanceAura         *core.Aura
+	VengeanceAura           *core.Aura
 
 	// SealOfWisdomAura        *core.Aura
 	// SealOfLightAura         *core.Aura
@@ -70,6 +72,7 @@ type Paladin struct {
 
 	AvoidClippingConsecration           bool
 	HoldLastAvengingWrathUntilExecution bool
+	CancelChaosBane                     bool
 
 	mutualLockoutDPAW *core.Timer
 }
@@ -142,12 +145,13 @@ func (paladin *Paladin) Initialize() {
 	paladin.registerExorcismSpell()
 	paladin.registerHolyShieldSpell()
 	paladin.registerHammerOfTheRighteousSpell()
-	//paladin.registerShieldOfRighteousnessSpell()
+	paladin.registerHandOfReckoningSpell()
+	paladin.registerShieldOfRighteousnessSpell()
 	paladin.registerAvengersShieldSpell()
 	paladin.registerJudgements()
 
 	paladin.registerSpiritualAttunement()
-	//paladin.registerDivinePleaSpell()
+	paladin.registerDivinePleaSpell()
 	paladin.registerDivineProtectionSpell()
 	paladin.registerForbearanceDebuff()
 
@@ -172,29 +176,29 @@ func NewPaladin(character core.Character, talentsStr string) *Paladin {
 	}
 	core.FillTalentsProto(paladin.Talents.ProtoReflect(), talentsStr, TalentTreeSizes)
 
+	// This is used to cache its effect in talents.go
+	paladin.HasTuralyonsOrLiadrinsBattlegear2Pc = paladin.HasSetBonus(ItemSetTuralyonsBattlegear, 2)
+
 	paladin.PseudoStats.CanParry = true
 
 	paladin.EnableManaBar()
-
-	// Paladins get 3 times their level in base AP
-	// then 2 AP per STR, then lose the first 20 AP
 	paladin.AddStatDependency(stats.Strength, stats.AttackPower, 2.0)
-	paladin.AddStat(stats.AttackPower, -20)
-	paladin.AddStatDependency(stats.Intellect, stats.SpellCrit, (1/80.5)*core.CritRatingPerCritChance)
-	// Paladins get 1% crit per 52.08 agil
-	paladin.AddStatDependency(stats.Agility, stats.MeleeCrit, (1.0/25)*core.CritRatingPerCritChance)
+	paladin.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritPerAgiMaxLevel[character.Class]*core.CritRatingPerCritChance)
 
-	// Paladins get 1% dodge per 52.08 agil
+	// Paladins get 0.0167 dodge per agi. ~1% per 59.88
 	paladin.AddStatDependency(stats.Agility, stats.Dodge, (1.0/25)*core.DodgeRatingPerDodgeChance)
 
-	// Paladins get more melee haste from haste than other classes, 25.22/1%
-	paladin.PseudoStats.MeleeHasteRatingPerHastePercent = 25.22
+	// Paladins get more melee haste from haste than other classes
+	paladin.PseudoStats.MeleeHasteRatingPerHastePercent /= 1.3
 
 	// Paladins get 1 block value per 2 str
 	paladin.AddStatDependency(stats.Strength, stats.BlockValue, .5)
 
+	// Bonus Armor and Armor are treated identically for Paladins
+	paladin.AddStatDependency(stats.BonusArmor, stats.Armor, 1)
+
 	// Base dodge is unaffected by Diminishing Returns
-	paladin.PseudoStats.BaseDodge += 0.0327
+	paladin.PseudoStats.BaseDodge += 0.034943
 	paladin.PseudoStats.BaseParry += 0.05
 
 	return paladin
@@ -203,61 +207,4 @@ func NewPaladin(character core.Character, talentsStr string) *Paladin {
 // Shared 30sec cooldown for Divine Protection and Avenging Wrath
 func (paladin *Paladin) GetMutualLockoutDPAW() *core.Timer {
 	return paladin.Character.GetOrInitTimer(&paladin.mutualLockoutDPAW)
-}
-
-func init() {
-	const basecrit = 3.29 * core.CritRatingPerCritChance
-	const basespellcrit = 3.336 * core.CritRatingPerCritChance
-	const basehealth = 3377
-	const basemana = 2953
-	const baseap = core.CharacterLevel * 3
-
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceBloodElf, Class: proto.Class_ClassPaladin}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Stamina:     120,
-		stats.Intellect:   86,
-		stats.Mana:        basemana,
-		stats.Spirit:      87,
-		stats.Strength:    123,
-		stats.AttackPower: baseap,
-		stats.Agility:     79,
-		stats.MeleeCrit:   basecrit,
-		stats.SpellCrit:   basespellcrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceDraenei, Class: proto.Class_ClassPaladin}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Stamina:     120,
-		stats.Intellect:   83,
-		stats.Mana:        basemana,
-		stats.Spirit:      91,
-		stats.Strength:    127,
-		stats.AttackPower: baseap,
-		stats.Agility:     74,
-		stats.MeleeCrit:   basecrit,
-		stats.SpellCrit:   basespellcrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceHuman, Class: proto.Class_ClassPaladin}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Stamina:     120,
-		stats.Intellect:   83,
-		stats.Mana:        basemana,
-		stats.Spirit:      89,
-		stats.Strength:    126,
-		stats.AttackPower: baseap,
-		stats.Agility:     77,
-		stats.MeleeCrit:   basecrit,
-		stats.SpellCrit:   basespellcrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceDwarf, Class: proto.Class_ClassPaladin}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Stamina:     121,
-		stats.Intellect:   82,
-		stats.Mana:        basemana,
-		stats.Spirit:      88,
-		stats.Strength:    131,
-		stats.AttackPower: baseap,
-		stats.Agility:     73,
-		stats.MeleeCrit:   basecrit,
-		stats.SpellCrit:   basespellcrit,
-	}
 }

@@ -46,6 +46,9 @@ func (unit *Unit) EnableRageBar(options RageBarOptions, onRageGain OnRageGain) {
 			if result.Outcome.Matches(OutcomeMiss) {
 				return
 			}
+			if !spell.ProcMask.Matches(ProcMaskMelee) {
+				return
+			}
 			if !spell.ProcMask.Matches(ProcMaskWhiteHit) {
 				return
 			}
@@ -135,7 +138,13 @@ func (rb *rageBar) AddRage(sim *Simulation, amount float64, metrics *ResourceMet
 	}
 
 	rb.currentRage = newRage
-	rb.onRageGain(sim)
+	if !sim.Options.Interactive {
+		if rb.unit.IsUsingAPL {
+			rb.unit.Rotation.DoNextAction(sim)
+		} else {
+			rb.onRageGain(sim)
+		}
+	}
 }
 
 func (rb *rageBar) SpendRage(sim *Simulation, amount float64, metrics *ResourceMetrics) {

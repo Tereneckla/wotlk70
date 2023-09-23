@@ -10,19 +10,13 @@ import (
 func (shaman *Shaman) newTotemSpellConfig(baseCost float64, spellID int32) core.SpellConfig {
 	return core.SpellConfig{
 		ActionID: core.ActionID{SpellID: spellID},
-		Flags:    SpellFlagTotem,
+		Flags:    SpellFlagTotem | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost: baseCost,
 			Multiplier: 1 -
 				0.05*float64(shaman.Talents.TotemicFocus) -
 				0.02*float64(shaman.Talents.MentalQuickness),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: time.Second,
-			},
-			IgnoreHaste: true,
 		},
 	}
 }
@@ -51,6 +45,41 @@ func (shaman *Shaman) registerManaSpringTotemSpell() {
 	shaman.ManaSpringTotem = shaman.RegisterSpell(config)
 }
 
+func (shaman *Shaman) registerHealingStreamTotemSpell() {
+	config := shaman.newTotemSpellConfig(0.03, 25567)
+	hsHeal := shaman.RegisterSpell(core.SpellConfig{
+		ActionID:         core.ActionID{SpellID: 25566},
+		SpellSchool:      core.SpellSchoolNature,
+		ProcMask:         core.ProcMaskEmpty,
+		Flags:            core.SpellFlagHelpful | core.SpellFlagNoOnCastComplete,
+		DamageMultiplier: 1 + (.02 * float64(shaman.Talents.Purification)) + 0.15*float64(shaman.Talents.RestorativeTotems),
+		CritMultiplier:   1,
+		ThreatMultiplier: 1 - (float64(shaman.Talents.HealingGrace) * 0.05),
+		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			// TODO: find healing stream coeff
+			healing := 18 + spell.HealingPower(target)*0.08272
+			spell.CalcAndDealHealing(sim, target, healing, spell.OutcomeHealing)
+		},
+	})
+	config.Hot = core.DotConfig{
+		Aura: core.Aura{
+			Label: "HealingStreamHot",
+		},
+		NumberOfTicks: 150,
+		TickLength:    time.Second * 2,
+		OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+			hsHeal.Cast(sim, target)
+		},
+	}
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		shaman.NextTotemDrops[WaterTotem] = sim.CurrentTime + time.Second*300
+		for _, agent := range shaman.Party.Players {
+			spell.Hot(&agent.GetCharacter().Unit).Activate(sim)
+		}
+	}
+	shaman.HealingStreamTotem = shaman.RegisterSpell(config)
+}
+
 func (shaman *Shaman) registerTotemOfWrathSpell() {
 	config := shaman.newTotemSpellConfig(0.05, 57721)
 	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
@@ -61,8 +90,8 @@ func (shaman *Shaman) registerTotemOfWrathSpell() {
 }
 
 func (shaman *Shaman) applyToWDebuff(sim *core.Simulation) {
-	for _, target := range sim.Encounter.Targets {
-		auraDef := core.TotemOfWrathDebuff(&target.Unit)
+	for _, target := range sim.Encounter.TargetUnits {
+		auraDef := core.TotemOfWrathDebuff(target)
 		auraDef.Activate(sim)
 	}
 }
@@ -99,6 +128,65 @@ func (shaman *Shaman) registerStoneskinTotemSpell() {
 	shaman.StoneskinTotem = shaman.RegisterSpell(config)
 }
 
+func (shaman *Shaman) registerCallOfTheElements() {
+	airTotem := shaman.getAirTotemSpell(shaman.Totems.Air)
+	earthTotem := shaman.getEarthTotemSpell(shaman.Totems.Earth)
+	fireTotem := shaman.getFireTotemSpell(shaman.Totems.Fire)
+	waterTotem := shaman.getWaterTotemSpell(shaman.Totems.Water)
+
+	totalManaCost := 0.0
+	if airTotem != nil {
+		totalManaCost += airTotem.DefaultCast.Cost
+	}
+	if earthTotem != nil {
+		totalManaCost += earthTotem.DefaultCast.Cost
+	}
+	if fireTotem != nil {
+		totalManaCost += fireTotem.DefaultCast.Cost
+	}
+	if waterTotem != nil {
+		totalManaCost += waterTotem.DefaultCast.Cost
+	}
+
+	shaman.RegisterSpell(core.SpellConfig{
+		ActionID: core.ActionID{SpellID: 66842},
+		Flags:    core.SpellFlagAPL,
+
+		Cast: core.CastConfig{
+			DefaultCast: core.Cast{
+				GCD: core.GCDDefault,
+			},
+		},
+		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
+			return shaman.CurrentMana() >= totalManaCost
+		},
+
+		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			// Save GCD timer value, so we can safely reset it between each totem cast.
+			nextGcdAt := shaman.GCD.ReadyAt()
+
+			if airTotem != nil {
+				shaman.GCD.Set(sim.CurrentTime)
+				airTotem.Cast(sim, target)
+			}
+			if earthTotem != nil {
+				shaman.GCD.Set(sim.CurrentTime)
+				earthTotem.Cast(sim, target)
+			}
+			if fireTotem != nil {
+				shaman.GCD.Set(sim.CurrentTime)
+				fireTotem.Cast(sim, target)
+			}
+			if waterTotem != nil {
+				shaman.GCD.Set(sim.CurrentTime)
+				waterTotem.Cast(sim, target)
+			}
+
+			shaman.GCD.Set(nextGcdAt)
+		},
+	})
+}
+
 func (shaman *Shaman) NextTotemAt(_ *core.Simulation) time.Duration {
 	nextTotemAt := core.MinDuration(
 		core.MinDuration(shaman.NextTotemDrops[0], shaman.NextTotemDrops[1]),
@@ -113,54 +201,79 @@ func (shaman *Shaman) NextTotemAt(_ *core.Simulation) time.Duration {
 func (shaman *Shaman) TryDropTotems(sim *core.Simulation) bool {
 	var spell *core.Spell
 
+	casted := false
 	for totemTypeIdx, totemExpiration := range shaman.NextTotemDrops {
-		if spell != nil {
-			break
-		}
+		spell = nil
 		nextDrop := shaman.NextTotemDropType[totemTypeIdx]
 		if sim.CurrentTime >= totemExpiration {
 			switch totemTypeIdx {
 			case AirTotem:
-				switch proto.AirTotem(nextDrop) {
-				case proto.AirTotem_WrathOfAirTotem:
-					spell = shaman.WrathOfAirTotem
-				case proto.AirTotem_WindfuryTotem:
-					spell = shaman.WindfuryTotem
-				}
-
+				spell = shaman.getAirTotemSpell(proto.AirTotem(nextDrop))
 			case EarthTotem:
-				switch proto.EarthTotem(nextDrop) {
-				case proto.EarthTotem_StrengthOfEarthTotem:
-					spell = shaman.StrengthOfEarthTotem
-				case proto.EarthTotem_TremorTotem:
-					spell = shaman.TremorTotem
-				case proto.EarthTotem_StoneskinTotem:
-					spell = shaman.StoneskinTotem
-				}
-
+				spell = shaman.getEarthTotemSpell(proto.EarthTotem(nextDrop))
 			case FireTotem:
-				switch proto.FireTotem(nextDrop) {
-				case proto.FireTotem_TotemOfWrath:
-					spell = shaman.TotemOfWrath
-				case proto.FireTotem_SearingTotem:
-					spell = shaman.SearingTotem
-				case proto.FireTotem_MagmaTotem:
-					spell = shaman.MagmaTotem
-				case proto.FireTotem_FlametongueTotem:
-					spell = shaman.FlametongueTotem
-				}
-
+				spell = shaman.getFireTotemSpell(proto.FireTotem(nextDrop))
 			case WaterTotem:
-				spell = shaman.ManaSpringTotem
+				spell = shaman.getWaterTotemSpell(proto.WaterTotem(nextDrop))
 			}
 		}
+		if spell != nil {
+			if success := spell.Cast(sim, shaman.CurrentTarget); !success {
+				shaman.WaitForMana(sim, spell.CurCast.Cost)
+				return true
+			}
+			casted = true
+		}
 	}
 
-	if spell != nil {
-		if success := spell.Cast(sim, shaman.CurrentTarget); !success {
-			shaman.WaitForMana(sim, spell.CurCast.Cost)
-		}
-		return true
+	if casted {
+		shaman.WaitUntil(sim, sim.CurrentTime+time.Second)
 	}
-	return false
+	return casted
+}
+
+func (shaman *Shaman) getAirTotemSpell(totemType proto.AirTotem) *core.Spell {
+	switch totemType {
+	case proto.AirTotem_WrathOfAirTotem:
+		return shaman.WrathOfAirTotem
+	case proto.AirTotem_WindfuryTotem:
+		return shaman.WindfuryTotem
+	}
+	return nil
+}
+
+func (shaman *Shaman) getEarthTotemSpell(totemType proto.EarthTotem) *core.Spell {
+	switch totemType {
+	case proto.EarthTotem_StrengthOfEarthTotem:
+		return shaman.StrengthOfEarthTotem
+	case proto.EarthTotem_TremorTotem:
+		return shaman.TremorTotem
+	case proto.EarthTotem_StoneskinTotem:
+		return shaman.StoneskinTotem
+	}
+	return nil
+}
+
+func (shaman *Shaman) getFireTotemSpell(totemType proto.FireTotem) *core.Spell {
+	switch totemType {
+	case proto.FireTotem_TotemOfWrath:
+		return shaman.TotemOfWrath
+	case proto.FireTotem_SearingTotem:
+		return shaman.SearingTotem
+	case proto.FireTotem_MagmaTotem:
+		return shaman.MagmaTotem
+	case proto.FireTotem_FlametongueTotem:
+		return shaman.FlametongueTotem
+	}
+	return nil
+}
+
+func (shaman *Shaman) getWaterTotemSpell(totemType proto.WaterTotem) *core.Spell {
+	switch totemType {
+	case proto.WaterTotem_ManaSpringTotem:
+		return shaman.ManaSpringTotem
+	case proto.WaterTotem_HealingStreamTotem:
+		return shaman.HealingStreamTotem
+	}
+	return nil
 }

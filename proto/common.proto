@@ -47,12 +47,6 @@ enum Faction {
 	Horde = 2;
 }
 
-enum ShattrathFaction {
-	None = 0;
-	Aldor = 1;
-	Scryer = 2;
-}
-
 enum Class {
 	ClassUnknown = 0;
 	ClassDruid = 1;
@@ -82,6 +76,7 @@ enum Profession {
 	Tailoring = 11;
 }
 
+// Keep in sync with sim/core/stats/stats.go.
 enum Stat {
 	StatStrength = 0;
 	StatAgility = 1;
@@ -118,6 +113,11 @@ enum Stat {
 	StatNatureResistance = 32;
 	StatShadowResistance = 33;
 	StatBonusArmor = 34;
+	StatRunicPower = 35; // Placeholder: not used yet.
+	StatBloodRune = 36; // Placeholder: not used yet.
+	StatFrostRune = 37; // Placeholder: not used yet.
+	StatUnholyRune = 38; // Placeholder: not used yet.
+	StatDeathRune = 39; // Placeholder: not used yet.
 	// DO NOT add new stats here without discussing it first; new stats come with
 	// a performance penalty.
 }
@@ -228,6 +228,8 @@ enum ItemQuality {
 	ItemQualityRare = 3;
 	ItemQualityEpic = 4;
 	ItemQualityLegendary = 5;
+	ItemQualityArtifact = 6;
+	ItemQualityHeirloom = 7;
 }
 
 enum GemColor {
@@ -260,9 +262,11 @@ enum TristateEffect {
 
 enum Explosive {
 	ExplosiveUnknown = 0;
-	ExplosiveBiggerOne = 1;
-	ExplosiveAdamantiteGrenade = 2;
-	ExplosiveFelIronBomb = 3;
+	ExplosiveSaroniteBomb = 1;
+	ExplosiveCobaltFragBomb = 2;
+	ExplosiveBiggerOne = 3;
+	ExplosiveAdamantiteGrenade = 4;
+	ExplosiveFelIronBomb = 5;
 }
 
 enum Potions {
@@ -396,7 +400,6 @@ enum Food {
 	FoodSkullfishSoup = 18;
 	FoodSpicyHotTalbuk = 19;
 	FoodFishermansFeast = 20;
-	FoodSpicyCrawDad = 21;
 }
 
 enum PetFood {
@@ -444,9 +447,11 @@ message RaidBuffs {
 	TristateEffect windfury_totem = 17; // none, 16%, 20%
 
 	// +Spell Power
-	bool totem_of_wrath = 18; // shouldn't stack with demonic pact (does in beta right now)
+	bool totem_of_wrath = 18;
 	bool flametongue_totem = 19;
-	int32 demonic_pact = 20; // SP buff, variable : 10% of demonology warlock's own SP
+	int32 demonic_pact_old = 20; // old demo SP 
+	int32 demonic_pact = 43; // SP buff -- deprecated.
+	int32 demonic_pact_sp = 44; // SP buff NEW CORRECT
 
 	// +5% Spell Crit and/or +3% Haste
 	bool swift_retribution = 21; //haste only
@@ -463,6 +468,13 @@ message RaidBuffs {
 
 	// mp5
 	TristateEffect mana_spring_totem = 28;
+
+	// Resistances
+	bool shadow_protection = 33;
+	bool nature_resistance_totem = 45;
+	bool aspect_of_the_wild = 46;
+	bool frost_resistance_aura = 47;
+	bool frost_resistance_totem = 48;
 	
 	// Miscellaneous
 	bool bloodlust = 29;
@@ -470,7 +482,6 @@ message RaidBuffs {
 	TristateEffect devotion_aura = 31;
 	TristateEffect stoneskin_totem = 42;
 	bool retribution_aura = 32;
-	bool shadow_protection = 33;	
 
 	// Drums
 	bool drums_of_forgotten_kings = 34;
@@ -524,6 +535,8 @@ message IndividualBuffs {
 	int32 tricks_of_the_trades = 19;
 	int32 divine_guardians = 23;
 	int32 pain_suppressions = 24;
+	int32 hand_of_sacrifices = 25;
+	int32 guardian_spirits = 26;
 
 	// Technically a debuff, but only used by individual sims.
 	int32 shattering_throws = 20;
@@ -545,6 +558,7 @@ message Consumes {
 
 	WeaponImbue weapon_main = 4;
 	WeaponImbue weapon_off = 5;
+
 	Food food = 6;
 	PetFood pet_food = 7;
 
@@ -555,7 +569,9 @@ message Consumes {
 	Potions prepop_potion = 11;
 	Conjured default_conjured = 12;
 
-	bool super_sapper = 15;
+	bool super_sapper = 14;
+	bool thermal_sapper = 15;
+	bool explosive_decoy = 16;
 	Explosive filler_explosive = 17;
 }
 
@@ -617,6 +633,8 @@ message Debuffs {
 
 	// 1 = normal, 2 = talented, 3 = talented+glyphed
 	int32 hunters_mark = 35;
+
+	bool crystal_yield = 38;
 }
 
 enum MobType {
@@ -656,11 +674,12 @@ message Target {
 
 	// Auto attack parameters.
 	double min_base_damage = 7;
+	double damage_spread = 19; // replaces tight_enemy_damage
 	double swing_speed = 8;
 	bool dual_wield = 9;
 	bool dual_wield_penalty = 10;
 	bool parry_haste = 12;
-	bool tight_enemy_damage = 17; // Patchwerk special
+	bool tight_enemy_damage = 17; // deprecated as of 07/12/23
 	bool suppress_dodge = 16; // Sunwell Radiance
 	SpellSchool spell_school = 13; // Allows elemental attacks.
 
@@ -710,7 +729,7 @@ message ItemSpec {
 	int32 enchant = 3;
 	repeated int32 gems = 4;
 	Suffix suffix = 5;
-	int32 ivl = 6;
+	int32 ilvl = 6;
 	ItemQuality quality = 7;
 }
 
@@ -744,7 +763,7 @@ message SimItem {
 	double weapon_speed = 13;
 
 	string set_name = 14;
-	
+
 	Suffix suffix = 15;
 	int32 ilvl = 16;
 	ItemQuality quality = 17;
@@ -774,9 +793,30 @@ message SimGem {
 	repeated double stats = 4;
 }
 
-message RaidTarget {
+message UnitReference {
+	enum Type {
+		Unknown = 0;
+		Player = 1;
+		Target = 2;
+		Pet = 3;
+		Self = 4;
+		CurrentTarget = 5;
+		AllPlayers = 6;
+		AllTargets = 7;
+	}
+
+	// The type of unit being referenced.
+	Type type = 2;
+
+	// Index of the player/target/pet/etc depending on value of type.
+	int32 index = 3;
+
+	// Reference to the owner, only used iff this is a pet.
+	UnitReference owner = 4;
+
 	// Raid index of the player to target. A value of -1 indicates no target.
-	int32 target_index = 1;
+	// TODO: Delete this after 2 months (on or after 9/19/2023)
+	int32 target_index = 1 [deprecated = true];
 }
 
 // ID for actions that aren't spells or items.
@@ -798,6 +838,7 @@ enum OtherAction {
 	OtherActionFrostRuneGain  = 14; // Indicates healing received from healing model.
 	OtherActionUnholyRuneGain  = 15; // Indicates healing received from healing model.
 	OtherActionDeathRuneGain  = 16; // Indicates healing received from healing model.
+	OtherActionPotion = 17; // Used by APL to generically refer to either the prepull or combat potion.
 }
 
 message ActionID {
@@ -839,6 +880,8 @@ message Cooldowns {
 
 	// % HP threshold, below which defensive cooldowns can be used.
 	double hp_percent_for_defensives = 2;
+	int32 desync_proc_trinket1_seconds = 3;
+	int32 desync_proc_trinket2_seconds = 4;
 }
 
 message HealingModel {
@@ -846,6 +889,8 @@ message HealingModel {
 	double hps = 1;
 	// How often healing is applied.
 	double cadence_seconds = 2;
+	// Variation in the cadence.
+	double cadence_variation = 5;
 	// % Inspiration buff uptime
 	double inspiration_uptime = 3;
 	// TMI burst window bin size

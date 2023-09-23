@@ -15,6 +15,7 @@ func (warlock *Warlock) registerCorruptionSpell() {
 		ActionID:    core.ActionID{SpellID: 27216},
 		SpellSchool: core.SpellSchoolShadow,
 		ProcMask:    core.ProcMaskSpellDamage,
+		Flags:       core.SpellFlagHauntSE | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.14,
@@ -27,14 +28,15 @@ func (warlock *Warlock) registerCorruptionSpell() {
 		},
 
 		BonusCritRating: 0 +
-			warlock.masterDemonologistShadowCrit +
-			3*float64(warlock.Talents.Malediction)*core.CritRatingPerCritChance,
+			3*float64(warlock.Talents.Malediction)*core.CritRatingPerCritChance +
+			core.TernaryFloat64(warlock.HasSetBonus(ItemSetDarkCovensRegalia, 2), 5*core.CritRatingPerCritChance, 0),
 		DamageMultiplierAdditive: 1 +
 			warlock.GrandSpellstoneBonus() +
 			0.03*float64(warlock.Talents.ShadowMastery) +
 			0.01*float64(warlock.Talents.Contagion) +
 			0.02*float64(warlock.Talents.ImprovedCorruption) +
 			core.TernaryFloat64(warlock.Talents.SiphonLife, 0.05, 0) +
+			core.TernaryFloat64(warlock.HasSetBonus(ItemSetGuldansRegalia, 4), 0.1, 0) +
 			core.TernaryFloat64(warlock.HasSetBonus(ItemSetCorruptorRaiment, 4), 0.05, 0),
 		CritMultiplier:   warlock.SpellCritMultiplier(1, 1),
 		ThreatMultiplier: 1 - 0.1*float64(warlock.Talents.ImprovedDrainSoul),
@@ -59,16 +61,25 @@ func (warlock *Warlock) registerCorruptionSpell() {
 				if canCrit {
 					dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeSnapshotCrit)
 				} else {
-					dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+					dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTickCounted)
 				}
 			},
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcAndDealOutcome(sim, target, spell.OutcomeMagicHit)
+			result := spell.CalcOutcome(sim, target, spell.OutcomeMagicHit)
 			if result.Landed() {
 				spell.SpellMetrics[target.UnitIndex].Hits--
 				spell.Dot(target).Apply(sim)
+			}
+		},
+		ExpectedDamage: func(sim *core.Simulation, target *core.Unit, spell *core.Spell, useSnapshot bool) *core.SpellResult {
+			if useSnapshot {
+				dot := spell.Dot(target)
+				return dot.CalcSnapshotDamage(sim, target, dot.OutcomeExpectedMagicSnapshotCrit)
+			} else {
+				baseDmg := 150 + spellCoeff*(dot.Spell.SpellPower()+core.TernaryFloat64(warlock.HasActiveAura("Shadowflame"), 135, 0))
+				return spell.CalcPeriodicDamage(sim, target, baseDmg, spell.OutcomeExpectedMagicCrit)
 			}
 		},
 	})

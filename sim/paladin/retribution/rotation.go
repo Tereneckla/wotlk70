@@ -8,7 +8,7 @@ import (
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 )
 
-func (ret *RetributionPaladin) OnAutoAttack(sim *core.Simulation, spell *core.Spell) {
+func (ret *RetributionPaladin) OnAutoAttack(sim *core.Simulation, _ *core.Spell) {
 	if ret.SealOfVengeanceAura.IsActive() && core.MinInt32(ret.MaxSoVTargets, ret.Env.GetNumTargets()) > 1 {
 		minVengeanceDotDuration := time.Second * 15
 		var minVengeanceDotDurationTarget *core.Unit
@@ -31,19 +31,22 @@ func (ret *RetributionPaladin) OnAutoAttack(sim *core.Simulation, spell *core.Sp
 			}
 		}
 
-		if minVengeanceDotDuration < ret.WeaponFromMainHand(0).SwingDuration*2 {
+		if minVengeanceDotDuration < core.DurationFromSeconds(ret.AutoAttacks.MH.SwingSpeed*2) {
 			ret.CurrentTarget = minVengeanceDotDurationTarget
 		} else if ret.SovDotSpell.Dot(ret.CurrentTarget).GetStacks() == 5 && minVengeanceDotStacks < 5 {
 			ret.CurrentTarget = minVengeanceDotStacksTarget
 		} else {
-			ret.CurrentTarget = &ret.Env.Encounter.Targets[0].Unit
+			ret.CurrentTarget = ret.Env.Encounter.TargetUnits[0]
 		}
 	}
 }
 
 func (ret *RetributionPaladin) OnGCDReady(sim *core.Simulation) {
-	ret.SelectedRotation(sim)
+	if ret.IsUsingAPL {
+		return
+	}
 
+	ret.SelectedRotation(sim)
 	if ret.GCD.IsReady(sim) {
 		ret.DoNothing() // this means we had nothing to do and we are ok
 	}
@@ -51,10 +54,14 @@ func (ret *RetributionPaladin) OnGCDReady(sim *core.Simulation) {
 
 func (ret *RetributionPaladin) customRotation(sim *core.Simulation) {
 	// Setup
-	target := &ret.Env.Encounter.Targets[0].Unit
+	target := ret.Env.Encounter.TargetUnits[0]
 
 	nextSwingAt := ret.AutoAttacks.NextAttackAt()
 	isExecutePhase := sim.IsExecutePhase20()
+
+	if ret.HandOfReckoning != nil && ret.HandOfReckoning.IsReady(sim) {
+		ret.HandOfReckoning.Cast(sim, ret.CurrentTarget)
+	}
 
 	if ret.GCD.IsReady(sim) {
 	rotationLoop:
@@ -72,6 +79,16 @@ func (ret *RetributionPaladin) customRotation(sim *core.Simulation) {
 				}
 			}
 
+			if spell == ret.HolyWrath {
+				// Holy Wrath isn't worth casting if it will reduce usages of CS/DS
+				if ret.CrusaderStrike.ReadyAt()-sim.CurrentTime < 500*time.Millisecond {
+					continue
+				}
+				if ret.DivineStorm.ReadyAt()-sim.CurrentTime < 500*time.Millisecond {
+					continue
+				}
+			}
+
 			if spell == ret.Consecration && !ret.checkConsecrationClipping(sim) {
 				// This is a skip, so we take the opposite of the clip check.
 				continue
@@ -81,9 +98,9 @@ func (ret *RetributionPaladin) customRotation(sim *core.Simulation) {
 				continue
 			}
 
-			/*if spell == ret.DivinePlea && ret.CurrentMana() > (ret.MaxMana()*ret.DivinePleaPercentage) {
+			if spell == ret.DivinePlea && ret.CurrentMana() > (ret.MaxMana()*ret.DivinePleaPercentage) {
 				continue
-			}*/
+			}
 
 			if spell.IsReady(sim) {
 				success := spell.Cast(sim, target)
@@ -106,11 +123,15 @@ func (ret *RetributionPaladin) customRotation(sim *core.Simulation) {
 		ret.CrusaderStrike.CD.ReadyAt(),
 		ret.Consecration.CD.ReadyAt(),
 		ret.Exorcism.CD.ReadyAt(),
-		//ret.DivinePlea.CD.ReadyAt(),
+		ret.DivinePlea.CD.ReadyAt(),
 	}
 
-	ret.waitUntilNextEvent(sim, events, ret.customRotation)
+	if ret.HandOfReckoning != nil {
+		events = append(events, ret.HandOfReckoning.CD.ReadyAt())
+	}
 
+	CancelChaosBane(ret, sim)
+	ret.waitUntilNextEvent(sim, events, ret.customRotation)
 }
 
 func (ret *RetributionPaladin) castSequenceRotation(sim *core.Simulation) {
@@ -119,32 +140,36 @@ func (ret *RetributionPaladin) castSequenceRotation(sim *core.Simulation) {
 	}
 
 	// Setup
-	target := &ret.Env.Encounter.Targets[0].Unit
+	target := ret.Env.Encounter.TargetUnits[0]
 	isExecutePhase := sim.IsExecutePhase20()
 
 	nextReadyAt := sim.CurrentTime
 
+	if hc := ret.Hardcast; ret.HandOfReckoning != nil && ret.HandOfReckoning.IsReady(sim) && !(hc.Expires > sim.CurrentTime) {
+		ret.HandOfReckoning.Cast(sim, ret.CurrentTarget)
+	}
+
 	if ret.GCD.IsReady(sim) {
-		/*if ret.UseDivinePlea && ret.DivinePlea.IsReady(sim) && ret.CurrentMana() < (ret.MaxMana()*ret.DivinePleaPercentage) {
+		if ret.UseDivinePlea && ret.DivinePlea.IsReady(sim) && ret.CurrentMana() < (ret.MaxMana()*ret.DivinePleaPercentage) {
 			ret.DivinePlea.Cast(sim, nil)
-		} else {*/
-		currentSpell := ret.RotationInput[ret.CastSequenceIndex]
-
-		if currentSpell == ret.HammerOfWrath && !isExecutePhase {
-			return
-		}
-
-		if currentSpell.IsReady(sim) {
-			success := currentSpell.Cast(sim, target)
-			if success {
-				ret.CastSequenceIndex = (ret.CastSequenceIndex + 1) % int32(len(ret.RotationInput))
-			} else {
-				ret.WaitForMana(sim, currentSpell.CurCast.Cost)
-			}
 		} else {
-			nextReadyAt = currentSpell.ReadyAt()
+			currentSpell := ret.RotationInput[ret.CastSequenceIndex]
+
+			if currentSpell == ret.HammerOfWrath && !isExecutePhase {
+				return
+			}
+
+			if currentSpell.IsReady(sim) {
+				success := currentSpell.Cast(sim, target)
+				if success {
+					ret.CastSequenceIndex = (ret.CastSequenceIndex + 1) % int32(len(ret.RotationInput))
+				} else {
+					ret.WaitForMana(sim, currentSpell.CurCast.Cost)
+				}
+			} else {
+				nextReadyAt = currentSpell.ReadyAt()
+			}
 		}
-		//}
 	}
 
 	events := []time.Duration{
@@ -152,13 +177,18 @@ func (ret *RetributionPaladin) castSequenceRotation(sim *core.Simulation) {
 		nextReadyAt,
 	}
 
+	if ret.HandOfReckoning != nil {
+		events = append(events, ret.HandOfReckoning.CD.ReadyAt())
+	}
+
+	CancelChaosBane(ret, sim)
 	ret.waitUntilNextEvent(sim, events, ret.castSequenceRotation)
 }
 
 func (ret *RetributionPaladin) mainRotation(sim *core.Simulation) {
 
 	// Setup
-	target := &ret.Env.Encounter.Targets[0].Unit
+	target := ret.Env.Encounter.TargetUnits[0]
 
 	nextSwingAt := ret.AutoAttacks.NextAttackAt()
 	isExecutePhase := sim.IsExecutePhase20()
@@ -166,6 +196,10 @@ func (ret *RetributionPaladin) mainRotation(sim *core.Simulation) {
 	nextPrimaryAbility := core.MinDuration(ret.CrusaderStrike.CD.ReadyAt(), ret.DivineStorm.CD.ReadyAt())
 	nextPrimaryAbility = core.MinDuration(nextPrimaryAbility, ret.SelectedJudgement.CD.ReadyAt())
 	nextPrimaryAbilityDelta := nextPrimaryAbility - sim.CurrentTime
+
+	if ret.HandOfReckoning != nil && ret.HandOfReckoning.IsReady(sim) {
+		ret.HandOfReckoning.Cast(sim, ret.CurrentTarget)
+	}
 
 	if ret.GCD.IsReady(sim) {
 		switch {
@@ -206,8 +240,8 @@ func (ret *RetributionPaladin) mainRotation(sim *core.Simulation) {
 			if !success {
 				ret.WaitForMana(sim, ret.HolyWrath.CurCast.Cost)
 			}
-		/*case ret.UseDivinePlea && ret.CurrentMana() < (ret.MaxMana()*ret.DivinePleaPercentage) && ret.DivinePlea.IsReady(sim):
-		ret.DivinePlea.Cast(sim, nil)*/
+		case ret.UseDivinePlea && ret.CurrentMana() < (ret.MaxMana()*ret.DivinePleaPercentage) && ret.DivinePlea.IsReady(sim):
+			ret.DivinePlea.Cast(sim, nil)
 		case ret.CrusaderStrike.IsReady(sim):
 			success := ret.CrusaderStrike.Cast(sim, target)
 			if !success {
@@ -235,6 +269,13 @@ func (ret *RetributionPaladin) mainRotation(sim *core.Simulation) {
 				ret.WaitForMana(sim, ret.Exorcism.CurCast.Cost)
 			}
 		case ret.DemonAndUndeadTargetCount >= 1 && ret.HolyWrath.IsReady(sim):
+			// Holy Wrath isn't worth casting if it will reduce usages of CS/DS
+			if ret.CrusaderStrike.ReadyAt()-sim.CurrentTime < 500*time.Millisecond {
+				break
+			}
+			if ret.DivineStorm.ReadyAt()-sim.CurrentTime < 500*time.Millisecond {
+				break
+			}
 			success := ret.HolyWrath.Cast(sim, target)
 			if !success {
 				ret.WaitForMana(sim, ret.HolyWrath.CurCast.Cost)
@@ -253,16 +294,20 @@ func (ret *RetributionPaladin) mainRotation(sim *core.Simulation) {
 		ret.CrusaderStrike.CD.ReadyAt(),
 		ret.Consecration.CD.ReadyAt(),
 		ret.Exorcism.CD.ReadyAt(),
-		//ret.DivinePlea.CD.ReadyAt(),
+		ret.DivinePlea.CD.ReadyAt(),
 	}
 
+	if ret.HandOfReckoning != nil {
+		events = append(events, ret.HandOfReckoning.CD.ReadyAt())
+	}
+
+	CancelChaosBane(ret, sim)
 	ret.waitUntilNextEvent(sim, events, ret.mainRotation)
 }
 
 func (ret *RetributionPaladin) checkConsecrationClipping(sim *core.Simulation) bool {
 	if ret.AvoidClippingConsecration {
-		// TODO: sim.Duration is the wrong value to check
-		return sim.CurrentTime+ret.Consecration.AOEDot().TickLength*4 <= sim.Duration
+		return ret.Consecration.AOEDot().TickLength*4 <= sim.GetRemainingDuration()
 	} else {
 		// If we're not configured to check, always return success.
 		return true
@@ -271,6 +316,7 @@ func (ret *RetributionPaladin) checkConsecrationClipping(sim *core.Simulation) b
 
 // Helper function for finding the next event
 func (ret *RetributionPaladin) waitUntilNextEvent(sim *core.Simulation, events []time.Duration, rotationCallback func(*core.Simulation)) {
+
 	// Find the minimum possible next event that is greater than the current time
 	nextEventAt := time.Duration(math.MaxInt64) // any event will happen before forever.
 	for _, elem := range events {
@@ -280,6 +326,9 @@ func (ret *RetributionPaladin) waitUntilNextEvent(sim *core.Simulation, events [
 	}
 	// If the next action is  the GCD, just return
 	if nextEventAt == ret.GCD.ReadyAt() {
+		if ret.CancelChaosBane && ret.HasActiveAura("Chaos Bane") {
+			ret.GetAura("Chaos Bane").Deactivate(sim)
+		}
 		return
 	}
 
@@ -291,4 +340,17 @@ func (ret *RetributionPaladin) waitUntilNextEvent(sim *core.Simulation, events [
 	}
 
 	sim.AddPendingAction(pa)
+
+	if ret.CancelChaosBane && ret.HasActiveAura("Chaos Bane") {
+		ret.GetAura("Chaos Bane").Deactivate(sim)
+	}
+}
+
+func CancelChaosBane(ret *RetributionPaladin, sim *core.Simulation) {
+	if !ret.Paladin.CancelChaosBane {
+		return
+	}
+	if a := ret.Paladin.GetAura("Chaos Bane"); a != nil {
+		a.Deactivate(sim)
+	}
 }

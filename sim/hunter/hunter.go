@@ -52,8 +52,8 @@ type Hunter struct {
 	// The most recent time at which moving could have started, for trap weaving.
 	mayMoveAt time.Duration
 
-	AspectOfTheHawk  *core.Spell
-	AspectOfTheViper *core.Spell
+	AspectOfTheHawk *core.Spell
+	AspectOfTheViper      *core.Spell
 
 	AimedShot       *core.Spell
 	ArcaneShot      *core.Spell
@@ -63,28 +63,30 @@ type Hunter struct {
 	ExplosiveShotR3 *core.Spell
 	ExplosiveTrap   *core.Spell
 	KillCommand     *core.Spell
-	//KillShot        *core.Spell
-	MultiShot     *core.Spell
-	RapidFire     *core.Spell
-	RaptorStrike  *core.Spell
-	ScorpidSting  *core.Spell
-	SerpentSting  *core.Spell
-	SilencingShot *core.Spell
-	SteadyShot    *core.Spell
-	Volley        *core.Spell
+	KillShot        *core.Spell
+	MultiShot       *core.Spell
+	RapidFire       *core.Spell
+	RaptorStrike    *core.Spell
+	ScorpidSting    *core.Spell
+	SerpentSting    *core.Spell
+	SilencingShot   *core.Spell
+	SteadyShot      *core.Spell
+	Volley          *core.Spell
 
 	// Fake spells to encapsulate weaving logic.
 	TrapWeaveSpell *core.Spell
 
-	AspectOfTheHawkAura    *core.Aura
-	AspectOfTheViperAura   *core.Aura
-	ImprovedSteadyShotAura *core.Aura
-	LockAndLoadAura        *core.Aura
-	RapidFireAura          *core.Aura
-	ScorpidStingAuras      core.AuraArray
-	TalonOfAlarAura        *core.Aura
+	AspectOfTheHawkAura *core.Aura
+	AspectOfTheViperAura      *core.Aura
+	ImprovedSteadyShotAura    *core.Aura
+	LockAndLoadAura           *core.Aura
+	RapidFireAura             *core.Aura
+	ScorpidStingAuras         core.AuraArray
+	TalonOfAlarAura           *core.Aura
 
-	CustomRotation *common.CustomRotation
+	CustomRotation     *common.CustomRotation
+	rotationConditions map[*core.Spell]RotationCondition
+	rotationPriority   []*core.Spell
 }
 
 func (hunter *Hunter) GetCharacter() *core.Character {
@@ -110,16 +112,16 @@ func (hunter *Hunter) AddRaidBuffs(raidBuffs *proto.RaidBuffs) {
 		raidBuffs.FerociousInspiration = true
 	}
 }
-func (hunter *Hunter) AddPartyBuffs(partyBuffs *proto.PartyBuffs) {
+func (hunter *Hunter) AddPartyBuffs(_ *proto.PartyBuffs) {
 }
 
 func (hunter *Hunter) Initialize() {
 	// Update auto crit multipliers now that we have the targets.
-	hunter.AutoAttacks.MHConfig.CritMultiplier = hunter.critMultiplier(false, false)
-	hunter.AutoAttacks.OHConfig.CritMultiplier = hunter.critMultiplier(false, false)
-	hunter.AutoAttacks.RangedConfig.CritMultiplier = hunter.critMultiplier(false, false)
+	hunter.AutoAttacks.MHConfig.CritMultiplier = hunter.critMultiplier(false, false, false)
+	hunter.AutoAttacks.OHConfig.CritMultiplier = hunter.critMultiplier(false, false, false)
+	hunter.AutoAttacks.RangedConfig.CritMultiplier = hunter.critMultiplier(false, false, false)
 
-	hunter.registerAspectOfTheHawkSpell()
+	hunter.registerAspectOfTheDragonhawkSpell()
 	hunter.registerAspectOfTheViperSpell()
 
 	multiShotTimer := hunter.NewTimer()
@@ -132,7 +134,7 @@ func (hunter *Hunter) Initialize() {
 	hunter.registerChimeraShotSpell()
 	hunter.registerExplosiveShotSpell(arcaneShotTimer)
 	hunter.registerExplosiveTrapSpell(fireTrapTimer)
-	//hunter.registerKillShotSpell()
+	hunter.registerKillShotSpell()
 	hunter.registerMultiShotSpell(multiShotTimer)
 	hunter.registerRaptorStrikeSpell()
 	hunter.registerScorpidStingSpell()
@@ -144,8 +146,11 @@ func (hunter *Hunter) Initialize() {
 	hunter.registerKillCommandCD()
 	hunter.registerRapidFireCD()
 
-	hunter.DelayDPSCooldownsForArmorDebuffs(time.Second * 10)
+	if !hunter.IsUsingAPL {
+		hunter.DelayDPSCooldownsForArmorDebuffs(time.Second * 10)
+	}
 
+	hunter.initRotation()
 	hunter.CustomRotation = hunter.makeCustomRotation()
 	if hunter.CustomRotation == nil {
 		hunter.Rotation.Type = proto.Hunter_Rotation_SingleTarget
@@ -159,7 +164,7 @@ func (hunter *Hunter) Initialize() {
 	}
 }
 
-func (hunter *Hunter) Reset(sim *core.Simulation) {
+func (hunter *Hunter) Reset(_ *core.Simulation) {
 	hunter.mayMoveAt = 0
 	hunter.manaSpentPerSecondAtFirstAspectSwap = 0
 	hunter.permaHawk = false
@@ -174,6 +179,9 @@ func NewHunter(character core.Character, options *proto.Player) *Hunter {
 		Options:   hunterOptions.Options,
 		Rotation:  hunterOptions.Rotation,
 	}
+	if hunter.Rotation == nil {
+		hunter.Rotation = &proto.Hunter_Rotation{}
+	}
 	core.FillTalentsProto(hunter.Talents.ProtoReflect(), options.TalentsString, TalentTreeSizes)
 	hunter.EnableManaBar()
 
@@ -186,6 +194,12 @@ func NewHunter(character core.Character, options *proto.Player) *Hunter {
 
 	if hunter.HasRangedWeapon() && hunter.GetRangedWeapon().ID != ThoridalTheStarsFuryItemID {
 		switch hunter.Options.Ammo {
+		case proto.Hunter_Options_IcebladeArrow:
+			hunter.AmmoDPS = 91.5
+		case proto.Hunter_Options_SaroniteRazorheads:
+			hunter.AmmoDPS = 67.5
+		case proto.Hunter_Options_TerrorshaftArrow:
+			hunter.AmmoDPS = 46.5
 		case proto.Hunter_Options_TimelessArrow:
 			hunter.AmmoDPS = 53
 		case proto.Hunter_Options_MysteriousArrow:
@@ -205,8 +219,8 @@ func NewHunter(character core.Character, options *proto.Player) *Hunter {
 		MainHand: hunter.WeaponFromMainHand(0),
 		OffHand:  hunter.WeaponFromOffHand(0),
 		Ranged:   rangedWeapon,
-		ReplaceMHSwing: func(sim *core.Simulation, _ *core.Spell) *core.Spell {
-			return hunter.TryRaptorStrike(sim)
+		ReplaceMHSwing: func(sim *core.Simulation, mhSwingSpell *core.Spell) *core.Spell {
+			return hunter.TryRaptorStrike(sim, mhSwingSpell)
 		},
 		AutoSwingRanged: true,
 	})
@@ -222,111 +236,9 @@ func NewHunter(character core.Character, options *proto.Player) *Hunter {
 	hunter.AddStatDependency(stats.Strength, stats.AttackPower, 1)
 	hunter.AddStatDependency(stats.Agility, stats.AttackPower, 1)
 	hunter.AddStatDependency(stats.Agility, stats.RangedAttackPower, 1)
-	hunter.AddStat(stats.AttackPower, -20)
-	hunter.AddStat(stats.RangedAttackPower, -10)
-	hunter.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritRatingPerCritChance/40.03)
+	hunter.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritPerAgiMaxLevel[character.Class]*core.CritRatingPerCritChance)
 
 	return hunter
-}
-
-func init() {
-	const basecrit = -1.53 * core.CritRatingPerCritChance
-	//const basespellcrit =
-	const basehealth = 3568
-	const basemana = 3383
-	const baseap = core.CharacterLevel * 2
-
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceBloodElf, Class: proto.Class_ClassHunter}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  61,
-		stats.Agility:   153,
-		stats.Stamina:   108,
-		stats.Intellect: 80,
-		stats.Spirit:    81,
-		stats.Mana:      basemana,
-
-		stats.AttackPower:       baseap,
-		stats.RangedAttackPower: baseap,
-		stats.MeleeCrit:         basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceDraenei, Class: proto.Class_ClassHunter}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  65,
-		stats.Agility:   148,
-		stats.Stamina:   108,
-		stats.Intellect: 77,
-		stats.Spirit:    85,
-		stats.Mana:      basemana,
-
-		stats.AttackPower:       baseap,
-		stats.RangedAttackPower: baseap,
-		stats.MeleeCrit:         basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceDwarf, Class: proto.Class_ClassHunter}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  69,
-		stats.Agility:   147,
-		stats.Stamina:   109,
-		stats.Intellect: 76,
-		stats.Spirit:    82,
-		stats.Mana:      basemana,
-
-		stats.AttackPower:       baseap,
-		stats.RangedAttackPower: baseap,
-		stats.MeleeCrit:         basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceNightElf, Class: proto.Class_ClassHunter}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  60,
-		stats.Agility:   155,
-		stats.Stamina:   108,
-		stats.Intellect: 77,
-		stats.Spirit:    83,
-		stats.Mana:      basemana,
-
-		stats.AttackPower:       baseap,
-		stats.RangedAttackPower: baseap,
-		stats.MeleeCrit:         basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceOrc, Class: proto.Class_ClassHunter}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  67,
-		stats.Agility:   148,
-		stats.Stamina:   109,
-		stats.Intellect: 74,
-		stats.Spirit:    85,
-		stats.Mana:      basemana,
-
-		stats.AttackPower:       baseap,
-		stats.RangedAttackPower: baseap,
-		stats.MeleeCrit:         basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceTauren, Class: proto.Class_ClassHunter}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  69,
-		stats.Agility:   147,
-		stats.Stamina:   109,
-		stats.Intellect: 73,
-		stats.Spirit:    85,
-		stats.Mana:      basemana,
-
-		stats.AttackPower:       baseap,
-		stats.RangedAttackPower: baseap,
-		stats.MeleeCrit:         basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceTroll, Class: proto.Class_ClassHunter}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  65,
-		stats.Agility:   153,
-		stats.Stamina:   108,
-		stats.Intellect: 73,
-		stats.Spirit:    84,
-		stats.Mana:      basemana,
-
-		stats.AttackPower:       baseap,
-		stats.RangedAttackPower: baseap,
-		stats.MeleeCrit:         basecrit,
-	}
 }
 
 // Agent is a generic way to access underlying hunter on any of the agents.

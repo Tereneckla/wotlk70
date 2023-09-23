@@ -16,14 +16,16 @@ func (paladin *Paladin) canJudgement(sim *core.Simulation) bool {
 }
 
 func (paladin *Paladin) registerJudgementOfWisdomSpell(cdTimer *core.Timer) {
+	jowAuras := paladin.NewEnemyAuraArray(core.JudgementOfWisdomAura)
+
 	paladin.JudgementOfWisdom = paladin.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 53408},
 		SpellSchool: core.SpellSchoolHoly,
-		ProcMask:    core.ProcMaskEmpty,
-		Flags:       SpellFlagPrimaryJudgement,
+		ProcMask:    core.ProcMaskProc, // can proc TaJ itself and from seal
+		Flags:       SpellFlagPrimaryJudgement | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost:   paladin.BaseMana*0.07 - core.TernaryFloat64(paladin.HasSetBonus(ItemSetCrystalforgeBattlegear, 2), 35, 0),
+			FlatCost:   paladin.BaseMana*0.05 - core.TernaryFloat64(paladin.HasSetBonus(ItemSetCrystalforgeBattlegear, 2), 35, 0),
 			Multiplier: 1 - 0.02*float64(paladin.Talents.Benediction),
 		},
 		Cast: core.CastConfig{
@@ -34,30 +36,36 @@ func (paladin *Paladin) registerJudgementOfWisdomSpell(cdTimer *core.Timer) {
 			CD: core.Cooldown{
 				Timer: cdTimer,
 				Duration: (time.Second * 10) -
-					(time.Second * time.Duration(paladin.Talents.ImprovedJudgements)),
+					(time.Second * time.Duration(paladin.Talents.ImprovedJudgements)) -
+					core.TernaryDuration(paladin.HasSetBonus(ItemSetRedemptionBattlegear, 4), 1*time.Second, 0) -
+					core.TernaryDuration(paladin.HasSetBonus(ItemSetGladiatorsVindication, 4), 1*time.Second, 0),
 			},
 		},
 		DamageMultiplier: 1 + core.TernaryFloat64(paladin.HasSetBonus(ItemSetJusticarBattlegear, 4), 0.1, 0),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			// Primary Judgements cannot crit or be dodged, parried, or blocked-- only miss. (Unless target is a hunter.)
-			jow := target.GetAura(core.JudgementOfWisdomAuraLabel)
+			jow := jowAuras.Get(target)
 			if jow.IsActive() {
 				jow.Refresh(sim)
 			} else {
-				core.JudgementOfWisdomAura(target).Activate(sim)
+				jow.Activate(sim)
 			}
 			spell.CalcAndDealOutcome(sim, target, spell.OutcomeRangedHit)
 		},
+
+		RelatedAuras: []core.AuraArray{jowAuras},
 	})
 }
 
 func (paladin *Paladin) registerJudgementOfLightSpell(cdTimer *core.Timer) {
+	jolAuras := paladin.NewEnemyAuraArray(core.JudgementOfLightAura)
+
 	paladin.JudgementOfLight = paladin.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 20271},
 		SpellSchool: core.SpellSchoolHoly,
-		ProcMask:    core.ProcMaskEmpty,
-		Flags:       SpellFlagPrimaryJudgement,
+		ProcMask:    core.ProcMaskProc,
+		Flags:       SpellFlagPrimaryJudgement | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.05,
@@ -71,21 +79,25 @@ func (paladin *Paladin) registerJudgementOfLightSpell(cdTimer *core.Timer) {
 			CD: core.Cooldown{
 				Timer: cdTimer,
 				Duration: (time.Second * 10) -
-					(time.Second * time.Duration(paladin.Talents.ImprovedJudgements)),
+					(time.Second * time.Duration(paladin.Talents.ImprovedJudgements)) -
+					core.TernaryDuration(paladin.HasSetBonus(ItemSetRedemptionBattlegear, 4), 1*time.Second, 0) -
+					core.TernaryDuration(paladin.HasSetBonus(ItemSetGladiatorsVindication, 4), 1*time.Second, 0),
 			},
 		},
 		DamageMultiplier: 1 + core.TernaryFloat64(paladin.HasSetBonus(ItemSetJusticarBattlegear, 4), 0.1, 0),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			// Primary Judgements cannot crit or be dodged, parried, or blocked-- only miss. (Unless target is a hunter.)
-			jol := target.GetAura(core.JudgementOfLightAuraLabel)
+			jol := jolAuras.Get(target)
 			if jol.IsActive() {
 				jol.Refresh(sim)
 			} else {
-				core.JudgementOfLightAura(target).Activate(sim)
+				jol.Activate(sim)
 			}
 			spell.CalcAndDealOutcome(sim, target, spell.OutcomeRangedHit)
 		},
+
+		RelatedAuras: []core.AuraArray{jolAuras},
 	})
 }
 

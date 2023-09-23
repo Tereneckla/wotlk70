@@ -8,14 +8,14 @@ import (
 )
 
 func (paladin *Paladin) registerHolyWrathSpell() {
-	results := make([]*core.SpellResult, len(paladin.Env.Encounter.Targets))
+	results := make([]*core.SpellResult, len(paladin.Env.Encounter.TargetUnits))
 	bonusSpellPower := 0 +
 		core.TernaryFloat64(paladin.Equip[proto.ItemSlot_ItemSlotRanged].ID == 28065, 120, 0)
 	paladin.HolyWrath = paladin.RegisterSpell(core.SpellConfig{
-		ActionID:        core.ActionID{SpellID: 27139},
-		SpellSchool:     core.SpellSchoolHoly,
-		ProcMask:        core.ProcMaskSpellDamage,
-		Flags:           core.SpellFlagMeleeMetrics,
+		ActionID:    core.ActionID{SpellID: 27139},
+		SpellSchool: core.SpellSchoolHoly,
+		ProcMask:    core.ProcMaskSpellDamage,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		BonusSpellPower: bonusSpellPower,
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.20,
@@ -38,18 +38,17 @@ func (paladin *Paladin) registerHolyWrathSpell() {
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			constBaseDamage := .07*spell.SpellPower() + .07*spell.MeleeAttackPower()
 
-			for i, aoeTarget := range sim.Encounter.Targets {
-				aoeUnit := &aoeTarget.Unit
+			for i, aoeTarget := range sim.Encounter.TargetUnits {
 				baseDamage := constBaseDamage + sim.Roll(779.2, 915.2)
 
-				if aoeUnit.MobType == proto.MobType_MobTypeDemon || aoeUnit.MobType == proto.MobType_MobTypeUndead {
-					results[i] = spell.CalcDamage(sim, aoeUnit, baseDamage, spell.OutcomeMagicHitAndCrit)
+				if aoeTarget.MobType == proto.MobType_MobTypeDemon || aoeTarget.MobType == proto.MobType_MobTypeUndead {
+					results[i] = spell.CalcDamage(sim, aoeTarget, baseDamage, spell.OutcomeMagicHitAndCrit)
 				} else {
-					results[i] = spell.CalcDamage(sim, aoeUnit, baseDamage, spell.OutcomeAlwaysMiss)
+					results[i] = spell.CalcDamage(sim, aoeTarget, baseDamage, spell.OutcomeAlwaysMiss)
 				}
 			}
 
-			for i := range sim.Encounter.Targets {
+			for i := range sim.Encounter.TargetUnits {
 				spell.DealDamage(sim, results[i])
 			}
 		},

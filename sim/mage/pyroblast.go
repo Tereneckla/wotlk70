@@ -14,11 +14,15 @@ func (mage *Mage) registerPyroblastSpell() {
 	spellCoeff := 1.15 + 0.05*float64(mage.Talents.EmpoweredFire)
 	tickCoeff := 0.05 + 0.05*float64(mage.Talents.EmpoweredFire)
 
-	mage.Pyroblast = mage.RegisterSpell(core.SpellConfig{
+	hasT8_4pc := mage.HasSetBonus(ItemSetKirinTorGarb, 4)
+
+	var pyroblastDot *core.Spell
+
+	pyroblastConfig := core.SpellConfig{
 		ActionID:     core.ActionID{SpellID: 33938},
 		SpellSchool:  core.SpellSchoolFire,
 		ProcMask:     core.ProcMaskSpellDamage,
-		Flags:        SpellFlagMage,
+		Flags:        SpellFlagMage | core.SpellFlagAPL,
 		MissileSpeed: 24,
 
 		ManaCost: core.ManaCostOptions{
@@ -32,7 +36,9 @@ func (mage *Mage) registerPyroblastSpell() {
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
 				if mage.HotStreakAura.IsActive() {
 					cast.CastTime = 0
-					mage.HotStreakAura.Deactivate(sim)
+					if !hasT8_4pc || sim.RandomFloat("MageT84PC") > T84PcProcChance {
+						mage.HotStreakAura.Deactivate(sim)
+					}
 				}
 			},
 		},
@@ -58,7 +64,7 @@ func (mage *Mage) registerPyroblastSpell() {
 				dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(dot.Spell.Unit.AttackTables[target.UnitIndex])
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTickCounted)
 			},
 		},
 
@@ -67,10 +73,17 @@ func (mage *Mage) registerPyroblastSpell() {
 			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeMagicHitAndCrit)
 			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 				if result.Landed() {
-					spell.Dot(target).Apply(sim)
+					pyroblastDot.SpellMetrics[target.UnitIndex].Casts++
+					pyroblastDot.Dot(target).Apply(sim)
 				}
 				spell.DealDamage(sim, result)
 			})
 		},
-	})
+	}
+
+	mage.Pyroblast = mage.RegisterSpell(pyroblastConfig)
+
+	dotConfig := pyroblastConfig
+	dotConfig.ActionID = dotConfig.ActionID.WithTag(1)
+	pyroblastDot = mage.RegisterSpell(dotConfig)
 }

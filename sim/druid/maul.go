@@ -7,15 +7,15 @@ import (
 
 func (druid *Druid) registerMaulSpell(rageThreshold float64) {
 	flatBaseDamage := 290.0
-	if druid.Equip[core.ItemSlotRanged].ID == 23198 { // Idol of Brutality
+	if druid.Ranged().ID == 23198 { // Idol of Brutality
 		flatBaseDamage += 50
-	} else if druid.Equip[core.ItemSlotRanged].ID == 38365 { // Idol of Perspicacious Attacks
+	} else if druid.Ranged().ID == 38365 { // Idol of Perspicacious Attacks
 		flatBaseDamage += 120
 	}
 
 	numHits := core.TernaryInt32(druid.HasMajorGlyph(proto.DruidMajorGlyph_GlyphOfMaul) && druid.Env.GetNumTargets() > 1, 2, 1)
 
-	druid.Maul = druid.RegisterSpell(core.SpellConfig{
+	druid.Maul = druid.RegisterSpell(Bear, core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 26996},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
@@ -60,6 +60,8 @@ func (druid *Druid) registerMaulSpell(rageThreshold float64) {
 
 				curTarget = sim.Environment.NextTargetUnit(curTarget)
 			}
+
+			druid.MaulQueueAura.Deactivate(sim)
 		},
 	})
 
@@ -69,39 +71,54 @@ func (druid *Druid) registerMaulSpell(rageThreshold float64) {
 		Duration: core.NeverExpires,
 	})
 
+	druid.MaulQueueSpell = druid.RegisterSpell(Bear, core.SpellConfig{
+		ActionID:    druid.Maul.WithTag(1),
+		SpellSchool: core.SpellSchoolPhysical,
+		ProcMask:    core.ProcMaskMeleeMHSpecial,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
+
+		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
+			return !druid.MaulQueueAura.IsActive() &&
+				druid.CurrentRage() >= druid.Maul.DefaultCast.Cost &&
+				sim.CurrentTime >= druid.Hardcast.Expires
+		},
+
+		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			druid.MaulQueueAura.Activate(sim)
+		},
+	})
+
 	druid.MaulRageThreshold = core.MaxFloat(druid.Maul.DefaultCast.Cost, rageThreshold)
+	if druid.IsUsingAPL {
+		druid.MaulRageThreshold = 0
+	}
 }
 
 func (druid *Druid) QueueMaul(sim *core.Simulation) {
-	if druid.CurrentRage() < druid.Maul.DefaultCast.Cost {
-		panic("Not enough rage for HS")
+	if druid.MaulQueueSpell.CanCast(sim, druid.CurrentTarget) {
+		druid.MaulQueueSpell.Cast(sim, druid.CurrentTarget)
 	}
-	if druid.MaulQueueAura.IsActive() {
-		return
-	}
-	druid.MaulQueueAura.Activate(sim)
 }
 
 // Returns true if the regular melee swing should be used, false otherwise.
 func (druid *Druid) MaulReplaceMH(sim *core.Simulation, mhSwingSpell *core.Spell) *core.Spell {
 	if !druid.MaulQueueAura.IsActive() {
-		return nil
+		return mhSwingSpell
 	}
 
-	if druid.CurrentRage() < druid.Maul.DefaultCast.Cost {
+	if druid.CurrentRage() < druid.MaulRageThreshold {
 		druid.MaulQueueAura.Deactivate(sim)
-		return nil
-	} else if druid.CurrentRage() < druid.MaulRageThreshold {
-		if mhSwingSpell == druid.AutoAttacks.MHAuto {
-			druid.MaulQueueAura.Deactivate(sim)
-			return nil
-		}
+		return mhSwingSpell
 	}
 
-	druid.MaulQueueAura.Deactivate(sim)
-	return druid.Maul
+	if !druid.Maul.Spell.CanCast(sim, druid.CurrentTarget) {
+		druid.MaulQueueAura.Deactivate(sim)
+		return mhSwingSpell
+	}
+
+	return druid.Maul.Spell
 }
 
-func (druid *Druid) ShouldQueueMaul(sim *core.Simulation) bool {
+func (druid *Druid) ShouldQueueMaul(_ *core.Simulation) bool {
 	return druid.CurrentRage() >= druid.MaulRageThreshold
 }

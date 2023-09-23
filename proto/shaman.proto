@@ -158,9 +158,19 @@ enum FireTotem {
 enum WaterTotem {
 	NoWaterTotem = 0;
 	ManaSpringTotem = 1;
+	HealingStreamTotem = 2;
 }
 
 message ShamanTotems {
+	// Not used here, but used by APL
+	enum TotemType {
+		TypeUnknown = 0;
+		Earth = 1;
+		Air = 2;
+		Fire = 3;
+		Water = 4;
+	}
+
 	EarthTotem earth = 1;
 	AirTotem air = 2;
 	FireTotem fire = 3;
@@ -183,6 +193,12 @@ message ShamanTotems {
 
 	// If set will use fire totems as an MCD instead of manually controlling when to place them.
 	bool use_fire_mcd = 9;
+
+	// Bonus spell power for fire elemental snapshotting.
+	int32 bonus_spellpower = 10;
+
+	// Snapshot fire elemental using Tier 10 4 set bonus.
+	bool enh_tier_ten_bonus = 11;
 }
 
 enum ShamanShield {
@@ -200,14 +216,16 @@ enum ShamanImbue {
 }
 
 enum ShamanSyncType {
-    NoSync = 0;
-    SyncMainhandOffhandSwings = 1;
-    DelayOffhandSwings = 2;
+  NoSync = 0;
+  SyncMainhandOffhandSwings = 1;
+  DelayOffhandSwings = 2;
+	Auto = 3;
 }
 
 message ElementalShaman {
 	message Rotation {
-		ShamanTotems totems = 3;
+		// Deprecated as of 2023-08-29
+		ShamanTotems totems = 3 [deprecated = true];
 
 		enum RotationType {
 			Unknown = 0;
@@ -232,6 +250,7 @@ message ElementalShaman {
 	message Options {
 		ShamanShield shield = 1;
 		bool bloodlust = 2;
+		ShamanTotems totems = 3;
 	}
 
 	Rotation rotation = 1;
@@ -240,7 +259,8 @@ message ElementalShaman {
 
 message EnhancementShaman {
 	message Rotation {
-		ShamanTotems totems = 1;
+		// Deprecated as of 2023-08-29
+		ShamanTotems totems = 1 [deprecated = true];
 		
 		enum RotationType {
 			Unknown = 0;
@@ -249,7 +269,7 @@ message EnhancementShaman {
 		}
 		RotationType rotation_type = 2;
 
-		//TODO: add spells here for custom rotation (if nessecary?)
+		//TODO: add spells here for custom rotation (if necessary?)
 		enum CustomRotationSpell {
 			NoSpell = 0;
 			Stormstrike = 1;
@@ -299,21 +319,35 @@ message EnhancementShaman {
 		ShamanSyncType sync_type = 3;
 		ShamanImbue imbue_mh = 4;
 		ShamanImbue imbue_oh = 5;
+		ShamanTotems totems = 6;
 	}
 
 	Rotation rotation = 1;
 	Options options = 3;
 }
 
+enum ShamanHealSpell {
+	AutoHeal = 0;
+	HealingWave = 1;
+	LesserHealingWave = 2;
+	ChainHeal = 3;
+}
+
 message RestorationShaman {
 	message Rotation {
-		ShamanTotems totems = 1;
+		// Deprecated as of 2023-08-29
+		ShamanTotems totems = 1 [deprecated = true];
+		bool use_earth_shield = 2;
+		ShamanHealSpell primary_heal = 3;
+		bool use_riptide = 4;
 	}
 
 	message Options {
 		ShamanShield shield = 1;
 		bool bloodlust = 2;
 		ShamanImbue imbue_mh = 4;
+		int32 earth_shield_p_p_m = 5;
+		ShamanTotems totems = 6;
 	}
 
 	Rotation rotation = 1;

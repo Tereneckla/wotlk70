@@ -11,6 +11,10 @@ import (
 // TODO:
 // Sanctified Wrath (Damage penetration, questions over affected stats)
 
+func (paladin *Paladin) ToughnessArmorMultiplier() float64 {
+	return 1.0 + 0.02*float64(paladin.Talents.Toughness)
+}
+
 func (paladin *Paladin) ApplyTalents() {
 	paladin.AddStat(stats.MeleeCrit, float64(paladin.Talents.Conviction)*core.CritRatingPerCritChance)
 	paladin.AddStat(stats.SpellCrit, float64(paladin.Talents.Conviction)*core.CritRatingPerCritChance)
@@ -20,7 +24,7 @@ func (paladin *Paladin) ApplyTalents() {
 	paladin.PseudoStats.BaseParry += 0.01 * float64(paladin.Talents.Deflection)
 	paladin.PseudoStats.BaseDodge += 0.01 * float64(paladin.Talents.Anticipation)
 
-	paladin.AddStat(stats.Armor, paladin.Equip.Stats()[stats.Armor]*0.02*float64(paladin.Talents.Toughness))
+	paladin.ApplyEquipScaling(stats.Armor, paladin.ToughnessArmorMultiplier())
 
 	if paladin.Talents.DivineStrength > 0 {
 		paladin.MultiplyStat(stats.Strength, 1.0+0.03*float64(paladin.Talents.DivineStrength))
@@ -62,8 +66,10 @@ func (paladin *Paladin) ApplyTalents() {
 	paladin.applyWeaponSpecialization()
 	paladin.applyVengeance()
 	paladin.applyHeartOfTheCrusader()
+	paladin.applyVindication()
 	paladin.applyArtOfWar()
-	paladin.applyJudgmentsOfTheWise()
+	paladin.applyJudgementsOfTheJust()
+	paladin.applyJudgementsOfTheWise()
 	paladin.applyRighteousVengeance()
 	paladin.applyMinorGlyphOfSenseUndead()
 	paladin.applyGuardedByTheLight()
@@ -221,13 +227,17 @@ func (paladin *Paladin) applyArdentDefender() {
 
 	var ardentDamageReduction float64
 	switch paladin.Talents.ArdentDefender {
-	case 3:
+	case 1:
 		ardentDamageReduction = 0.07
 	case 2:
 		ardentDamageReduction = 0.13
-	case 1:
+	case 3:
 		ardentDamageReduction = 0.20
 	}
+
+	// 540 defense (+140) yields the full heal amount
+	ardentHealAmount := core.MaxFloat(1.0, float64(paladin.GetStat(stats.Defense))/core.DefenseRatingPerDefense/140.0) * 0.10 * float64(paladin.Talents.ArdentDefender)
+
 
 	// TBD? Buff to mark time spent fully below 35% and attribute absorbs
 	// rangeAura := paladin.RegisterAura(core.Aura{
@@ -265,8 +275,6 @@ func (paladin *Paladin) applyArdentDefender() {
 		ThreatMultiplier: 0.25,
 		DamageMultiplier: 1,
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			// 540 defense (+140) yields the full heal amount
-			ardentHealAmount := core.MaxFloat(1.0, float64(paladin.GetStat(stats.Defense))/core.DefenseRatingPerDefense/140.0) * 0.10 * float64(paladin.Talents.ArdentDefender)
 			spell.CalcAndDealHealing(sim, &paladin.Unit, ardentHealAmount*paladin.MaxHealth(), spell.OutcomeHealingCrit)
 		},
 	})
@@ -283,10 +291,26 @@ func (paladin *Paladin) applyArdentDefender() {
 				paladin.Log(sim, "Ardent Defender reduced damage by %d", int32(incomingDamage-result.Damage))
 			}
 
+			incomingDamage2 := result.Damage
+
 			// Now check death save, based on the reduced damage
 			if (result.Damage >= paladin.CurrentHealth()) && !procAura.IsActive() {
-				result.Damage = paladin.CurrentHealth()
-				procHeal.Cast(sim, &paladin.Unit)
+				if (paladin.CurrentHealth() + ardentHealAmount*paladin.MaxHealth() > paladin.MaxHealth()) {
+					// We will overheal and wind up at the wrong HP value... Let's work around this
+					// TODO: Find a cleaner way to do this, using absorbs?
+					procHeal.Cast(sim, &paladin.Unit)
+					result.Damage = paladin.CurrentHealth() - ardentHealAmount*paladin.MaxHealth()
+					if sim.Log != nil {
+						paladin.Log(sim, "Ardent Defender proc reduced overkill damage by %d, compensating for overheal", int32(incomingDamage2-result.Damage))
+					}
+				} else {
+					// Cleanest handling for < 70% HP, includes proper healing amount in metrics
+					result.Damage = paladin.CurrentHealth()
+					procHeal.Cast(sim, &paladin.Unit)
+					if sim.Log != nil {
+						paladin.Log(sim, "Ardent Defender proc reduced overkill damage by %d", int32(incomingDamage2-result.Damage))
+					}
+				}
 				procAura.Activate(sim)
 			}
 		}
@@ -353,6 +377,13 @@ func (paladin *Paladin) applyWeaponSpecialization() {
 	}
 }
 
+func (paladin *Paladin) maybeProcVengeance(sim *core.Simulation, result *core.SpellResult) {
+	if result.DidCrit() && paladin.Talents.Vengeance > 0 {
+		paladin.VengeanceAura.Activate(sim)
+		paladin.VengeanceAura.AddStack(sim)
+	}
+}
+
 // I don't know if the new stack of vengeance applies to the crit that triggered it or not
 // Need to check this
 func (paladin *Paladin) applyVengeance() {
@@ -361,7 +392,7 @@ func (paladin *Paladin) applyVengeance() {
 	}
 
 	bonusPerStack := 0.01 * float64(paladin.Talents.Vengeance)
-	procAura := paladin.RegisterAura(core.Aura{
+	paladin.VengeanceAura = paladin.RegisterAura(core.Aura{
 		Label:     "Vengeance Proc",
 		ActionID:  core.ActionID{SpellID: 20057},
 		Duration:  time.Second * 30,
@@ -382,10 +413,7 @@ func (paladin *Paladin) applyVengeance() {
 			aura.Activate(sim)
 		},
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if result.Outcome.Matches(core.OutcomeCrit) {
-				procAura.Activate(sim)
-				procAura.AddStack(sim)
-			}
+			paladin.maybeProcVengeance(sim, result)
 		},
 	})
 }
@@ -395,6 +423,10 @@ func (paladin *Paladin) applyHeartOfTheCrusader() {
 		return
 	}
 
+	hotcAuras := paladin.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
+		return core.HeartOfTheCrusaderDebuff(target, paladin.Talents.HeartOfTheCrusader)
+	})
+
 	paladin.RegisterAura(core.Aura{
 		Label:    "Heart of the Crusader",
 		Duration: core.NeverExpires,
@@ -402,11 +434,32 @@ func (paladin *Paladin) applyHeartOfTheCrusader() {
 			aura.Activate(sim)
 		},
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if !spell.Flags.Matches(SpellFlagSecondaryJudgement) {
-				return
+			if spell.Flags.Matches(SpellFlagSecondaryJudgement) {
+				hotcAuras.Get(result.Target).Activate(sim)
 			}
-			debuffAura := core.HeartoftheCrusaderDebuff(result.Target, float64(paladin.Talents.HeartOfTheCrusader))
-			debuffAura.Activate(sim)
+		},
+	})
+}
+
+func (paladin *Paladin) applyVindication() {
+	if paladin.Talents.Vindication == 0 {
+		return
+	}
+
+	vindicationAuras := paladin.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
+		return core.VindicationAura(target, paladin.Talents.Vindication)
+	})
+	paladin.RegisterAura(core.Aura{
+		Label:    "Vindication Talent",
+		Duration: core.NeverExpires,
+		OnReset: func(aura *core.Aura, sim *core.Simulation) {
+			aura.Activate(sim)
+		},
+		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			// TODO: Replace with actual proc mask / proc chance
+			if result.Landed() && spell.ProcMask.Matches(core.ProcMaskMelee) {
+				vindicationAuras.Get(result.Target).Activate(sim)
+			}
 		},
 	})
 }
@@ -454,7 +507,38 @@ func (paladin *Paladin) applyArtOfWar() {
 	})
 }
 
-func (paladin *Paladin) applyJudgmentsOfTheWise() {
+func (paladin *Paladin) applyJudgementsOfTheJust() {
+	if paladin.Talents.JudgementsOfTheJust == 0 {
+		return
+	}
+
+	jojAuras := paladin.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
+		return core.JudgementsOfTheJustAura(target, paladin.Talents.JudgementsOfTheJust)
+	})
+	// This application can proc stuff
+	jojApplicationSpell := paladin.RegisterSpell(core.SpellConfig{
+		ActionID: core.ActionID{SpellID: 68055},
+		ProcMask: core.ProcMaskProc,
+		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			jojAuras.Get(target).Activate(sim)
+		},
+	})
+
+	paladin.RegisterAura(core.Aura{
+		Label:    "Judgements Of The Just Talent",
+		Duration: core.NeverExpires,
+		OnReset: func(aura *core.Aura, sim *core.Simulation) {
+			aura.Activate(sim)
+		},
+		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if result.Landed() && spell.Flags.Matches(SpellFlagPrimaryJudgement) {
+				jojApplicationSpell.Cast(sim, result.Target)
+			}
+		},
+	})
+}
+
+func (paladin *Paladin) applyJudgementsOfTheWise() {
 	if paladin.Talents.JudgementsOfTheWise == 0 {
 		return
 	}
@@ -529,7 +613,7 @@ func (paladin *Paladin) applyRighteousVengeance() {
 	rvSpell := paladin.RegisterSpell(core.SpellConfig{
 		ActionID:    dotActionID.WithTag(1),
 		SpellSchool: core.SpellSchoolHoly,
-		ProcMask:    core.ProcMaskEmpty,
+		ProcMask:    core.ProcMaskProc,
 		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagIgnoreModifiers,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
@@ -597,9 +681,9 @@ func (paladin *Paladin) applyGuardedByTheLight() {
 				return
 			}
 
-			/*if paladin.DivinePleaAura.IsActive() {
+			if paladin.DivinePleaAura.IsActive() {
 				paladin.DivinePleaAura.Refresh(sim)
-			}*/
+			}
 		},
 	})
 }

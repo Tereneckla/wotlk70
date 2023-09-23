@@ -1,13 +1,6 @@
-import { BooleanPicker } from '../core/components/boolean_picker.js';
-import { EnumPicker } from '../core/components/enum_picker.js';
-import { IconEnumPicker, IconEnumPickerConfig } from '../core/components/icon_enum_picker.js';
-import { IconPickerConfig } from '../core/components/icon_picker.js';
-import { CustomRotation } from '../core/proto/common.js';
 import { Spec } from '../core/proto/common.js';
 import { ActionId } from '../core/proto_utils/action_id.js';
 import { Player } from '../core/player.js';
-import { Sim } from '../core/sim.js';
-import { Target } from '../core/target.js';
 import { EventID, TypedEvent } from '../core/typed_event.js';
 import { makePetTypeInputConfig } from '../core/talents/hunter_pet.js';
 
@@ -62,6 +55,12 @@ export const SniperTrainingUptime = InputHelpers.makeSpecOptionsNumberInput<Spec
 	changeEmitter: (player: Player<Spec.SpecHunter>) => TypedEvent.onAny([player.specOptionsChangeEmitter, player.talentsChangeEmitter]),
 });
 
+export const TimeToTrapWeaveMs = InputHelpers.makeSpecOptionsNumberInput<Spec.SpecHunter>({
+	fieldName: 'timeToTrapWeaveMs',
+	label: 'Weave Time',
+	labelTooltip: 'Amount of time for Explosive Trap, in milliseconds, between when you start moving towards the boss and when you re-engage your ranged autos.',
+});
+
 export const HunterRotationConfig = {
 	inputs: [
 		InputHelpers.makeRotationEnumInput<Spec.SpecHunter, RotationType>({
@@ -70,7 +69,6 @@ export const HunterRotationConfig = {
 			values: [
 				{ name: 'Single Target', value: RotationType.SingleTarget },
 				{ name: 'AOE', value: RotationType.Aoe },
-				{ name: 'Custom', value: RotationType.Custom },
 			],
 		}),
 		InputHelpers.makeRotationEnumInput<Spec.SpecHunter, StingType>({
@@ -88,13 +86,6 @@ export const HunterRotationConfig = {
 			fieldName: 'trapWeave',
 			label: 'Trap Weave',
 			labelTooltip: 'Uses Explosive Trap at appropriate times. Note that selecting this will disable Black Arrow because they share a CD.',
-			showWhen: (player: Player<Spec.SpecHunter>) => player.getRotation().type != RotationType.Custom,
-		}),
-		InputHelpers.makeRotationNumberInput<Spec.SpecHunter>({
-			fieldName: 'timeToTrapWeaveMs',
-			label: 'Weave Time',
-			labelTooltip: 'Amount of time, in milliseconds, between when you start moving towards the boss and when you re-engage your ranged autos.',
-			enableWhen: (player: Player<Spec.SpecHunter>) => (player.getRotation().type != RotationType.Custom && player.getRotation().trapWeave) || (player.getRotation().type == RotationType.Custom && player.getRotation().customRotation?.spells.some(spell => spell.spell == SpellOption.ExplosiveTrap) || false),
 		}),
 		InputHelpers.makeRotationBooleanInput<Spec.SpecHunter>({
 			fieldName: 'allowExplosiveShotDownrank',
@@ -103,25 +94,11 @@ export const HunterRotationConfig = {
 			showWhen: (player: Player<Spec.SpecHunter>) => player.getRotation().type != RotationType.Custom && player.getTalents().explosiveShot && player.getTalents().lockAndLoad > 0,
 			changeEmitter: (player: Player<Spec.SpecHunter>) => TypedEvent.onAny([player.rotationChangeEmitter, player.talentsChangeEmitter]),
 		}),
-		InputHelpers.makeCustomRotationInput<Spec.SpecHunter, SpellOption>({
-			fieldName: 'customRotation',
-			numColumns: 2,
-			values: [
-				{ actionId: ActionId.fromSpellId(34120), value: SpellOption.SteadyShot },
-				{ actionId: ActionId.fromSpellId(27019), value: SpellOption.ArcaneShot },
-				{ actionId: ActionId.fromSpellId(27065), value: SpellOption.AimedShot },
-				{ actionId: ActionId.fromSpellId(27021), value: SpellOption.MultiShot },
-				{ actionId: ActionId.fromSpellId(27016), value: SpellOption.SerpentStingSpell },
-				{ actionId: ActionId.fromSpellId(3043), value: SpellOption.ScorpidStingSpell },
-				//{ actionId: ActionId.fromSpellId(61006), value: SpellOption.KillShot },
-				{ actionId: ActionId.fromSpellId(63670), value: SpellOption.BlackArrow },
-				{ actionId: ActionId.fromSpellId(53209), value: SpellOption.ChimeraShot },
-				{ actionId: ActionId.fromSpellId(60051), value: SpellOption.ExplosiveShot, text: 'R4' },
-				{ actionId: ActionId.fromSpellId(60050), value: SpellOption.ExplosiveShotDownrank, text: 'R3' },
-				{ actionId: ActionId.fromSpellId(27025), value: SpellOption.ExplosiveTrap },
-				{ actionId: ActionId.fromSpellId(27022), value: SpellOption.Volley },
-			],
-			showWhen: (player: Player<Spec.SpecHunter>) => player.getRotation().type == RotationType.Custom,
+		InputHelpers.makeRotationBooleanInput<Spec.SpecHunter>({
+			fieldName: 'multiDotSerpentSting',
+			label: 'Multi-Dot Serpent Sting',
+			labelTooltip: 'Casts Serpent Sting on multiple targets',
+			changeEmitter: (player: Player<Spec.SpecHunter>) => TypedEvent.onAny([player.rotationChangeEmitter, player.talentsChangeEmitter]),
 		}),
 		InputHelpers.makeRotationNumberInput<Spec.SpecHunter>({
 			fieldName: 'viperStartManaPercent',

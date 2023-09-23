@@ -110,7 +110,7 @@ export class RetributionPaladinSimUI extends IndividualSimUI<Spec.SpecRetributio
 				// Default rotation settings.
 				rotation: Presets.DefaultRotation,
 				// Default talents.
-				talents: Presets.BasicTalents.data,
+				talents: Presets.AuraMasteryTalents.data,
 				// Default spec-specific settings.
 				specOptions: Presets.DefaultOptions,
 				// Default raid/party buffs settings.
@@ -130,6 +130,7 @@ export class RetributionPaladinSimUI extends IndividualSimUI<Spec.SpecRetributio
 					icyTalons: true,
 					totemOfWrath: true,
 					wrathOfAirTotem: true,
+					demonicPact: 500,
 				}),
 				partyBuffs: PartyBuffs.create({
 				}),
@@ -166,6 +167,7 @@ export class RetributionPaladinSimUI extends IndividualSimUI<Spec.SpecRetributio
 					//RetributionPaladinInputs.RetributionPaladinRotationDivinePleaSelection,
 					RetributionPaladinInputs.RetributionPaladinRotationAvoidClippingConsecration,
 					RetributionPaladinInputs.RetributionPaladinRotationHoldLastAvengingWrathUntilExecution,
+					RetributionPaladinInputs.RetributionPaladinRotationCancelChaosBane,
 					//RetributionPaladinInputs.RetributionPaladinRotationDivinePleaSelectionAlternate,
 					//RetributionPaladinInputs.RetributionPaladinRotationDivinePleaPercentageConfig,
 					RetributionPaladinInputs.RetributionPaladinRotationConsSlackConfig,
@@ -195,9 +197,13 @@ export class RetributionPaladinSimUI extends IndividualSimUI<Spec.SpecRetributio
 			},
 
 			presets: {
+				rotations: [
+					Presets.ROTATION_PRESET_BASIC_APL,
+				],
 				// Preset talents that the user can quickly select.
 				talents: [
-					Presets.BasicTalents,
+					Presets.AuraMasteryTalents,
+					Presets.DivineSacTalents,
 				],
 				// Preset gear configurations that the user can quickly select.
 				gear: [

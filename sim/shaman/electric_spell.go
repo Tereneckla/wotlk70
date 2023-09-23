@@ -12,6 +12,9 @@ const (
 	TotemOfAncestralGuidance = 32330
 	TotemOfStorms            = 23199
 	TotemOfTheVoid           = 28248
+	TotemOfHex               = 40267
+	VentureCoLightningRod    = 38361
+	ThunderfallTotem         = 45255
 )
 
 const (
@@ -22,11 +25,19 @@ const (
 
 // Shared precomputation logic for LB and CL.
 func (shaman *Shaman) newElectricSpellConfig(actionID core.ActionID, baseCost float64, baseCastTime time.Duration, isLightningOverload bool) core.SpellConfig {
+	mask := core.ProcMaskSpellDamage
+	if isLightningOverload {
+		mask = core.ProcMaskProc
+	}
+	flags := SpellFlagElectric | SpellFlagFocusable
+	if !isLightningOverload {
+		flags |= core.SpellFlagAPL
+	}
 	spell := core.SpellConfig{
 		ActionID:     actionID,
 		SpellSchool:  core.SpellSchoolNature,
-		ProcMask:     core.ProcMaskSpellDamage,
-		Flags:        SpellFlagElectric | SpellFlagFocusable,
+		ProcMask:     mask,
+		Flags:        flags,
 		MetricSplits: 6,
 
 		ManaCost: core.ManaCostOptions{
@@ -68,9 +79,10 @@ func (shaman *Shaman) newElectricSpellConfig(actionID core.ActionID, baseCost fl
 
 func (shaman *Shaman) electricSpellBonusDamage(spellCoeff float64) float64 {
 	bonusDamage := 0 +
-		core.TernaryFloat64(shaman.Equip[core.ItemSlotRanged].ID == TotemOfStorms, 33, 0) +
-		core.TernaryFloat64(shaman.Equip[core.ItemSlotRanged].ID == TotemOfTheVoid, 55, 0) +
-		core.TernaryFloat64(shaman.Equip[core.ItemSlotRanged].ID == TotemOfAncestralGuidance, 85, 0)
+		core.TernaryFloat64(shaman.Ranged().ID == TotemOfStorms, 33, 0) +
+		core.TernaryFloat64(shaman.Ranged().ID == TotemOfTheVoid, 55, 0) +
+		core.TernaryFloat64(shaman.Ranged().ID == TotemOfAncestralGuidance, 85, 0) +
+		core.TernaryFloat64(shaman.Ranged().ID == TotemOfHex, 165, 0)
 
 	return bonusDamage * spellCoeff // These items do not benefit from the bonus coeff from shamanism.
 }

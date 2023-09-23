@@ -1,6 +1,3 @@
-import { Race } from '../proto/common.js';
-import { specToEligibleRaces } from '../proto_utils/utils.js';
-import { raceNames } from '../proto_utils/names.js';
 import { EventID, TypedEvent } from '../typed_event.js';
 
 import { Input, InputConfig } from './input.js';
@@ -23,7 +20,6 @@ export class EnumPicker<ModObject> extends Input<ModObject, number> {
 
 		this.selectElem = document.createElement('select');
 		this.selectElem.classList.add('enum-picker-selector', 'form-select');
-		this.rootElem.appendChild(this.selectElem);
 
 		config.values.forEach((value) => {
 			const option = document.createElement('option');
@@ -35,6 +31,7 @@ export class EnumPicker<ModObject> extends Input<ModObject, number> {
 				option.title = value.tooltip;
 			}
 		});
+		this.rootElem.appendChild(this.selectElem);
 
 		this.init();
 

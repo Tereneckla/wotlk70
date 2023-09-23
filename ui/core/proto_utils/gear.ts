@@ -45,17 +45,17 @@ abstract class BaseGear {
 	}
 
 	removeUniqueGems(gear: InternalGear, newItem: EquippedItem) {
-			// If the new item has unique gems, remove matching.
-			newItem.gems
-				.filter(gem => gem?.unique)
-				.forEach(gem => {
-					this.getItemSlots().map(slot => Number(slot) as ItemSlot).forEach(slot => {
-						gear[slot] = gear[slot]?.removeGemsWithId(gem!.id) || null;
-					});
+		// If the new item has unique gems, remove matching.
+		newItem.gems
+			.filter(gem => gem?.unique)
+			.forEach(gem => {
+				this.getItemSlots().map(slot => Number(slot) as ItemSlot).forEach(slot => {
+					gear[slot] = gear[slot]?.removeGemsWithId(gem!.id) || null;
 				});
+			});
 	}
 
-	removeUniqueItems(gear: InternalGear, newItem: EquippedItem){
+	removeUniqueItems(gear: InternalGear, newItem: EquippedItem) {
 		if (newItem.item.unique) {
 			this.getItemSlots().map(slot => Number(slot) as ItemSlot).forEach(slot => {
 				if (gear[slot]?.item.id == newItem.item.id) {
@@ -144,6 +144,16 @@ export class Gear extends BaseGear {
 		return this.getTrinkets().map(t => t?.item.id).includes(itemId);
 	}
 
+	hasRelic(itemId: number): boolean {
+		const relicItem = this.getEquippedItem(ItemSlot.ItemSlotRanged);
+
+		if (!relicItem) {
+			return false;
+		}
+
+		return relicItem!.item.id == itemId;
+	}
+
 	asMap(): InternalGear {
 		const newInternalGear: Partial<InternalGear> = {};
 		getEnumValues(ItemSlot).map(slot => Number(slot) as ItemSlot).forEach(slot => {
@@ -158,21 +168,21 @@ export class Gear extends BaseGear {
 		});
 	}
 
-	getAllGems(): Array<Gem> {
+	getAllGems(isBlacksmithing: boolean): Array<Gem> {
 		return this.asArray()
-			.map(ei => ei == null ? [] : ei.curGems())
+			.map(ei => ei == null ? [] : ei.curGems(isBlacksmithing))
 			.flat();
 	}
 
-	getNonMetaGems(): Array<Gem> {
-		return this.getAllGems().filter(gem => gem.color != GemColor.GemColorMeta);
+	getNonMetaGems(isBlacksmithing: boolean): Array<Gem> {
+		return this.getAllGems(isBlacksmithing).filter(gem => gem.color != GemColor.GemColorMeta);
 	}
 
-	statsFromGems(): Stats {
+	statsFromGems(isBlacksmithing: boolean): Stats {
 		let stats = new Stats();
 
 		// Stats from just the gems.
-		const gems = this.getAllGems();
+		const gems = this.getAllGems(isBlacksmithing);
 		for (let i = 0; i < gems.length; i++) {
 			stats = stats.add(new Stats(gems[i].stats));
 		}
@@ -186,20 +196,20 @@ export class Gear extends BaseGear {
 		return stats;
 	}
 
-	getGemsOfColor(color: GemColor): Array<Gem> {
-		return this.getAllGems().filter(gem => gem.color == color);
+	getGemsOfColor(color: GemColor, isBlacksmithing: boolean): Array<Gem> {
+		return this.getAllGems(isBlacksmithing).filter(gem => gem.color == color);
 	}
 
-	getJCGems(): Array<Gem> {
-		return this.getAllGems().filter(gem => gem.requiredProfession == Profession.Jewelcrafting);
+	getJCGems(isBlacksmithing: boolean): Array<Gem> {
+		return this.getAllGems(isBlacksmithing).filter(gem => gem.requiredProfession == Profession.Jewelcrafting);
 	}
 
 	getMetaGem(): Gem | null {
-		return this.getGemsOfColor(GemColor.GemColorMeta)[0] || null;
+		return this.getGemsOfColor(GemColor.GemColorMeta, false)[0] || null;
 	}
 
-	gemColorCounts(): ({ red: number, yellow: number, blue: number }) {
-		const gems = this.getAllGems();
+	gemColorCounts(isBlacksmithing: boolean): ({ red: number, yellow: number, blue: number }) {
+		const gems = this.getAllGems(isBlacksmithing);
 		return {
 			red: gems.filter(gem => gemMatchesSocket(gem, GemColor.GemColorRed)).length,
 			yellow: gems.filter(gem => gemMatchesSocket(gem, GemColor.GemColorYellow)).length,
@@ -208,22 +218,46 @@ export class Gear extends BaseGear {
 	}
 
 	// Returns true if this gear set has a meta gem AND the other gems meet the meta's conditions.
-	hasActiveMetaGem(): boolean {
+	hasActiveMetaGem(isBlacksmithing: boolean): boolean {
 		const metaGem = this.getMetaGem();
 		if (!metaGem) {
 			return false;
 		}
 
-		const gemColorCounts = this.gemColorCounts();
+		const gemColorCounts = this.gemColorCounts(isBlacksmithing);
 
-		const gems = this.getAllGems();
+		const gems = this.getAllGems(isBlacksmithing);
 		return isMetaGemActive(
 			metaGem,
 			gemColorCounts.red, gemColorCounts.yellow, gemColorCounts.blue);
 	}
 
-	hasInactiveMetaGem(): boolean {
-		return this.getMetaGem() != null && !this.hasActiveMetaGem();
+	hasInactiveMetaGem(isBlacksmithing: boolean): boolean {
+		return this.getMetaGem() != null && !this.hasActiveMetaGem(isBlacksmithing);
+	}
+
+	withGem(itemSlot: ItemSlot, socketIdx: number, gem: Gem | null): Gear {
+		const item = this.getEquippedItem(itemSlot);
+
+		if (item) {
+			return this.withEquippedItem(itemSlot, item.withGem(gem, socketIdx), true);
+		}
+
+		return this;
+	}
+
+	withMetaGem(metaGem: Gem | null): Gear {
+		const headItem = this.getEquippedItem(ItemSlot.ItemSlotHead);
+
+		if (headItem) {
+			for (const [socketIdx, socketColor] of headItem.allSocketColors().entries()) {
+				if (socketColor == GemColor.GemColorMeta) {
+					return this.withEquippedItem(ItemSlot.ItemSlotHead, headItem.withGem(metaGem, socketIdx), true);
+				}
+			}
+		}
+
+		return this;
 	}
 
 	withoutMetaGem(): Gear {
@@ -234,6 +268,37 @@ export class Gear extends BaseGear {
 		} else {
 			return this;
 		}
+	}
+
+	withoutGems(): Gear {
+		let curGear: Gear = this;
+
+		for (var slot of this.getItemSlots()) {
+			const item = this.getEquippedItem(slot);
+
+			if (item) {
+				curGear = curGear.withEquippedItem(slot, item.removeAllGems(), true);
+			}
+		}
+
+		return curGear;
+	}
+
+	// Removes bonus gems from blacksmith profession bonus.
+	withoutBlacksmithSockets(): Gear {
+		let curGear: Gear = this;
+
+		const wristItem = this.getEquippedItem(ItemSlot.ItemSlotWrist);
+		if (wristItem) {
+			curGear = curGear.withEquippedItem(ItemSlot.ItemSlotWrist, wristItem.withGem(null, wristItem.numPossibleSockets - 1), true);
+		}
+
+		const handsItem = this.getEquippedItem(ItemSlot.ItemSlotHands);
+		if (handsItem) {
+			curGear = curGear.withEquippedItem(ItemSlot.ItemSlotHands, handsItem.withGem(null, handsItem.numPossibleSockets - 1), true);
+		}
+
+		return curGear;
 	}
 
 	hasBluntMHWeapon(): boolean {
@@ -269,7 +334,7 @@ export class Gear extends BaseGear {
 		return SimDatabase.create({
 			items: distinct(equippedItems.map(ei => Gear.itemToDB(ei.item))),
 			enchants: distinct(equippedItems.filter(ei => ei.enchant).map(ei => Gear.enchantToDB(ei.enchant!))),
-			gems: distinct(equippedItems.map(ei => ei.curGems().map(gem => Gear.gemToDB(gem))).flat()),
+			gems: distinct(equippedItems.map(ei => (ei._gems.filter(g => g != null) as Array<Gem>).map(gem => Gear.gemToDB(gem))).flat()),
 		});
 	}
 }
@@ -294,7 +359,7 @@ export class ItemSwapGear extends BaseGear {
 			this.removeUniqueGems(this.gear, equippedItem);
 			this.removeUniqueItems(this.gear, equippedItem);
 		}
-		
+
 		this.gear[slot] = equippedItem;
 		this.validateWeaponCombo(this.gear, slot, canDualWield2H);
 	}
@@ -312,7 +377,7 @@ export class ItemSwapGear extends BaseGear {
 		return SimDatabase.create({
 			items: distinct(equippedItems.map(ei => ItemSwapGear.itemToDB(ei.item))),
 			enchants: distinct(equippedItems.filter(ei => ei.enchant).map(ei => ItemSwapGear.enchantToDB(ei.enchant!))),
-			gems: distinct(equippedItems.map(ei => ei.curGems().map(gem => ItemSwapGear.gemToDB(gem))).flat()),
+			gems: distinct(equippedItems.map(ei => ei.curGems(false).map(gem => ItemSwapGear.gemToDB(gem))).flat()),
 		});
 	}
 }

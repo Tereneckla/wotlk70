@@ -11,19 +11,21 @@ import (
 var TalentTreeSizes = [3]int{31, 27, 27}
 
 type WarriorInputs struct {
-	ShoutType            proto.WarriorShout
-	PrecastShout         bool
-	PrecastShoutSapphire bool
-	PrecastShoutT2       bool
-	RendCdThreshold      time.Duration
-	Munch                bool
+	ShoutType                   proto.WarriorShout
+	PrecastShout                bool
+	PrecastShoutSapphire        bool
+	PrecastShoutT2              bool
+	RendCdThreshold             time.Duration
+	BloodsurgeDurationThreshold time.Duration
+	StanceSnapshot              bool
 }
 
 const (
-	SpellFlagBloodsurge = core.SpellFlagAgentReserved1
-	ArmsTree            = 0
-	FuryTree            = 1
-	ProtTree            = 2
+	SpellFlagBloodsurge  = core.SpellFlagAgentReserved1
+	SpellFlagWhirlwindOH = core.SpellFlagAgentReserved2
+	ArmsTree             = 0
+	FuryTree             = 1
+	ProtTree             = 2
 )
 
 type Warrior struct {
@@ -34,22 +36,19 @@ type Warrior struct {
 	WarriorInputs
 
 	// Current state
-	Stance                Stance
-	overpowerValidUntil   time.Duration
-	rendValidUntil        time.Duration
-	shoutExpiresAt        time.Duration
-	revengeProcAura       *core.Aura
-	lastTasteForBloodProc time.Duration
-	Ymirjar4pcProcAura    *core.Aura
+	Stance               Stance
+	RendValidUntil       time.Duration
+	BloodsurgeValidUntil time.Duration
+	revengeProcAura      *core.Aura
+	Ymirjar4pcProcAura   *core.Aura
 
 	munchedDeepWoundsProcs []*core.PendingAction
 
 	// Reaction time values
 	reactionTime       time.Duration
 	lastBloodsurgeProc time.Duration
-
-	// Cached values
-	shoutDuration time.Duration
+	lastOverpowerProc  time.Duration
+	LastAMTick         time.Duration
 
 	Shout           *core.Spell
 	BattleStance    *core.Spell
@@ -79,8 +78,13 @@ type Warrior struct {
 	Bladestorm           *core.Spell
 	BladestormOH         *core.Spell
 
-	HeroicStrikeOrCleave     *core.Spell
-	HSOrCleaveQueueAura      *core.Aura
+	HeroicStrike         *core.Spell
+	Cleave               *core.Spell
+	hsOrCleaveQueueSpell *core.Spell
+	curQueueAura         *core.Aura
+	curQueuedAutoSpell   *core.Spell
+
+	OverpowerAura            *core.Aura
 	HSRageThreshold          float64
 	RendRageThresholdBelow   float64
 	RendHealthThresholdAbove float64
@@ -94,8 +98,6 @@ type Warrior struct {
 	ShieldBlockAura *core.Aura
 
 	DemoralizingShoutAuras core.AuraArray
-	BloodFrenzyAuras       []*core.Aura
-	TraumaAuras            []*core.Aura
 	SunderArmorAuras       core.AuraArray
 	ThunderClapAuras       core.AuraArray
 }
@@ -105,18 +107,6 @@ func (warrior *Warrior) GetCharacter() *core.Character {
 }
 
 func (warrior *Warrior) AddRaidBuffs(raidBuffs *proto.RaidBuffs) {
-	if warrior.ShoutType == proto.WarriorShout_WarriorShoutBattle {
-		raidBuffs.BattleShout = core.MaxTristate(raidBuffs.BattleShout, proto.TristateEffect_TristateEffectRegular)
-		if warrior.Talents.CommandingPresence == 5 {
-			raidBuffs.BattleShout = proto.TristateEffect_TristateEffectImproved
-		}
-	} else if warrior.ShoutType == proto.WarriorShout_WarriorShoutCommanding {
-		raidBuffs.CommandingShout = core.MaxTristate(raidBuffs.CommandingShout, proto.TristateEffect_TristateEffectRegular)
-		if warrior.Talents.CommandingPresence == 5 {
-			raidBuffs.CommandingShout = proto.TristateEffect_TristateEffectImproved
-		}
-	}
-
 	if warrior.Talents.Rampage {
 		raidBuffs.Rampage = true
 	}
@@ -155,21 +145,22 @@ func (warrior *Warrior) Initialize() {
 	warrior.SunderArmor = warrior.newSunderArmorSpell(false)
 	warrior.SunderArmorDevastate = warrior.newSunderArmorSpell(true)
 
-	warrior.shoutDuration = time.Duration(float64(time.Minute*2) * (1 + 0.1*float64(warrior.Talents.BoomingVoice)))
-
 	warrior.registerBloodrageCD()
 
 	warrior.munchedDeepWoundsProcs = make([]*core.PendingAction, warrior.Env.GetNumTargets())
+
+	if !warrior.IsUsingAPL && warrior.Shout != nil && warrior.PrecastShout {
+		warrior.RegisterPrepullAction(-10*time.Second, func(sim *core.Simulation) {
+			warrior.Shout.SkipCastAndApplyEffects(sim, nil)
+		})
+	}
 }
 
 func (warrior *Warrior) Reset(_ *core.Simulation) {
-	warrior.overpowerValidUntil = 0
-	warrior.rendValidUntil = 0
+	warrior.RendValidUntil = 0
+	warrior.curQueueAura = nil
+	warrior.curQueuedAutoSpell = nil
 
-	warrior.shoutExpiresAt = 0
-	if warrior.Shout != nil && warrior.PrecastShout {
-		warrior.shoutExpiresAt = warrior.shoutDuration - time.Second*10
-	}
 	for i := range warrior.munchedDeepWoundsProcs {
 		warrior.munchedDeepWoundsProcs[i] = nil
 	}
@@ -185,11 +176,11 @@ func NewWarrior(character core.Character, talents string, inputs WarriorInputs) 
 
 	warrior.PseudoStats.CanParry = true
 
-	warrior.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritRatingPerCritChance/30)
-	warrior.AddStatDependency(stats.Agility, stats.Dodge, core.DodgeRatingPerDodgeChance/30)
+	warrior.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritPerAgiMaxLevel[character.Class]*core.CritRatingPerCritChance)
+	warrior.AddStatDependency(stats.Agility, stats.Dodge, core.DodgeRatingPerDodgeChance/84.746)
 	warrior.AddStatDependency(stats.Strength, stats.AttackPower, 2)
-	warrior.AddStat(stats.AttackPower, -20)
 	warrior.AddStatDependency(stats.Strength, stats.BlockValue, .5) // 50% block from str
+	warrior.AddStatDependency(stats.BonusArmor, stats.Armor, 1)
 
 	// Base dodge unaffected by Diminishing Returns
 	warrior.PseudoStats.BaseDodge += 0.03664
@@ -212,7 +203,7 @@ func (warrior *Warrior) autoCritMultiplier(hand hand) float64 {
 
 func primary(warrior *Warrior, hand hand) float64 {
 	if warrior.Talents.PoleaxeSpecialization > 0 {
-		if (hand == mh && isPoleaxe(warrior.GetMHWeapon())) || (hand == oh && isPoleaxe(warrior.GetOHWeapon())) {
+		if (hand == mh && isPoleaxe(warrior.MainHand())) || (hand == oh && isPoleaxe(warrior.OffHand())) {
 			return 1 + 0.01*float64(warrior.Talents.PoleaxeSpecialization)
 		}
 	}
@@ -220,7 +211,7 @@ func primary(warrior *Warrior, hand hand) float64 {
 }
 
 func isPoleaxe(weapon *core.Item) bool {
-	return weapon != nil && (weapon.WeaponType == proto.WeaponType_WeaponTypeAxe || weapon.WeaponType == proto.WeaponType_WeaponTypePolearm)
+	return weapon.WeaponType == proto.WeaponType_WeaponTypeAxe || weapon.WeaponType == proto.WeaponType_WeaponTypePolearm
 }
 
 func (warrior *Warrior) critMultiplier(hand hand) float64 {
@@ -238,105 +229,6 @@ func (warrior *Warrior) HasMinorGlyph(glyph proto.WarriorMinorGlyph) bool {
 func (warrior *Warrior) intensifyRageCooldown(baseCd time.Duration) time.Duration {
 	baseCd /= 100
 	return []time.Duration{baseCd * 100, baseCd * 89, baseCd * 78, baseCd * 67}[warrior.Talents.IntensifyRage]
-}
-
-func init() {
-	const basecrit = 3.18909995257854 * core.CritRatingPerCritChance
-	//const basespellcrit = 3.336 * core.CritRatingPerCritChance
-	const basehealth = 4444
-	//const basemana = 2953
-	const baseap = core.CharacterLevel * 3
-
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceDraenei, Class: proto.Class_ClassWarrior}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Strength:    146,
-		stats.Agility:     93,
-		stats.Stamina:     133,
-		stats.Intellect:   33,
-		stats.Spirit:      53,
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceDwarf, Class: proto.Class_ClassWarrior}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Strength:    150,
-		stats.Agility:     92,
-		stats.Stamina:     134,
-		stats.Intellect:   32,
-		stats.Spirit:      50,
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceGnome, Class: proto.Class_ClassWarrior}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Strength:    140,
-		stats.Agility:     98,
-		stats.Stamina:     133,
-		stats.Intellect:   36,
-		stats.Spirit:      51,
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceHuman, Class: proto.Class_ClassWarrior}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Strength:    145,
-		stats.Agility:     96,
-		stats.Stamina:     133,
-		stats.Intellect:   33,
-		stats.Spirit:      51,
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceNightElf, Class: proto.Class_ClassWarrior}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Strength:    141,
-		stats.Agility:     100,
-		stats.Stamina:     133,
-		stats.Intellect:   33,
-		stats.Spirit:      51,
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceOrc, Class: proto.Class_ClassWarrior}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Strength:    148,
-		stats.Agility:     93,
-		stats.Stamina:     134,
-		stats.Intellect:   30,
-		stats.Spirit:      53,
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceTauren, Class: proto.Class_ClassWarrior}] = stats.Stats{
-		stats.Health:      basehealth * 1.05,
-		stats.Strength:    150,
-		stats.Agility:     92,
-		stats.Stamina:     134,
-		stats.Intellect:   29,
-		stats.Spirit:      53,
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceTroll, Class: proto.Class_ClassWarrior}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Strength:    146,
-		stats.Agility:     98,
-		stats.Stamina:     133,
-		stats.Intellect:   29,
-		stats.Spirit:      52,
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceUndead, Class: proto.Class_ClassWarrior}] = stats.Stats{
-		stats.Health:      basehealth,
-		stats.Strength:    144,
-		stats.Agility:     94,
-		stats.Stamina:     133,
-		stats.Intellect:   31,
-		stats.Spirit:      56,
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-	}
 }
 
 // Agent is a generic way to access underlying warrior on any of the agents.

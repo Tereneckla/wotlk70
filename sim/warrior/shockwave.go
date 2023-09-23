@@ -15,12 +15,11 @@ func (warrior *Warrior) registerShockwaveSpell() {
 	warrior.Shockwave = warrior.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 46968},
 		SpellSchool: core.SpellSchoolPhysical,
-		ProcMask:    core.ProcMaskRanged, // TODO: Is this correct?
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
+		ProcMask:    core.ProcMaskRangedSpecial,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
-			Cost:   15 - float64(warrior.Talents.FocusedRage),
-			Refund: 0.8,
+			Cost: 15 - float64(warrior.Talents.FocusedRage),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -36,18 +35,15 @@ func (warrior *Warrior) registerShockwaveSpell() {
 			return warrior.StanceMatches(DefensiveStance)
 		},
 
+		DamageMultiplier: 1 + core.TernaryFloat64(warrior.HasSetBonus(ItemSetYmirjarLordsPlate, 2), .20, 0),
 		CritMultiplier:   warrior.critMultiplier(none),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			baseDamage := 0.75 * spell.MeleeAttackPower()
 			baseDamage *= sim.Encounter.AOECapMultiplier()
-			for _, aoeTarget := range sim.Encounter.Targets {
-				result := spell.CalcAndDealDamage(sim, &aoeTarget.Unit, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
-				// TODO: AOE spells usually don't give refunds, this is probably wrong
-				if !result.Landed() {
-					spell.IssueRefund(sim)
-				}
+			for _, aoeTarget := range sim.Encounter.TargetUnits {
+				spell.CalcAndDealDamage(sim, aoeTarget, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 			}
 		},
 	})

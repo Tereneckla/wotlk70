@@ -4,12 +4,11 @@ import (
 	"time"
 
 	"github.com/Tereneckla/wotlk/sim/core"
-	"github.com/Tereneckla/wotlk/sim/core/proto"
 )
 
 func (paladin *Paladin) registerDivineStormSpell() {
-	bonusDmg := core.TernaryFloat64(paladin.Equip[proto.ItemSlot_ItemSlotRanged].ID == 45510, 235, 0) + // Libram of Discord
-		core.TernaryFloat64(paladin.Equip[proto.ItemSlot_ItemSlotRanged].ID == 38362, 81, 0) // Venture Co. Libram of Retribution
+	bonusDmg := core.TernaryFloat64(paladin.Ranged().ID == 45510, 235, 0) + // Libram of Discord
+		core.TernaryFloat64(paladin.Ranged().ID == 38362, 81, 0) // Venture Co. Libram of Retribution
 	numHits := core.MinInt32(4, paladin.Env.GetNumTargets())
 	results := make([]*core.SpellResult, numHits)
 
@@ -17,7 +16,7 @@ func (paladin *Paladin) registerDivineStormSpell() {
 		ActionID:    core.ActionID{SpellID: 53385},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.12,
@@ -34,9 +33,11 @@ func (paladin *Paladin) registerDivineStormSpell() {
 			},
 		},
 
+		BonusCritRating: core.TernaryFloat64(paladin.HasSetBonus(ItemSetAegisBattlegear, 4), 10, 0) * core.CritRatingPerCritChance,
 		// base 1.1 multiplier, can be further improved by 10% via taow for a grand total of 1.21. NOTE: Unlike cs, ds tooltip IS NOT updated to reflect this.
 		DamageMultiplierAdditive: 1 +
-			paladin.getTalentTheArtOfWarBonus(),
+			paladin.getTalentTheArtOfWarBonus() +
+			paladin.getItemSetRedemptionBattlegearBonus2(),
 		DamageMultiplier: 1.1,
 		CritMultiplier:   paladin.MeleeCritMultiplier(),
 		ThreatMultiplier: 1,

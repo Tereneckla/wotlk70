@@ -10,9 +10,8 @@ import (
 func (druid *Druid) registerMoonfireSpell() {
 	numTicks := druid.moonfireTicks()
 
-	bonusSpellpower := core.TernaryFloat64(druid.Equip[proto.ItemSlot_ItemSlotRanged].ID == 23197, 33, 0)
-
 	starfireBonusCrit := float64(druid.Talents.ImprovedInsectSwarm) * core.CritRatingPerCritChance
+	dotCanCrit := druid.HasSetBonus(ItemSetMalfurionsRegalia, 2)
 
 	baseDamageMultiplier := 1 +
 		0.05*float64(druid.Talents.ImprovedMoonfire) +
@@ -24,11 +23,11 @@ func (druid *Druid) registerMoonfireSpell() {
 		0.01*float64(druid.Talents.Genesis) +
 		core.TernaryFloat64(druid.HasMajorGlyph(proto.DruidMajorGlyph_GlyphOfMoonfire), 0.75, 0)
 
-	druid.Moonfire = druid.RegisterSpell(core.SpellConfig{
+	druid.Moonfire = druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 26988},
 		SpellSchool: core.SpellSchoolArcane,
 		ProcMask:    core.ProcMaskSpellDamage,
-		Flags:       SpellFlagNaturesGrace | SpellFlagOmenTrigger,
+		Flags:       SpellFlagNaturesGrace | SpellFlagOmenTrigger | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.21,
@@ -39,7 +38,7 @@ func (druid *Druid) registerMoonfireSpell() {
 				GCD: core.GCDDefault,
 			},
 		},
-		BonusSpellPower:  bonusSpellpower,
+
 		BonusCritRating:  float64(druid.Talents.ImprovedMoonfire) * 5 * core.CritRatingPerCritChance,
 		DamageMultiplier: baseDamageMultiplier - malusInitialDamageMultiplier,
 
@@ -68,7 +67,11 @@ func (druid *Druid) registerMoonfireSpell() {
 				dot.Spell.DamageMultiplier = baseDamageMultiplier - malusInitialDamageMultiplier
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+				if dotCanCrit {
+					dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeSnapshotCrit)
+				} else {
+					dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTickCounted)
+				}
 			},
 		},
 
@@ -76,6 +79,7 @@ func (druid *Druid) registerMoonfireSpell() {
 			baseDamage := sim.Roll(305, 357) + 0.15*spell.SpellPower()
 			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeMagicHitAndCrit)
 			if result.Landed() {
+				druid.ExtendingMoonfireStacks = 3
 				dot := spell.Dot(target)
 				dot.NumberOfTicks = numTicks
 				dot.Apply(sim)

@@ -1,6 +1,6 @@
 package hunter
-
-/*import (
+/*
+import (
 	"time"
 
 	"github.com/Tereneckla/wotlk/sim/core"
@@ -36,7 +36,7 @@ func (hunter *Hunter) registerKillShotSpell() {
 			5*core.CritRatingPerCritChance*float64(hunter.Talents.SniperTraining),
 		DamageMultiplier: 1 *
 			hunter.markedForDeathMultiplier(),
-		CritMultiplier:   hunter.critMultiplier(true, true),
+		CritMultiplier:   hunter.critMultiplier(true, true, false),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {

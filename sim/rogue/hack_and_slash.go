@@ -7,15 +7,14 @@ import (
 )
 
 func (rogue *Rogue) registerHackAndSlash(mask core.ProcMask) {
-	if rogue.Talents.HackAndSlash < 1 || mask == core.ProcMaskUnknown {
-		return
-	}
+	// https://wotlk.wowhead.com/spell=13964/sword-specialization, proc mask = 20.
 	var hackAndSlashSpell *core.Spell
 	icd := core.Cooldown{
 		Timer:    rogue.NewTimer(),
 		Duration: time.Millisecond * 500,
 	}
 	procChance := 0.01 * float64(rogue.Talents.HackAndSlash)
+
 	rogue.RegisterAura(core.Aura{
 		Label:    "Hack and Slash",
 		Duration: core.NeverExpires,
@@ -46,11 +45,10 @@ func (rogue *Rogue) registerHackAndSlash(mask core.ProcMask) {
 			if !icd.IsReady(sim) {
 				return
 			}
-			if sim.RandomFloat("Sword Specialization") > procChance {
-				return
+			if sim.RandomFloat("Hack and Slash") < procChance {
+				icd.Use(sim)
+				hackAndSlashSpell.Cast(sim, result.Target)
 			}
-			icd.Use(sim)
-			hackAndSlashSpell.Cast(sim, result.Target)
 		},
 	})
 }

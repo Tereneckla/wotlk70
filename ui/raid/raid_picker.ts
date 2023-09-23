@@ -13,7 +13,7 @@ import { Glyphs } from '../core/proto/common.js';
 import { cssClassForClass, playerToSpec } from '../core/proto_utils/utils.js';
 import { isTankSpec } from '../core/proto_utils/utils.js';
 import { specToClass } from '../core/proto_utils/utils.js';
-import { newRaidTarget } from '../core/proto_utils/utils.js';
+import { newUnitReference } from '../core/proto_utils/utils.js';
 import { EventID, TypedEvent } from '../core/typed_event.js';
 import { formatDeltaTextElem } from '../core/utils.js';
 import { getEnumValues } from '../core/utils.js';
@@ -233,7 +233,7 @@ export class PartyPicker extends Component {
 				return;
 			}
 
-			dpsResultElem.textContent = partyDps.toFixed(1);
+			dpsResultElem.textContent = `${partyDps.toFixed(1)} DPS`;
 
 			if (!referenceData) {
 				referenceDeltaElem.textContent = '';
@@ -354,7 +354,7 @@ export class PlayerPicker extends Component {
 
 			if (this.player) {
 				this.resultsElem?.classList.remove('hide');
-				(this.dpsResultElem as HTMLElement).textContent = playerDps.toFixed(1);
+				(this.dpsResultElem as HTMLElement).textContent = `${playerDps.toFixed(1)} DPS`;
 
 				if (referenceData)
 					formatDeltaTextElem(this.referenceDeltaElem as HTMLElement, referenceDps, playerDps, 1);
@@ -475,10 +475,9 @@ export class PlayerPicker extends Component {
 			const classCssClass = cssClassForClass(this.player.getClass());
 
 			this.rootElem.className = `player-picker-root player bg-${classCssClass}-dampened`;
-			this.rootElem.setAttribute('draggable', 'true');
 			this.rootElem.innerHTML = `
 				<div class="player-label">
-					<img class="player-icon" src="${this.player.getSpecIcon()}" draggable="false"/>
+					<img class="player-icon" src="${this.player.getSpecIcon()}" draggable="true" />
 					<div class="player-details">
 						<input
 							class="player-name text-${classCssClass}"
@@ -498,7 +497,6 @@ export class PlayerPicker extends Component {
 						href="javascript:void(0)"
 						class="player-edit"
 						role="button"
-						draggable="false"
 						data-bs-toggle="tooltip"
 						data-bs-title="Click to Edit"
 					>
@@ -518,7 +516,6 @@ export class PlayerPicker extends Component {
 						href="javascript:void(0)"
 						class="player-delete link-danger"
 						role="button"
-						draggable="false"
 						data-bs-toggle="tooltip"
 						data-bs-title="Click to Delete"
 					>
@@ -544,12 +541,10 @@ export class PlayerPicker extends Component {
 		});
 
 		this.nameElem?.addEventListener('mousedown', event => {
-			this.rootElem.setAttribute('draggable', 'false')
 			this.partyPicker.rootElem.setAttribute('draggable', 'false')
 		})
 
 		this.nameElem?.addEventListener('mouseup', event => {
-			this.rootElem.setAttribute('draggable', 'true')
 			this.partyPicker.rootElem.setAttribute('draggable', 'true')
 		})
 
@@ -582,16 +577,14 @@ export class PlayerPicker extends Component {
 		const copyElem = this.rootElem.querySelector('.player-copy') as HTMLElement;
 		const deleteElem = this.rootElem.querySelector('.player-delete') as HTMLElement;
 
-		this.rootElem.ondragstart = event => {
-			if (event.target != copyElem) {
-				dragStart(event, DragType.Swap)
-			}
-		}
-
 		const editTooltip = Tooltip.getOrCreateInstance(editElem);
 		const copyTooltip = Tooltip.getOrCreateInstance(copyElem);
 		const deleteTooltip = Tooltip.getOrCreateInstance(deleteElem);
 
+		(this.iconElem as HTMLElement).ondragstart = event => {
+			event.dataTransfer!.setDragImage(this.rootElem, 20, 20);
+			dragStart(event, DragType.Swap)
+		}
 		editElem.onclick = event => {
 			new PlayerEditorModal(this.player as Player<any>);
 		};
@@ -609,7 +602,7 @@ export class PlayerPicker extends Component {
 class PlayerEditorModal extends BaseModal {
 	constructor(player: Player<any>) {
 		super(document.body, 'player-editor-modal', {
-			closeButton: {fixed: true},
+			closeButton: { fixed: true },
 			header: false
 		});
 
@@ -704,13 +697,13 @@ class NewPlayerPicker extends Component {
 function applyNewPlayerAssignments(eventID: EventID, newPlayer: Player<any>, raid: Raid) {
 	if (isTankSpec(newPlayer.spec)) {
 		const tanks = raid.getTanks();
-		const emptyIdx = tanks.findIndex(tank => raid.getPlayerFromRaidTarget(tank) == null);
+		const emptyIdx = tanks.findIndex(tank => raid.getPlayerFromUnitReference(tank) == null);
 		if (emptyIdx == -1) {
 			if (tanks.length < 3) {
-				raid.setTanks(eventID, tanks.concat([newPlayer.makeRaidTarget()]));
+				raid.setTanks(eventID, tanks.concat([newPlayer.makeUnitReference()]));
 			}
 		} else {
-			tanks[emptyIdx] = newPlayer.makeRaidTarget();
+			tanks[emptyIdx] = newPlayer.makeUnitReference();
 			raid.setTanks(eventID, tanks);
 		}
 	}
@@ -718,15 +711,15 @@ function applyNewPlayerAssignments(eventID: EventID, newPlayer: Player<any>, rai
 	// Spec-specific assignments. For most cases, default to buffing self.
 	if (newPlayer.spec == Spec.SpecBalanceDruid) {
 		const newOptions = newPlayer.getSpecOptions() as BalanceDruidOptions;
-		newOptions.innervateTarget = newRaidTarget(newPlayer.getRaidIndex());
+		newOptions.innervateTarget = newUnitReference(newPlayer.getRaidIndex());
 		newPlayer.setSpecOptions(eventID, newOptions);
 	} else if (newPlayer.spec == Spec.SpecSmitePriest) {
 		const newOptions = newPlayer.getSpecOptions() as SmitePriestOptions;
-		newOptions.powerInfusionTarget = newRaidTarget(newPlayer.getRaidIndex());
+		newOptions.powerInfusionTarget = newUnitReference(newPlayer.getRaidIndex());
 		newPlayer.setSpecOptions(eventID, newOptions);
 	} else if (newPlayer.spec == Spec.SpecMage) {
 		const newOptions = newPlayer.getSpecOptions() as MageOptions;
-		newOptions.focusMagicTarget = newRaidTarget(newPlayer.getRaidIndex());
+		newOptions.focusMagicTarget = newUnitReference(newPlayer.getRaidIndex());
 		newPlayer.setSpecOptions(eventID, newOptions);
 	}
 }

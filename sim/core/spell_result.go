@@ -83,28 +83,29 @@ func (spell *Spell) BonusWeaponDamage() float64 {
 }
 
 func (spell *Spell) ExpertisePercentage() float64 {
+	// As of 06/20, Blizzard has changed Expertise to no longer truncate at quarter
+	// percent intervals. Note that in-game character sheet tooltips will still
+	// display the truncated values, but it has been tested to behave continuously in
+	// reality since the patch.
 	expertiseRating := spell.Unit.stats[stats.Expertise] + spell.BonusExpertiseRating
-	return math.Floor(expertiseRating/ExpertisePerQuarterPercentReduction) / 400
+	return expertiseRating / ExpertisePerQuarterPercentReduction / 400
 }
 
-func (spell *Spell) PhysicalHitChance(target *Unit) float64 {
+func (spell *Spell) PhysicalHitChance(attackTable *AttackTable) float64 {
 	hitRating := spell.Unit.stats[stats.MeleeHit] +
 		spell.BonusHitRating +
-		target.PseudoStats.BonusMeleeHitRatingTaken
+		attackTable.Defender.PseudoStats.BonusMeleeHitRatingTaken
 	return hitRating / (MeleeHitRatingPerHitChance * 100)
 }
 
-func (spell *Spell) physicalCritRating(target *Unit) float64 {
-	return spell.Unit.stats[stats.MeleeCrit] +
+func (spell *Spell) PhysicalCritChance(attackTable *AttackTable) float64 {
+	critRating := spell.Unit.stats[stats.MeleeCrit] +
 		spell.BonusCritRating +
-		target.PseudoStats.BonusCritRatingTaken
+		attackTable.Defender.PseudoStats.BonusCritRatingTaken
+	return critRating/(CritRatingPerCritChance*100) - attackTable.CritSuppression
 }
-func (spell *Spell) PhysicalCritChance(target *Unit, attackTable *AttackTable) float64 {
-	critRating := spell.physicalCritRating(target)
-	return (critRating / (CritRatingPerCritChance * 100)) - attackTable.CritSuppression
-}
-func (spell *Spell) PhysicalCritCheck(sim *Simulation, target *Unit, attackTable *AttackTable) bool {
-	return sim.RandomFloat("Physical Crit Roll") < spell.PhysicalCritChance(target, attackTable)
+func (spell *Spell) PhysicalCritCheck(sim *Simulation, attackTable *AttackTable) bool {
+	return sim.RandomFloat("Physical Crit Roll") < spell.PhysicalCritChance(attackTable)
 }
 
 func (spell *Spell) SpellPower() float64 {
@@ -121,10 +122,10 @@ func (spell *Spell) SpellHitChance(target *Unit) float64 {
 	return hitRating / (SpellHitRatingPerHitChance * 100)
 }
 func (spell *Spell) SpellChanceToMiss(attackTable *AttackTable) float64 {
-	return attackTable.BaseSpellMissChance - spell.SpellHitChance(attackTable.Defender)
+	return math.Max(0, attackTable.BaseSpellMissChance-spell.SpellHitChance(attackTable.Defender))
 }
 func (spell *Spell) MagicHitCheck(sim *Simulation, attackTable *AttackTable) bool {
-	return sim.RandomFloat("Magical Hit Roll") > spell.SpellChanceToMiss(attackTable)
+	return sim.Proc(1.0-spell.SpellChanceToMiss(attackTable), "Magical Hit Roll")
 }
 
 func (spell *Spell) spellCritRating(target *Unit) float64 {
@@ -188,10 +189,10 @@ func (spell *Spell) calcDamageInternal(sim *Simulation, target *Unit, baseDamage
 	} else {
 		result.Damage *= attackerMultiplier
 		afterAttackMods := result.Damage
-		result.applyTargetModifiers(spell, attackTable, isPeriodic)
-		afterTargetMods := result.Damage
 		result.applyResistances(sim, spell, isPeriodic, attackTable)
 		afterResistances := result.Damage
+		result.applyTargetModifiers(spell, attackTable, isPeriodic)
+		afterTargetMods := result.Damage
 		outcomeApplier(sim, result, attackTable)
 		afterOutcome := result.Damage
 		spell.ApplyPostOutcomeDamageModifiers(sim, result)
@@ -199,8 +200,8 @@ func (spell *Spell) calcDamageInternal(sim *Simulation, target *Unit, baseDamage
 
 		spell.Unit.Log(
 			sim,
-			"%s %s [DEBUG] MAP: %0.01f, RAP: %0.01f, SP: %0.01f, BaseDamage:%0.01f, AfterAttackerMods:%0.01f, AfterTargetMods:%0.01f, AfterResistances:%0.01f, AfterOutcome:%0.01f, AfterPostOutcome:%0.01f",
-			target.LogLabel(), spell.ActionID, spell.Unit.GetStat(stats.AttackPower), spell.Unit.GetStat(stats.RangedAttackPower), spell.Unit.GetStat(stats.SpellPower), baseDamage, afterAttackMods, afterTargetMods, afterResistances, afterOutcome, afterPostOutcome)
+			"%s %s [DEBUG] MAP: %0.01f, RAP: %0.01f, SP: %0.01f, BaseDamage:%0.01f, AfterAttackerMods:%0.01f, AfterResistances:%0.01f, AfterTargetMods:%0.01f, AfterOutcome:%0.01f, AfterPostOutcome:%0.01f",
+			target.LogLabel(), spell.ActionID, spell.Unit.GetStat(stats.AttackPower), spell.Unit.GetStat(stats.RangedAttackPower), spell.Unit.GetStat(stats.SpellPower), baseDamage, afterAttackMods, afterResistances, afterTargetMods, afterOutcome, afterPostOutcome)
 	}
 
 	result.Threat = spell.ThreatFromDamage(result.Outcome, result.Damage)
@@ -247,12 +248,14 @@ func (spell *Spell) dealDamageInternal(sim *Simulation, isPeriodic bool, result 
 		}
 	}
 
-	if isPeriodic {
-		spell.Unit.OnPeriodicDamageDealt(sim, spell, result)
-		result.Target.OnPeriodicDamageTaken(sim, spell, result)
-	} else {
-		spell.Unit.OnSpellHitDealt(sim, spell, result)
-		result.Target.OnSpellHitTaken(sim, spell, result)
+	if !spell.Flags.Matches(SpellFlagNoOnDamageDealt) {
+		if isPeriodic {
+			spell.Unit.OnPeriodicDamageDealt(sim, spell, result)
+			result.Target.OnPeriodicDamageTaken(sim, spell, result)
+		} else {
+			spell.Unit.OnSpellHitDealt(sim, spell, result)
+			result.Target.OnSpellHitTaken(sim, spell, result)
+		}
 	}
 
 	spell.DisposeResult(result)
@@ -382,9 +385,8 @@ func (spell *Spell) attackerDamageMultiplierInternal(attackTable *AttackTable) f
 		return 1
 	}
 
-	ps := spell.Unit.PseudoStats
-	return ps.DamageDealtMultiplier *
-		ps.SchoolDamageDealtMultiplier[spell.SchoolIndex] *
+	return spell.Unit.PseudoStats.DamageDealtMultiplier *
+		spell.Unit.PseudoStats.SchoolDamageDealtMultiplier[spell.SchoolIndex] *
 		attackTable.DamageDealtMultiplier
 }
 
@@ -412,15 +414,14 @@ func (spell *Spell) TargetDamageMultiplier(attackTable *AttackTable, isPeriodic 
 		multiplier *= attackTable.Defender.PseudoStats.DiseaseDamageTakenMultiplier
 	}
 
+	if spell.Flags.Matches(SpellFlagHauntSE) {
+		multiplier *= attackTable.HauntSEDamageTakenMultiplier
+	}
+
 	if spell.SpellSchool.Matches(SpellSchoolNature) {
 		multiplier *= attackTable.NatureDamageTakenMultiplier
-	} else if isPeriodic {
-		switch {
-		case spell.SpellSchool.Matches(SpellSchoolPhysical):
-			multiplier *= attackTable.Defender.PseudoStats.PeriodicPhysicalDamageTakenMultiplier
-		case spell.SpellSchool.Matches(SpellSchoolShadow):
-			multiplier *= attackTable.PeriodicShadowDamageTakenMultiplier
-		}
+	} else if isPeriodic && spell.SpellSchool.Matches(SpellSchoolPhysical) {
+		multiplier *= attackTable.Defender.PseudoStats.PeriodicPhysicalDamageTakenMultiplier
 	}
 
 	return multiplier

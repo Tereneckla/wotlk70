@@ -1,6 +1,7 @@
 package rogue
 
 import (
+	"math"
 	"time"
 
 	"github.com/Tereneckla/wotlk/sim/core"
@@ -26,11 +27,9 @@ func RegisterRogue() {
 }
 
 const (
-	SpellFlagBuilder  = core.SpellFlagAgentReserved2
-	SpellFlagFinisher = core.SpellFlagAgentReserved3
-	AssassinTree      = 0
-	CombatTree        = 1
-	SubtletyTree      = 2
+	SpellFlagBuilder     = core.SpellFlagAgentReserved2
+	SpellFlagFinisher    = core.SpellFlagAgentReserved3
+	SpellFlagColdBlooded = core.SpellFlagAgentReserved4
 )
 
 var TalentTreeSizes = [3]int{27, 28, 28}
@@ -44,11 +43,9 @@ type Rogue struct {
 	Options  *proto.Rogue_Options
 	Rotation *proto.Rogue_Rotation
 
-	priorityItems      []roguePriorityItem
-	rotationItems      []rogueRotationItem
-	assassinationPrios []assassinationPrio
-	subtletyPrios      []subtletyPrio
-	bleedCategory      *core.ExclusiveCategory
+	rotation rotation
+
+	bleedCategory *core.ExclusiveCategory
 
 	sliceAndDiceDurations [6]time.Duration
 	exposeArmorDurations  [6]time.Duration
@@ -57,11 +54,10 @@ type Rogue struct {
 
 	maxEnergy float64
 
-	BuilderPoints    int32
-	Builder          *core.Spell
 	Backstab         *core.Spell
 	BladeFlurry      *core.Spell
 	DeadlyPoison     *core.Spell
+	//FanOfKnives      *core.Spell
 	Feint            *core.Spell
 	Garrote          *core.Spell
 	Ambush           *core.Spell
@@ -71,6 +67,8 @@ type Rogue struct {
 	InstantPoison    [3]*core.Spell
 	WoundPoison      [3]*core.Spell
 	Mutilate         *core.Spell
+	MutilateMH       *core.Spell
+	MutilateOH       *core.Spell
 	Shiv             *core.Spell
 	SinisterStrike   *core.Spell
 	TricksOfTheTrade *core.Spell
@@ -79,9 +77,7 @@ type Rogue struct {
 	Premeditation    *core.Spell
 	ShadowDance      *core.Spell
 	ColdBlood        *core.Spell
-	MasterOfSubtlety *core.Spell
-	Overkill         *core.Spell
-	FanOfKnives      *core.Spell
+	Vanish           *core.Spell
 
 	Envenom      *core.Spell
 	Eviscerate   *core.Spell
@@ -89,7 +85,8 @@ type Rogue struct {
 	Rupture      *core.Spell
 	SliceAndDice *core.Spell
 
-	lastDeadlyPoisonProcMask    core.ProcMask
+	lastDeadlyPoisonProcMask core.ProcMask
+
 	deadlyPoisonProcChanceBonus float64
 	instantPoisonPPMM           core.PPMManager
 	woundPoisonPPMM             core.PPMManager
@@ -102,17 +99,16 @@ type Rogue struct {
 	KillingSpreeAura     *core.Aura
 	OverkillAura         *core.Aura
 	SliceAndDiceAura     *core.Aura
-	TricksOfTheTradeAura *core.Aura
 	MasterOfSubtletyAura *core.Aura
 	ShadowstepAura       *core.Aura
 	ShadowDanceAura      *core.Aura
 	DirtyDeedsAura       *core.Aura
 	HonorAmongThieves    *core.Aura
-	DeathmantleProcAura  *core.Aura
+	StealthAura          *core.Aura
 
-	masterPoisonerDebuffAuras []*core.Aura
-	savageCombatDebuffAuras   []*core.Aura
-	woundPoisonDebuffAuras    []*core.Aura
+	masterPoisonerDebuffAuras core.AuraArray
+	savageCombatDebuffAuras   core.AuraArray
+	woundPoisonDebuffAuras    core.AuraArray
 
 	QuickRecoveryMetrics *core.ResourceMetrics
 
@@ -128,8 +124,8 @@ func (rogue *Rogue) GetRogue() *Rogue {
 	return rogue
 }
 
-func (rogue *Rogue) AddRaidBuffs(raidBuffs *proto.RaidBuffs)    {}
-func (rogue *Rogue) AddPartyBuffs(partyBuffs *proto.PartyBuffs) {}
+func (rogue *Rogue) AddRaidBuffs(_ *proto.RaidBuffs)   {}
+func (rogue *Rogue) AddPartyBuffs(_ *proto.PartyBuffs) {}
 
 func (rogue *Rogue) finisherFlags() core.SpellFlag {
 	flags := SpellFlagFinisher
@@ -139,6 +135,7 @@ func (rogue *Rogue) finisherFlags() core.SpellFlag {
 	return flags
 }
 
+// Apply the effect of successfully casting a finisher to combo points
 func (rogue *Rogue) ApplyFinisher(sim *core.Simulation, spell *core.Spell) {
 	numPoints := rogue.ComboPoints()
 	rogue.SpendComboPoints(sim, spell.ComboPointMetrics())
@@ -164,11 +161,13 @@ func (rogue *Rogue) Initialize() {
 
 	rogue.costModifier = rogue.makeCostModifier()
 
+	rogue.registerStealthAura()
 	rogue.registerBackstabSpell()
 	rogue.registerDeadlyPoisonSpell()
 	rogue.registerPoisonAuras()
 	rogue.registerEviscerate()
 	rogue.registerExposeArmorSpell()
+	rogue.registerFanOfKnives()
 	rogue.registerFeintSpell()
 	rogue.registerGarrote()
 	rogue.registerHemorrhageSpell()
@@ -180,31 +179,22 @@ func (rogue *Rogue) Initialize() {
 	rogue.registerSinisterStrikeSpell()
 	rogue.registerSliceAndDice()
 	rogue.registerThistleTeaCD()
+	rogue.registerTricksOfTheTradeSpell()
 	rogue.registerAmbushSpell()
 	rogue.registerEnvenom()
-	rogue.registerFanOfKnives()
+	rogue.registerVanishSpell()
 
 	rogue.finishingMoveEffectApplier = rogue.makeFinishingMoveEffectApplier()
-	rogue.DelayDPSCooldownsForArmorDebuffs(time.Second * 14)
-}
 
-func (rogue *Rogue) getExpectedEnergyPerSecond() float64 {
-	const finishersPerSecond = 1.0 / 6
-	const averageComboPointsSpendOnFinisher = 4.0
-	bonusEnergyPerSecond := float64(rogue.Talents.CombatPotency) * 3 * 0.2 * 1.0 / (rogue.AutoAttacks.OH.SwingSpeed / 1.4)
-	bonusEnergyPerSecond += float64(rogue.Talents.FocusedAttacks)
-	bonusEnergyPerSecond += float64(rogue.Talents.RelentlessStrikes) * 0.04 * 25 * finishersPerSecond * averageComboPointsSpendOnFinisher
-	return (core.EnergyPerTick*rogue.EnergyTickMultiplier)/core.EnergyTickDuration.Seconds() + bonusEnergyPerSecond
+	if !rogue.IsUsingAPL && rogue.Rotation.TricksOfTheTradeFrequency != proto.Rogue_Rotation_Never && !rogue.HasSetBonus(Tier10, 2) {
+		rogue.RegisterPrepullAction(-10*time.Second, func(sim *core.Simulation) {
+			rogue.TricksOfTheTrade.Cast(sim, nil)
+		})
+	}
 }
 
 func (rogue *Rogue) ApplyEnergyTickMultiplier(multiplier float64) {
 	rogue.EnergyTickMultiplier += multiplier
-}
-
-func (rogue *Rogue) getExpectedComboPointPerSecond() float64 {
-	const criticalPerSecond = 1
-	honorAmongThievesChance := []float64{0, 0.33, 0.66, 1.0}[rogue.Talents.HonorAmongThieves]
-	return criticalPerSecond * honorAmongThievesChance
 }
 
 func (rogue *Rogue) Reset(sim *core.Simulation) {
@@ -212,26 +202,29 @@ func (rogue *Rogue) Reset(sim *core.Simulation) {
 		mcd.Disable()
 	}
 	rogue.allMCDsDisabled = true
-	rogue.lastDeadlyPoisonProcMask = core.ProcMaskEmpty
-	// Vanish triggered effects (Overkill and Master of Subtlety) prepull activation
-	if rogue.Rotation.OpenWithGarrote || rogue.Options.StartingOverkillDuration > 0 {
-		length := rogue.Options.StartingOverkillDuration
-		if rogue.OverkillAura != nil {
-			if rogue.Rotation.OpenWithGarrote {
-				length = 20
+
+	if !rogue.IsUsingAPL {
+		// Stealth triggered effects (Overkill and Master of Subtlety) pre-pull activation
+		if rogue.Rotation.OpenWithGarrote || rogue.Rotation.OpenWithPremeditation {
+			rogue.AutoAttacks.CancelAutoSwing(sim)
+			rogue.StealthAura.Activate(sim)
+		} else {
+			if rogue.Options.StartingOverkillDuration > 0 {
+				if rogue.Talents.Overkill {
+					duration := time.Second * time.Duration(math.Min(float64(rogue.Options.StartingOverkillDuration), 20))
+					rogue.OverkillAura.Activate(sim)
+					rogue.OverkillAura.UpdateExpires(duration)
+				}
+				if rogue.Talents.MasterOfSubtlety > 0 {
+					duration := time.Second * time.Duration(math.Min(float64(rogue.Options.StartingOverkillDuration), 6))
+					rogue.MasterOfSubtletyAura.Activate(sim)
+					rogue.MasterOfSubtletyAura.UpdateExpires(duration)
+				}
 			}
-			rogue.OverkillAura.Activate(sim)
-			rogue.OverkillAura.UpdateExpires(sim.CurrentTime + time.Second*time.Duration(length))
-		}
-		if rogue.MasterOfSubtletyAura != nil {
-			if rogue.Rotation.OpenWithGarrote {
-				length = 6
-			}
-			rogue.MasterOfSubtletyAura.Activate(sim)
-			rogue.MasterOfSubtletyAura.UpdateExpires(sim.CurrentTime + time.Second*time.Duration(length))
 		}
 	}
-	rogue.setPriorityItems(sim)
+
+	rogue.setupRotation(sim)
 }
 
 func (rogue *Rogue) MeleeCritMultiplier(applyLethality bool) float64 {
@@ -268,7 +261,7 @@ func NewRogue(character core.Character, options *proto.Player) *Rogue {
 	if rogue.HasMajorGlyph(proto.RogueMajorGlyph_GlyphOfVigor) {
 		maxEnergy += 10
 	}
-	if rogue.HasSetBonus(ItemSetGladiatorsVestments, 4) {
+	if rogue.HasSetBonus(Arena, 4) {
 		maxEnergy += 10
 	}
 	rogue.maxEnergy = maxEnergy
@@ -284,12 +277,13 @@ func NewRogue(character core.Character, options *proto.Player) *Rogue {
 
 	rogue.AddStatDependency(stats.Strength, stats.AttackPower, 1)
 	rogue.AddStatDependency(stats.Agility, stats.AttackPower, 1)
-	rogue.AddStat(stats.AttackPower, -20)
-	rogue.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritRatingPerCritChance/40.0019)
+	rogue.AddStatDependency(stats.Agility, stats.MeleeCrit, core.CritPerAgiMaxLevel[character.Class]*core.CritRatingPerCritChance)
 
 	return rogue
 }
 
+// Apply the effects of the Cut to the Chase talent
+// TODO: Put a fresh instance of SnD rather than use the original as per client
 func (rogue *Rogue) ApplyCutToTheChase(sim *core.Simulation) {
 	if rogue.Talents.CutToTheChase > 0 && rogue.SliceAndDiceAura.IsActive() {
 		procChance := float64(rogue.Talents.CutToTheChase) * 0.2
@@ -300,116 +294,36 @@ func (rogue *Rogue) ApplyCutToTheChase(sim *core.Simulation) {
 	}
 }
 
-func (rogue *Rogue) CanMutilate() bool {
-	return rogue.Talents.Mutilate &&
-		rogue.HasMHWeapon() && rogue.HasOHWeapon() &&
-		rogue.GetMHWeapon().WeaponType == proto.WeaponType_WeaponTypeDagger &&
-		rogue.GetOHWeapon().WeaponType == proto.WeaponType_WeaponTypeDagger
+// Deactivate Stealth if it is active. This must be added to all abilities that cause Stealth to fade.
+func (rogue *Rogue) BreakStealth(sim *core.Simulation) {
+	if rogue.StealthAura.IsActive() {
+		rogue.StealthAura.Deactivate(sim)
+		rogue.AutoAttacks.EnableAutoSwing(sim)
+	}
 }
 
-func init() {
-	const basecrit = -0.29 * core.CritRatingPerCritChance
-	const basespellcrit = 0 * core.CritRatingPerCritChance
-	const basehealth = 3704
-	//const basemana = 2953
-	const baseap = core.CharacterLevel * 2
+// Can the rogue fulfil the weapon equipped requirement for Mutilate?
+func (rogue *Rogue) CanMutilate() bool {
+	return rogue.Talents.Mutilate && rogue.HasDagger(core.MainHand) && rogue.HasDagger(core.OffHand)
+}
 
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceBloodElf, Class: proto.Class_ClassRogue}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  92,
-		stats.Agility:   160,
-		stats.Stamina:   89,
-		stats.Intellect: 42,
-		stats.Spirit:    56,
-
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-		stats.SpellCrit:   basespellcrit,
+// Does the rogue have a dagger equipped in the specified hand (main or offhand)?
+func (rogue *Rogue) HasDagger(hand core.Hand) bool {
+	if hand == core.MainHand {
+		return rogue.MainHand().WeaponType == proto.WeaponType_WeaponTypeDagger
 	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceDwarf, Class: proto.Class_ClassRogue}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  100,
-		stats.Agility:   154,
-		stats.Stamina:   90,
-		stats.Intellect: 38,
-		stats.Spirit:    57,
+	return rogue.OffHand().WeaponType == proto.WeaponType_WeaponTypeDagger
+}
 
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-		stats.SpellCrit:   basespellcrit,
+// Check if the rogue is considered in "stealth" for the purpose of casting abilities
+func (rogue *Rogue) IsStealthed() bool {
+	if rogue.StealthAura.IsActive() {
+		return true
 	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceGnome, Class: proto.Class_ClassRogue}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  90,
-		stats.Agility:   160,
-		stats.Stamina:   89,
-		stats.Intellect: 42,
-		stats.Spirit:    58,
-
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-		stats.SpellCrit:   basespellcrit,
+	if rogue.Talents.ShadowDance && rogue.ShadowDanceAura.IsActive() {
+		return true
 	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceHuman, Class: proto.Class_ClassRogue}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  95,
-		stats.Agility:   158,
-		stats.Stamina:   89,
-		stats.Intellect: 39,
-		stats.Spirit:    58,
-
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-		stats.SpellCrit:   basespellcrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceNightElf, Class: proto.Class_ClassRogue}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  91,
-		stats.Agility:   162,
-		stats.Stamina:   89,
-		stats.Intellect: 39,
-		stats.Spirit:    58,
-
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-		stats.SpellCrit:   basespellcrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceOrc, Class: proto.Class_ClassRogue}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  98,
-		stats.Agility:   155,
-		stats.Stamina:   90,
-		stats.Intellect: 36,
-		stats.Spirit:    60,
-
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-		stats.SpellCrit:   basespellcrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceTroll, Class: proto.Class_ClassRogue}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  96,
-		stats.Agility:   160,
-		stats.Stamina:   89,
-		stats.Intellect: 35,
-		stats.Spirit:    59,
-
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-		stats.SpellCrit:   basespellcrit,
-	}
-	core.BaseStats[core.BaseStatsKey{Race: proto.Race_RaceUndead, Class: proto.Class_ClassRogue}] = stats.Stats{
-		stats.Health:    basehealth,
-		stats.Strength:  94,
-		stats.Agility:   156,
-		stats.Stamina:   89,
-		stats.Intellect: 37,
-		stats.Spirit:    63,
-
-		stats.AttackPower: baseap,
-		stats.MeleeCrit:   basecrit,
-		stats.SpellCrit:   basespellcrit,
-	}
+	return false
 }
 
 // Agent is a generic way to access underlying rogue on any of the agents.

@@ -50,8 +50,11 @@ type SpellConfig struct {
 	// Optional field. Calculates expected average damage.
 	ExpectedDamage ExpectedDamageCalculator
 
-	Dot DotConfig
-	Hot DotConfig
+	Dot    DotConfig
+	Hot    DotConfig
+	Shield ShieldConfig
+
+	RelatedAuras []AuraArray
 }
 
 type Spell struct {
@@ -89,6 +92,7 @@ type Spell struct {
 
 	SpellMetrics      []SpellMetrics
 	splitSpellMetrics [][]SpellMetrics // Used to split metrics by some condition.
+	casts             int              // Sum of casts on all targets, for efficient CPM calculation
 
 	// Performs the actions of this spell.
 	ApplyEffects ApplySpellResults
@@ -129,6 +133,12 @@ type Spell struct {
 
 	dots   DotArray
 	aoeDot *Dot
+
+	shields    ShieldArray
+	selfShield *Shield
+
+	// Per-target auras that are related to this spell, usually buffs or debuffs applied by the spell.
+	RelatedAuras []AuraArray
 }
 
 func (unit *Unit) OnSpellRegistered(handler SpellRegisteredHandler) {
@@ -136,6 +146,17 @@ func (unit *Unit) OnSpellRegistered(handler SpellRegisteredHandler) {
 		handler(spell)
 	}
 	unit.spellRegistrationHandlers = append(unit.spellRegistrationHandlers, handler)
+}
+
+func (unit *Unit) GetDummyProcSpell() *Spell {
+	if unit.DummyProcSpell == nil {
+		unit.DummyProcSpell = unit.RegisterSpell(SpellConfig{
+			ActionID: ActionID{SpellID: -1},
+			Flags:    SpellFlagNoLogs | SpellFlagNoMetrics,
+			ProcMask: ProcMaskProc,
+		})
+	}
+	return unit.DummyProcSpell
 }
 
 // Registers a new spell to the unit. Returns the newly created spell.
@@ -150,6 +171,11 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 	}
 	if config.DamageMultiplierAdditive != 0 && config.DamageMultiplier == 0 {
 		config.DamageMultiplier = 1
+	}
+
+	if unit.IsUsingAPL {
+		config.Cast.DefaultCast.ChannelTime = 0
+		config.Cast.DefaultCast.AfterCastDelay = 0
 	}
 
 	spell := &Spell{
@@ -184,6 +210,8 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		FlatThreatBonus:  config.FlatThreatBonus,
 
 		splitSpellMetrics: make([][]SpellMetrics, MaxInt(1, config.MetricSplits)),
+
+		RelatedAuras: config.RelatedAuras,
 	}
 
 	if (spell.DamageMultiplier != 0 || spell.ThreatMultiplier != 0) && spell.ProcMask == ProcMaskUnknown {
@@ -225,6 +253,7 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 
 	spell.createDots(config.Dot, false)
 	spell.createDots(config.Hot, true)
+	spell.createShields(config.Shield)
 
 	spell.castFn = spell.makeCastFunc(config.Cast, spell.applyEffects)
 
@@ -286,6 +315,12 @@ func (spell *Spell) AOEHot() *Dot {
 func (spell *Spell) SelfHot() *Dot {
 	return spell.aoeDot
 }
+func (spell *Spell) Shield(target *Unit) *Shield {
+	return spell.shields.Get(target)
+}
+func (spell *Spell) SelfShield() *Shield {
+	return spell.selfShield
+}
 
 // Metrics for the current iteration
 func (spell *Spell) CurDamagePerCast() float64 {
@@ -300,6 +335,16 @@ func (spell *Spell) CurDamagePerCast() float64 {
 		}
 		return damage / float64(casts)
 	}
+}
+
+// Current casts per minute
+func (spell *Spell) CurCPM(sim *Simulation) float64 {
+	if sim.CurrentTime <= 0 {
+		return 0
+	}
+	casts := float64(spell.casts)
+	minutes := float64(sim.CurrentTime) / float64(time.Minute)
+	return casts / minutes
 }
 
 func (spell *Spell) finalize() {
@@ -333,6 +378,7 @@ func (spell *Spell) reset(_ *Simulation) {
 			spell.splitSpellMetrics[i][j] = SpellMetrics{}
 		}
 	}
+	spell.casts = 0
 
 	// Reset dynamic effects.
 	spell.BonusHitRating = spell.initialBonusHitRating
@@ -375,10 +421,6 @@ func (spell *Spell) HealthMetrics(target *Unit) *ResourceMetrics {
 	return spell.healthMetrics[target.UnitIndex]
 }
 
-func (spell *Spell) FinalCritMultiplier() float64 {
-	return spell.CritMultiplier * spell.Unit.PseudoStats.SchoolCritMultiplier[spell.SchoolIndex]
-}
-
 func (spell *Spell) ReadyAt() time.Duration {
 	return BothTimersReadyAt(spell.CD.Timer, spell.SharedCD.Timer)
 }
@@ -402,31 +444,31 @@ func (spell *Spell) CanCast(sim *Simulation, target *Unit) bool {
 	}
 
 	if spell.ExtraCastCondition != nil && !spell.ExtraCastCondition(sim, target) {
-		if sim.Log != nil {
-			sim.Log("Cant cast because of extra condition")
-		}
+		//if sim.Log != nil {
+		//	sim.Log("Cant cast because of extra condition")
+		//}
 		return false
 	}
 
-	// While casting or channeling, no other action is possible
+	// While casting, no other action is possible
 	if spell.Unit.Hardcast.Expires > sim.CurrentTime {
-		if sim.Log != nil {
-			sim.Log("Cant cast because already casting/channeling")
-		}
+		//if sim.Log != nil {
+		//	sim.Log("Cant cast because already casting")
+		//}
 		return false
 	}
 
 	if spell.DefaultCast.GCD > 0 && !spell.Unit.GCD.IsReady(sim) {
-		if sim.Log != nil {
-			sim.Log("Cant cast because of GCD")
-		}
+		//if sim.Log != nil {
+		//	sim.Log("Cant cast because of GCD")
+		//}
 		return false
 	}
 
 	if !BothTimersReady(spell.CD.Timer, spell.SharedCD.Timer, sim) {
-		if sim.Log != nil {
-			sim.Log("Cant cast because of CDs")
-		}
+		//if sim.Log != nil {
+		//	sim.Log("Cant cast because of CDs")
+		//}
 		return false
 	}
 
@@ -434,9 +476,9 @@ func (spell *Spell) CanCast(sim *Simulation, target *Unit) bool {
 		// temp hack
 		spell.CurCast.Cost = spell.DefaultCast.Cost
 		if !spell.Cost.MeetsRequirement(spell) {
-			if sim.Log != nil {
-				sim.Log("Cant cast because of resource cost")
-			}
+			//if sim.Log != nil {
+			//	sim.Log("Cant cast because of resource cost")
+			//}
 			return false
 		}
 	}
@@ -471,6 +513,7 @@ func (spell *Spell) applyEffects(sim *Simulation, target *Unit) {
 	// target can still be null in individual sims when the caster is the enemy target
 	if target != nil {
 		spell.SpellMetrics[target.UnitIndex].Casts++
+		spell.casts++
 	}
 	spell.ApplyEffects(sim, target, spell)
 }
@@ -500,6 +543,18 @@ func (spell *Spell) ExpectedDamage(sim *Simulation, target *Unit) float64 {
 }
 func (spell *Spell) ExpectedDamageFromCurrentSnapshot(sim *Simulation, target *Unit) float64 {
 	return spell.expectedDamageHelper(sim, target, true)
+}
+
+// Time until either the cast is finished or GCD is ready again, whichever is longer
+func (spell *Spell) EffectiveCastTime() time.Duration {
+	// TODO: this is wrong for spells like shadowfury, that have a GCD of less than 1s
+	return MaxDuration(spell.Unit.SpellGCD(),
+		spell.Unit.ApplyCastSpeedForSpell(spell.DefaultCast.EffectiveTime(), spell))
+}
+
+// Time until the cast is finished (ignoring GCD)
+func (spell *Spell) CastTime() time.Duration {
+	return spell.Unit.ApplyCastSpeedForSpell(spell.DefaultCast.CastTime, spell)
 }
 
 // Handles computing the cost of spells and checking whether the Unit

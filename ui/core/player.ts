@@ -1,5 +1,5 @@
 import {
-	ArmorType,
+	ArmorType
 	Class,
 	Consumes,
 	Cooldowns,
@@ -10,19 +10,28 @@ import {
 	HealingModel,
 	IndividualBuffs,
 	ItemSlot,
-	ItemSwap,
 	Profession,
 	PseudoStat,
 	Race,
-	RaidTarget,
-	RangedWeaponType,
+	UnitReference,
 	ShattrathFaction,
 	SimDatabase,
 	Spec,
 	Stat,
 	UnitStats,
-	WeaponType,
+	UnitReference_Type,
 } from './proto/common.js';
+import {
+	AuraStats as AuraStatsProto,
+	SpellStats as SpellStatsProto,
+	UnitMetadata as UnitMetadataProto,
+} from './proto/api.js';
+import {
+	APLRotation,
+	APLRotation_Type as APLRotationType,
+	APLValue,
+	SimpleRotation,
+} from './proto/apl.js';
 import {
 	DungeonDifficulty,
 	Expansion,
@@ -31,18 +40,20 @@ import {
 	UIEnchant as Enchant,
 	UIGem as Gem,
 	UIItem as Item,
+	UIItem_FactionRestriction,
 } from './proto/ui.js';
 
 import { PlayerStats } from './proto/api.js';
 import { Player as PlayerProto } from './proto/api.js';
 import { StatWeightsResult } from './proto/api.js';
+import { ActionId } from './proto_utils/action_id.js';
 import { EquippedItem, getWeaponDPS } from './proto_utils/equipped_item.js';
+import { aplLaunchStatuses, LaunchStatus } from './launched_sims';
 
 import { playerTalentStringToProto } from './talents/factory.js';
 import { Gear, ItemSwapGear } from './proto_utils/gear.js';
 import {
 	isUnrestrictedGem,
-	gemEligibleForSocket,
 	gemMatchesSocket,
 } from './proto_utils/gems.js';
 import { Stats } from './proto_utils/stats.js';
@@ -57,34 +68,130 @@ import {
 	canEquipEnchant,
 	canEquipItem,
 	classColors,
-	emptyRaidTarget,
+	emptyUnitReference,
 	enchantAppliesToItem,
-	getEligibleEnchantSlots,
-	getEligibleItemSlots,
 	getTalentTree,
 	getTalentTreeIcon,
+	getTalentTreePoints,
 	getMetaGemEffectEP,
 	isTankSpec,
-	newRaidTarget,
-	playerToSpec,
+	newUnitReference,
 	raceToFaction,
 	specToClass,
 	specToEligibleRaces,
 	specTypeFunctions,
 	withSpecProto,
+	ShamanSpecs,
 } from './proto_utils/utils.js';
 
+
 import { getLanguageCode } from './constants/lang.js';
-import { Listener } from './typed_event.js';
 import { EventID, TypedEvent } from './typed_event.js';
 import { Party, MAX_PARTY_SIZE } from './party.js';
 import { Raid } from './raid.js';
 import { Sim } from './sim.js';
-import { sum } from './utils.js';
-import { wait } from './utils.js';
-import { WorkerPool } from './worker_pool.js';
-import { EnhancementShaman_Options } from './proto/shaman.js';
-import { Console } from 'console';
+import { stringComparator, sum } from './utils.js';
+
+export interface AuraStats {
+	data: AuraStatsProto,
+	id: ActionId,
+}
+export interface SpellStats {
+	data: SpellStatsProto,
+	id: ActionId,
+}
+
+export class UnitMetadata {
+	private name: string;
+	private auras: Array<AuraStats>;
+	private spells: Array<SpellStats>;
+
+	constructor() {
+		this.name = '';
+		this.auras = [];
+		this.spells = [];
+	}
+
+	getName(): string {
+		return this.name;
+	}
+
+	getAuras(): Array<AuraStats> {
+		return this.auras.slice();
+	}
+
+	getSpells(): Array<SpellStats> {
+		return this.spells.slice();
+	}
+
+	// Returns whether any updates were made.
+	async update(metadata: UnitMetadataProto): Promise<boolean> {
+		let newSpells = metadata!.spells.map(spell => {
+			return {
+				data: spell,
+				id: ActionId.fromProto(spell.id!),
+			};
+		});
+		let newAuras = metadata!.auras.map(aura => {
+			return {
+				data: aura,
+				id: ActionId.fromProto(aura.id!),
+			};
+		});
+
+		await Promise.all([...newSpells, ...newAuras].map(newSpell => newSpell.id.fill().then(newId => newSpell.id = newId)));
+
+		newSpells = newSpells.sort((a, b) => stringComparator(a.id.name, b.id.name))
+		newAuras = newAuras.sort((a, b) => stringComparator(a.id.name, b.id.name))
+
+		let anyUpdates = false;
+		if (metadata.name != this.name) {
+			this.name = metadata.name;
+			anyUpdates = true;
+		}
+		if (newSpells.length != this.spells.length || newSpells.some((newSpell, i) => !newSpell.id.equals(this.spells[i].id))) {
+			this.spells = newSpells;
+			anyUpdates = true;
+		}
+		if (newAuras.length != this.auras.length || newAuras.some((newAura, i) => !newAura.id.equals(this.auras[i].id))) {
+			this.auras = newAuras;
+			anyUpdates = true;
+		}
+
+		return anyUpdates;
+	}
+}
+
+export class UnitMetadataList {
+	private metadatas: Array<UnitMetadata>;
+
+	constructor() {
+		this.metadatas = [];
+	}
+
+	async update(newMetadatas: Array<UnitMetadataProto>): Promise<boolean> {
+		const oldLen = this.metadatas.length;
+
+		if (newMetadatas.length > oldLen) {
+			for (let i = oldLen; i < newMetadatas.length; i++) {
+				this.metadatas.push(new UnitMetadata());
+			}
+		} else if (newMetadatas.length < oldLen) {
+			this.metadatas = this.metadatas.slice(0, newMetadatas.length);
+		}
+
+		const anyUpdates = await Promise.all(newMetadatas.map((metadata, i) => this.metadatas[i].update(metadata)));
+
+		return oldLen != this.metadatas.length || anyUpdates.some(v => v);
+	}
+
+	asList(): Array<UnitMetadata> {
+		return this.metadatas.slice();
+	}
+}
+
+export type AutoRotationGenerator<SpecType extends Spec> = (player: Player<SpecType>) => APLRotation;
+export type SimpleRotationGenerator<SpecType extends Spec> = (player: Player<SpecType>, simpleRotation: SpecRotation<SpecType>, cooldowns: Cooldowns) => APLRotation;
 
 // Manages all the gear / consumes / other settings for a single Player.
 export class Player<SpecType extends Spec> {
@@ -98,30 +205,41 @@ export class Player<SpecType extends Spec> {
 	private consumes: Consumes = Consumes.create();
 	private bonusStats: Stats = new Stats();
 	private gear: Gear = new Gear({});
+	//private bulkEquipmentSpec: BulkEquipmentSpec = BulkEquipmentSpec.create();
 	private itemSwapGear: ItemSwapGear = new ItemSwapGear();
 	private race: Race;
 	private shattFaction: ShattrathFaction;
 	private profession1: Profession = 0;
 	private profession2: Profession = 0;
 	private rotation: SpecRotation<SpecType>;
+	aplRotation: APLRotation = APLRotation.create();
 	private talentsString: string = '';
 	private glyphs: Glyphs = Glyphs.create();
 	private specOptions: SpecOptions<SpecType>;
 	private cooldowns: Cooldowns = Cooldowns.create();
+	private reactionTime: number = 0;
+	private channelClipDelay: number = 0;
 	private inFrontOfTarget: boolean = false;
 	private distanceFromTarget: number = 0;
 	private healingModel: HealingModel = HealingModel.create();
 	private healingEnabled: boolean = false;
 
-	private itemEPCache: Map<number, number> = new Map<number, number>();
-	private gemEPCache: Map<number, number> = new Map<number, number>();
-	private enchantEPCache: Map<number, number> = new Map<number, number>();
+	private autoRotationGenerator: AutoRotationGenerator<SpecType> | null = null;
+	private simpleRotationGenerator: SimpleRotationGenerator<SpecType> | null = null;
+
+	private itemEPCache = new Array<Map<number, number>>();
+	private gemEPCache = new Map<number, number>();
+	private enchantEPCache = new Map<number, number>();
 	private talents: SpecTalents<SpecType> | null = null;
 
 	readonly specTypeFunctions: SpecTypeFunctions<SpecType>;
 
+	private static readonly numEpRatios = 6;
+	private epRatios: Array<number> = new Array<number>(Player.numEpRatios).fill(0);
 	private epWeights: Stats = new Stats();
 	private currentStats: PlayerStats = PlayerStats.create();
+	private metadata: UnitMetadata = new UnitMetadata();
+	private petMetadatas: UnitMetadataList = new UnitMetadataList();
 
 	readonly nameChangeEmitter = new TypedEvent<void>('PlayerName');
 	readonly buffsChangeEmitter = new TypedEvent<void>('PlayerBuffs');
@@ -139,8 +257,11 @@ export class Player<SpecType extends Spec> {
 	readonly distanceFromTargetChangeEmitter = new TypedEvent<void>('PlayerDistanceFromTarget');
 	readonly healingModelChangeEmitter = new TypedEvent<void>('PlayerHealingModel');
 	readonly epWeightsChangeEmitter = new TypedEvent<void>('PlayerEpWeights');
+	readonly miscOptionsChangeEmitter = new TypedEvent<void>('PlayerMiscOptions');
 
 	readonly currentStatsEmitter = new TypedEvent<void>('PlayerCurrentStats');
+	readonly epRatiosChangeEmitter = new TypedEvent<void>('PlayerEpRatios');
+	readonly epRefStatChangeEmitter = new TypedEvent<void>('PlayerEpRefStat');
 
 	// Emits when any of the above emitters emit.
 	readonly changeEmitter: TypedEvent<void>;
@@ -157,6 +278,10 @@ export class Player<SpecType extends Spec> {
 		this.rotation = this.specTypeFunctions.rotationCreate();
 		this.specOptions = this.specTypeFunctions.optionsCreate();
 
+		for(let i = 0; i < ItemSlot.ItemSlotRanged+1; ++i) {
+			this.itemEPCache[i] = new Map();
+		}
+
 		this.changeEmitter = TypedEvent.onAny([
 			this.nameChangeEmitter,
 			this.buffsChangeEmitter,
@@ -170,10 +295,13 @@ export class Player<SpecType extends Spec> {
 			this.glyphsChangeEmitter,
 			this.specOptionsChangeEmitter,
 			this.cooldownsChangeEmitter,
+			this.miscOptionsChangeEmitter,
 			this.inFrontOfTargetChangeEmitter,
 			this.distanceFromTargetChangeEmitter,
 			this.healingModelChangeEmitter,
 			this.epWeightsChangeEmitter,
+			this.epRatiosChangeEmitter,
+			this.epRefStatChangeEmitter,
 		], 'PlayerChange');
 	}
 
@@ -265,9 +393,12 @@ export class Player<SpecType extends Spec> {
 		this.epWeightsChangeEmitter.emit(eventID);
 
 		this.gemEPCache = new Map();
-		this.itemEPCache = new Map();
 		this.enchantEPCache = new Map();
+		for(let i = 0; i < ItemSlot.ItemSlotRanged+1; ++i) {
+			this.itemEPCache[i] = new Map();
+		}
 	}
+
 	getShattFaction(): ShattrathFaction {
 		return this.shattFaction;
 	}
@@ -278,6 +409,30 @@ export class Player<SpecType extends Spec> {
 		}
 	}
 
+	getDefaultEpRatios(isTankSpec: boolean, isHealingSpec: boolean): Array<number> {
+		const defaultRatios = new Array(Player.numEpRatios).fill(0);
+		if (isHealingSpec) {
+			// By default only value HPS EP for healing spec
+			defaultRatios[1] = 1;
+		} else if (isTankSpec) {
+			// By default value TPS and DTPS EP equally for tanking spec
+			defaultRatios[2] = 1;
+			defaultRatios[3] = 1;
+		} else {
+			// By default only value DPS EP
+			defaultRatios[0] = 1;
+		}
+		return defaultRatios;
+	}
+
+	getEpRatios() {
+		return this.epRatios.slice();
+	}
+
+	setEpRatios(eventID: EventID, newRatios: Array<number>) {
+		this.epRatios = newRatios;
+		this.epRatiosChangeEmitter.emit(eventID);
+	}
 
 	async computeStatWeights(eventID: EventID, epStats: Array<Stat>, epPseudoStats: Array<PseudoStat>, epReferenceStat: Stat, onProgress: Function): Promise<StatWeightsResult> {
 		const result = await this.sim.statWeights(this, epStats, epPseudoStats, epReferenceStat, onProgress);
@@ -291,19 +446,22 @@ export class Player<SpecType extends Spec> {
 	setCurrentStats(eventID: EventID, newStats: PlayerStats) {
 		this.currentStats = newStats;
 		this.currentStatsEmitter.emit(eventID);
+	}
 
-		//// Remove item cooldowns if there is no cooldown available for the item.
-		//const availableCooldowns = this.currentStats.cooldowns;
-		//const newCooldowns = this.getCooldowns();
-		//newCooldowns.cooldowns = newCooldowns.cooldowns.filter(cd => {
-		//	if (cd.id && 'itemId' in cd.id.rawId) {
-		//		return availableCooldowns.find(acd => ActionIdProto.equals(acd, cd.id)) != null;
-		//	} else {
-		//		return true;
-		//	}
-		//});
-		//// TODO: Reference the parent event ID
-		//this.setCooldowns(TypedEvent.nextEventID(), newCooldowns);
+	getMetadata(): UnitMetadata {
+		return this.metadata;
+	}
+
+	getPetMetadatas(): UnitMetadataList {
+		return this.petMetadatas;
+	}
+
+	async updateMetadata(): Promise<boolean> {
+		const playerPromise = this.metadata.update(this.currentStats.metadata!);
+		const petsPromise = this.petMetadatas.update(this.currentStats.pets.map(p => p.metadata!));
+		const playerUpdated = await playerPromise;
+		const petsUpdated = await petsPromise;
+		return playerUpdated || petsUpdated;
 	}
 
 	getName(): string {
@@ -365,7 +523,7 @@ export class Player<SpecType extends Spec> {
 		return this.getProfessions().includes(prof);
 	}
 	isBlacksmithing(): boolean {
-		return this.hasProfession(Profession.Blacksmithing);
+		return false; //this.hasProfession(Profession.Blacksmithing);
 	}
 
 	getFaction(): Faction {
@@ -402,15 +560,28 @@ export class Player<SpecType extends Spec> {
 
 	getCooldowns(): Cooldowns {
 		// Make a defensive copy
-		return Cooldowns.clone(this.cooldowns);
+		if (aplLaunchStatuses[this.spec] == LaunchStatus.Launched) {
+			return Cooldowns.clone(this.aplRotation.simple?.cooldowns || Cooldowns.create());
+		} else {
+			return Cooldowns.clone(this.cooldowns);
+		}
 	}
 
 	setCooldowns(eventID: EventID, newCooldowns: Cooldowns) {
-		if (Cooldowns.equals(this.cooldowns, newCooldowns))
+		if (Cooldowns.equals(this.getCooldowns(), newCooldowns))
 			return;
 
-		// Make a defensive copy
-		this.cooldowns = Cooldowns.clone(newCooldowns);
+		if (aplLaunchStatuses[this.spec] == LaunchStatus.Launched) {
+			if (!this.aplRotation.simple) {
+				this.aplRotation.simple = SimpleRotation.create();
+			}
+			this.aplRotation.simple.cooldowns = newCooldowns;
+			this.rotationChangeEmitter.emit(eventID);
+		} else {
+			// Make a defensive copy
+			this.cooldowns = Cooldowns.clone(newCooldowns);
+		}
+
 		this.cooldownsChangeEmitter.emit(eventID);
 	}
 
@@ -471,6 +642,22 @@ export class Player<SpecType extends Spec> {
 		});
 	}
 
+	/*
+	setBulkEquipmentSpec(eventID: EventID, newBulkEquipmentSpec: BulkEquipmentSpec) {
+		if (BulkEquipmentSpec.equals(this.bulkEquipmentSpec, newBulkEquipmentSpec))
+			return;
+
+		TypedEvent.freezeAllAndDo(() => {
+			this.bulkEquipmentSpec = newBulkEquipmentSpec;
+			this.bulkGearChangeEmitter.emit(eventID);
+		});
+	}
+
+	getBulkEquipmentSpec(): BulkEquipmentSpec {
+		return BulkEquipmentSpec.clone(this.bulkEquipmentSpec);
+	}
+	*/
+
 	getBonusStats(): Stats {
 		return this.bonusStats;
 	}
@@ -484,22 +671,90 @@ export class Player<SpecType extends Spec> {
 	}
 
 	getRotation(): SpecRotation<SpecType> {
-		return this.specTypeFunctions.rotationCopy(this.rotation);
+		if (aplLaunchStatuses[this.spec] == LaunchStatus.Launched) {
+			const jsonStr = this.aplRotation.simple?.specRotationJson || '';
+			if (!jsonStr) {
+				return this.specTypeFunctions.rotationCreate();
+			}
+
+			try {
+				const json = JSON.parse(jsonStr);
+				return this.specTypeFunctions.rotationFromJson(json);
+			} catch (e) {
+				console.warn(`Error parsing rotation spec options: ${e}\n\nSpec options: '${jsonStr}'`);
+				return this.specTypeFunctions.rotationCreate();
+			}
+		} else {
+			return this.specTypeFunctions.rotationCopy(this.rotation);
+		}
 	}
 
 	setRotation(eventID: EventID, newRotation: SpecRotation<SpecType>) {
-		if (this.specTypeFunctions.rotationEquals(newRotation, this.rotation))
+		if (this.specTypeFunctions.rotationEquals(newRotation, this.getRotation()))
 			return;
 
-		this.rotation = this.specTypeFunctions.rotationCopy(newRotation);
+		if (aplLaunchStatuses[this.spec] == LaunchStatus.Launched) {
+			if (!this.aplRotation.simple) {
+				this.aplRotation.simple = SimpleRotation.create();
+			}
+			this.aplRotation.simple.specRotationJson = JSON.stringify(this.specTypeFunctions.rotationToJson(newRotation));
+		} else {
+			this.rotation = this.specTypeFunctions.rotationCopy(newRotation);
+		}
+
 		this.rotationChangeEmitter.emit(eventID);
+	}
+
+	setAplRotation(eventID: EventID, newRotation: APLRotation) {
+		if (APLRotation.equals(newRotation, this.aplRotation))
+			return;
+
+		this.aplRotation = APLRotation.clone(newRotation);
+		this.rotationChangeEmitter.emit(eventID);
+	}
+
+	getRotationType(): APLRotationType {
+		if (this.aplRotation.enabled) {
+			return APLRotationType.TypeAPL;
+		} else if (this.aplRotation.type == APLRotationType.TypeUnknown) {
+			return APLRotationType.TypeLegacy;
+		} else {
+			return this.aplRotation.type;
+		}
+	}
+
+	setAutoRotationGenerator(generator: AutoRotationGenerator<SpecType>) {
+		this.autoRotationGenerator = generator;
+	}
+
+	setSimpleRotationGenerator(generator: SimpleRotationGenerator<SpecType>) {
+		this.simpleRotationGenerator = generator;
+	}
+
+	hasSimpleRotationGenerator(): boolean {
+		return this.simpleRotationGenerator != null;
+	}
+
+	getResolvedAplRotation(): APLRotation {
+		const type = this.getRotationType();
+		if (type == APLRotationType.TypeAuto && this.autoRotationGenerator) {
+			// Clone to avoid modifying preset rotations, which are often returned directly.
+			return APLRotation.clone(this.autoRotationGenerator(this));
+		} else if (type == APLRotationType.TypeSimple && this.simpleRotationGenerator) {
+			// Clone to avoid modifying preset rotations, which are often returned directly.
+			const rot = APLRotation.clone(this.simpleRotationGenerator(this, this.getRotation(), this.getCooldowns()));
+			rot.type = APLRotationType.TypeAPL; // Set this here for convenience, so the generator functions don't need to.
+			return rot;
+		} else {
+			return this.aplRotation;
+		}
 	}
 
 	getTalents(): SpecTalents<SpecType> {
 		if (this.talents == null) {
 			this.talents = playerTalentStringToProto(this.spec, this.talentsString) as SpecTalents<SpecType>;
 		}
-		return this.talents;
+		return this.talents!;
 	}
 
 	getTalentsString(): string {
@@ -517,6 +772,10 @@ export class Player<SpecType extends Spec> {
 
 	getTalentTree(): number {
 		return getTalentTree(this.getTalentsString());
+	}
+
+	getTalentTreePoints(): Array<number> {
+		return getTalentTreePoints(this.getTalentsString())
 	}
 
 	getTalentTreeIcon(): string {
@@ -569,6 +828,30 @@ export class Player<SpecType extends Spec> {
 		this.specOptionsChangeEmitter.emit(eventID);
 	}
 
+	getReactionTime(): number {
+		return this.reactionTime;
+	}
+
+	setReactionTime(eventID: EventID, newReactionTime: number) {
+		if (newReactionTime == this.reactionTime)
+			return;
+
+		this.reactionTime = newReactionTime;
+		this.miscOptionsChangeEmitter.emit(eventID);
+	}
+
+	getChannelClipDelay(): number {
+		return this.reactionTime;
+	}
+
+	setChannelClipDelay(eventID: EventID, newChannelClipDelay: number) {
+		if (newChannelClipDelay == this.reactionTime)
+			return;
+
+		this.channelClipDelay = newChannelClipDelay;
+		this.miscOptionsChangeEmitter.emit(eventID);
+	}
+
 	getInFrontOfTarget(): boolean {
 		return this.inFrontOfTarget;
 	}
@@ -592,12 +875,28 @@ export class Player<SpecType extends Spec> {
 		this.distanceFromTarget = newDistanceFromTarget;
 		this.distanceFromTargetChangeEmitter.emit(eventID);
 	}
+	setDefaultHealingParams(hm: HealingModel) {
+		var boss = this.sim.encounter.primaryTarget;
+		var dualWield = boss.dualWield;
+		if (hm.cadenceSeconds == 0) {
+			hm.cadenceSeconds = 1.5 * boss.swingSpeed;
+			if (dualWield) {
+				hm.cadenceSeconds /= 2;
+			}
+		}
+		if (hm.hps == 0) {
+			hm.hps = 0.175 * boss.minBaseDamage / boss.swingSpeed;
+			if (dualWield) {
+				hm.hps *= 1.5;
+			}
+		}
+	}
 
 	enableHealing() {
 		this.healingEnabled = true;
 		var hm = this.getHealingModel();
-		if (hm.cadenceSeconds == 0) {
-			hm.cadenceSeconds = 2;
+		if (hm.cadenceSeconds == 0 || hm.hps == 0) {
+			this.setDefaultHealingParams(hm)
 			this.setHealingModel(0, hm)
 		}
 	}
@@ -613,9 +912,9 @@ export class Player<SpecType extends Spec> {
 
 		// Make a defensive copy
 		this.healingModel = HealingModel.clone(newHealingModel);
-		// If we have enabled healing model and try to set 0s cadence, default to 2s.
-		if (this.healingModel.cadenceSeconds == 0 && this.healingEnabled) {
-			this.healingModel.cadenceSeconds = 2;
+		// If we have enabled healing model and try to set 0s cadence or 0 incoming HPS, then set intelligent defaults instead based on boss parameters.
+		if (this.healingEnabled) {
+			this.setDefaultHealingParams(this.healingModel)
 		}
 		this.healingModelChangeEmitter.emit(eventID);
 	}
@@ -659,9 +958,9 @@ export class Player<SpecType extends Spec> {
 		if (item == null)
 			return 0;
 
-		if (this.itemEPCache.has(item.id)) {
-			return this.itemEPCache.get(item.id)!;
-		}
+		let cached = this.itemEPCache[slot].get(item.id);
+		if (cached !== undefined)
+			return cached;
 
 		let itemStats = new Stats(item.stats);
 		if (item.weaponSpeed > 0) {
@@ -674,15 +973,17 @@ export class Player<SpecType extends Spec> {
 				itemStats = itemStats.withPseudoStat(PseudoStat.PseudoStatRangedDps, weaponDps);
 			}
 		}
-		
+
  		let epWeight = Stats.fromJson(this.epWeights.toJson());
-		
+
 		if (this.isSpec(Spec.SpecFeralTankDruid) && item.armorType != ArmorType.ArmorTypeCloth && item.armorType != ArmorType.ArmorTypeLeather) {
 			epWeight = epWeight.withStat(Stat.StatArmor, epWeight.getStat(Stat.StatArmor) / 6.87561);
 		}
-		
+
 		let ep = itemStats.computeEP(epWeight);
-		
+
+
+
 		// unique items are slightly worse than non-unique because you can have only one.
 		if (item.unique) {
 			ep -= 0.01;
@@ -709,7 +1010,7 @@ export class Player<SpecType extends Spec> {
 
 		ep += Math.max(bestGemEPMatchingSockets, bestGemEPNotMatchingSockets);
 
-		this.itemEPCache.set(item.id, ep);
+		this.itemEPCache[slot].set(item.id, ep);
 		return ep;
 	}
 
@@ -720,15 +1021,21 @@ export class Player<SpecType extends Spec> {
 		const langPrefix = lang ? lang + '.' : '';
 		parts.push(`domain=${langPrefix}wotlk`);
 
+		const isBlacksmithing = this.hasProfession(Profession.Blacksmithing);
 		if (equippedItem.gems.length > 0) {
-			parts.push('gems=' + equippedItem.curGems().map(gem => gem ? gem.id : 0).join(':'));
+			parts.push('gems=' + equippedItem.curGems(isBlacksmithing).map(gem => gem ? gem.id : 0).join(':'));
 		}
 		if (equippedItem.enchant != null) {
 			parts.push('ench=' + equippedItem.enchant.effectId);
 		}
 		parts.push('pcs=' + this.gear.asArray().filter(ei => ei != null).map(ei => ei!.item.id).join(':'));
 
-		elem.setAttribute('data-wowhead', parts.join('&'));
+		if (equippedItem.hasExtraSocket(isBlacksmithing)) {
+			parts.push('sock');
+		}
+
+		elem.dataset.wowhead = parts.join('&');
+		elem.dataset.whtticon = 'false';
 	}
 
 	static ARMOR_SLOTS: Array<ItemSlot> = [
@@ -748,12 +1055,12 @@ export class Player<SpecType extends Spec> {
 	];
 
 	static readonly DIFFICULTY_SRCS: Partial<Record<SourceFilterOption, DungeonDifficulty>> = {
-		[SourceFilterOption.SourceDungeon ]: DungeonDifficulty.DifficultyNormal,
+		[SourceFilterOption.SourceDungeon]: DungeonDifficulty.DifficultyNormal,
 		[SourceFilterOption.SourceDungeonH]: DungeonDifficulty.DifficultyHeroic,
-		[SourceFilterOption.SourceRaid10  ]: DungeonDifficulty.DifficultyRaid10,
-		[SourceFilterOption.SourceRaid10H ]: DungeonDifficulty.DifficultyRaid10H,
-		[SourceFilterOption.SourceRaid25  ]: DungeonDifficulty.DifficultyRaid25,
-		[SourceFilterOption.SourceRaid25H ]: DungeonDifficulty.DifficultyRaid25H,
+		[SourceFilterOption.SourceRaid10]: DungeonDifficulty.DifficultyRaid10,
+		[SourceFilterOption.SourceRaid10H]: DungeonDifficulty.DifficultyRaid10H,
+		[SourceFilterOption.SourceRaid25]: DungeonDifficulty.DifficultyRaid25,
+		[SourceFilterOption.SourceRaid25H]: DungeonDifficulty.DifficultyRaid25H,
 	};
 
 	static readonly HEROIC_TO_NORMAL: Partial<Record<DungeonDifficulty, DungeonDifficulty>> = {
@@ -781,6 +1088,10 @@ export class Player<SpecType extends Spec> {
 			return itemData.filter(itemElem => filterFunc(getItemFunc(itemElem)));
 		};
 
+		if (filters.factionRestriction != UIItem_FactionRestriction.UNSPECIFIED) {
+			itemData = filterItems(itemData, item => item.factionRestriction == filters.factionRestriction || item.factionRestriction == UIItem_FactionRestriction.UNSPECIFIED);
+		}
+
 		if (!filters.sources.includes(SourceFilterOption.SourceCrafting)) {
 			itemData = filterItems(itemData, item => !item.sources.some(itemSrc => itemSrc.source.oneofKind == 'crafted'));
 		}
@@ -792,14 +1103,14 @@ export class Player<SpecType extends Spec> {
 			const srcOption = parseInt(srcOptionStr) as SourceFilterOption;
 			if (!filters.sources.includes(srcOption)) {
 				itemData = filterItems(itemData, item =>
-						!item.sources.some(itemSrc =>
-								itemSrc.source.oneofKind == 'drop' && itemSrc.source.drop.difficulty == difficulty));
+					!item.sources.some(itemSrc =>
+						itemSrc.source.oneofKind == 'drop' && itemSrc.source.drop.difficulty == difficulty));
 
 				if (difficulty == DungeonDifficulty.DifficultyRaid10H || difficulty == DungeonDifficulty.DifficultyRaid25H) {
 					const normalDifficulty = Player.HEROIC_TO_NORMAL[difficulty];
 					itemData = filterItems(itemData, item =>
-							!item.sources.some(itemSrc =>
-									itemSrc.source.oneofKind == 'drop' && itemSrc.source.drop.difficulty == normalDifficulty && itemSrc.source.drop.category == AL_CATEGORY_HARD_MODE));
+						!item.sources.some(itemSrc =>
+							itemSrc.source.oneofKind == 'drop' && itemSrc.source.drop.difficulty == normalDifficulty && itemSrc.source.drop.category == AL_CATEGORY_HARD_MODE));
 				}
 			}
 		}
@@ -807,12 +1118,15 @@ export class Player<SpecType extends Spec> {
 		if (!filters.raids.includes(RaidFilterOption.RaidVanilla)) {
 			itemData = filterItems(itemData, item => item.expansion != Expansion.ExpansionVanilla);
 		}
+		if (!filters.raids.includes(RaidFilterOption.RaidTbc)) {
+			itemData = filterItems(itemData, item => item.expansion != Expansion.ExpansionTbc);
+		}
 		for (const [raidOptionStr, zoneId] of Object.entries(Player.RAID_IDS)) {
 			const raidOption = parseInt(raidOptionStr) as RaidFilterOption;
 			if (!filters.raids.includes(raidOption)) {
 				itemData = filterItems(itemData, item =>
-						!item.sources.some(itemSrc =>
-								itemSrc.source.oneofKind == 'drop' && itemSrc.source.drop.zoneId == zoneId));
+					!item.sources.some(itemSrc =>
+						itemSrc.source.oneofKind == 'drop' && itemSrc.source.drop.zoneId == zoneId));
 			}
 		}
 
@@ -868,12 +1182,12 @@ export class Player<SpecType extends Spec> {
 		return itemData;
 	}
 
-	filterEnchantData<T>(enchantData: Array<T>, getEnchantFunc: (val: T) => Enchant, slot: ItemSlot, currentEquippedItem: EquippedItem|null): Array<T> {
+	filterEnchantData<T>(enchantData: Array<T>, getEnchantFunc: (val: T) => Enchant, slot: ItemSlot, currentEquippedItem: EquippedItem | null): Array<T> {
 		if (!currentEquippedItem) {
 			return enchantData;
 		}
 
-		const filters = this.sim.getFilters();
+		//const filters = this.sim.getFilters();
 
 		return enchantData.filter(enchantElem => {
 			const enchant = getEnchantFunc(enchantElem);
@@ -900,25 +1214,38 @@ export class Player<SpecType extends Spec> {
 		});
 	}
 
-	makeRaidTarget(): RaidTarget {
+	makeUnitReference(): UnitReference {
 		if (this.party == null) {
-			return emptyRaidTarget();
+			return emptyUnitReference();
 		} else {
-			return newRaidTarget(this.getRaidIndex());
+			return newUnitReference(this.getRaidIndex());
 		}
 	}
 
 	private toDatabase(): SimDatabase {
-		const dbGear =  this.getGear().toDatabase()
+		const dbGear = this.getGear().toDatabase()
 		const dbItemSwapGear = this.getItemSwapGear().toDatabase();
 		return SimDatabase.create({
-			items: dbGear.items.concat(dbItemSwapGear.items),
-			enchants: dbGear.enchants.concat(dbItemSwapGear.enchants),
-			gems: dbGear.gems.concat(dbItemSwapGear.gems),
+			items: dbGear.items.concat(dbItemSwapGear.items).filter(function(elem, index, self) {
+				return index === self.findIndex((t) => (
+					t.id === elem.id
+				));
+			}),
+			enchants: dbGear.enchants.concat(dbItemSwapGear.enchants).filter(function(elem, index, self) {
+				return index === self.findIndex((t) => (
+					t.effectId === elem.effectId
+				));
+			}),
+			gems: dbGear.gems.concat(dbItemSwapGear.gems).filter(function(elem, index, self) {
+				return index === self.findIndex((t) => (
+					t.id === elem.id
+				));
+			}),
 		})
 	}
 
-	toProto(forExport?: boolean): PlayerProto {
+	toProto(forExport?: boolean, forSimming?: boolean): PlayerProto {
+		const aplIsLaunched = aplLaunchStatuses[this.spec] == LaunchStatus.Launched;
 		const gear = this.getGear();
 		return withSpecProto(
 			this.spec,
@@ -931,38 +1258,131 @@ export class Player<SpecType extends Spec> {
 				consumes: this.getConsumes(),
 				bonusStats: this.getBonusStats().toProto(),
 				buffs: this.getBuffs(),
-				cooldowns: this.getCooldowns(),
+				cooldowns: aplIsLaunched ? Cooldowns.create({ hpPercentForDefensives: this.getCooldowns().hpPercentForDefensives }) : this.getCooldowns(),
 				talentsString: this.getTalentsString(),
 				glyphs: this.getGlyphs(),
+				rotation: forSimming ? this.getResolvedAplRotation() : this.aplRotation,
 				profession1: this.getProfession1(),
 				profession2: this.getProfession2(),
+				reactionTimeMs: this.getReactionTime(),
+				channelClipDelayMs: this.getChannelClipDelay(),
 				inFrontOfTarget: this.getInFrontOfTarget(),
 				distanceFromTarget: this.getDistanceFromTarget(),
 				healingModel: this.getHealingModel(),
 				database: forExport ? SimDatabase.create() : this.toDatabase(),
 			}),
-			this.getRotation(),
+			aplIsLaunched ? this.specTypeFunctions.rotationCreate() : this.getRotation(),
 			this.getSpecOptions());
 	}
 
 	fromProto(eventID: EventID, proto: PlayerProto) {
+		if (proto.rotation) {
+			proto.rotation.prepullActions.forEach(ppa => {
+				if (ppa.doAt) {
+					ppa.doAtValue = APLValue.create({
+						value: {oneofKind: 'const', const: { val: ppa.doAt }}
+					});
+					ppa.doAt = '';
+				}
+			});
+			if (proto.rotation.enabled) {
+				proto.rotation.enabled = false;
+				proto.rotation.type = APLRotationType.TypeAPL;
+			}
+		}
+
+		if (aplLaunchStatuses[this.spec] == LaunchStatus.Launched) {
+			const rot = this.specTypeFunctions.rotationFromPlayer(proto);
+			if (rot && !this.specTypeFunctions.rotationEquals(rot, this.specTypeFunctions.rotationCreate())) {
+				if (proto.rotation?.type == APLRotationType.TypeAPL) {
+					// Do nothing
+				} else if (this.simpleRotationGenerator) {
+					proto.rotation = APLRotation.create({
+						type: APLRotationType.TypeSimple,
+						simple: {
+							specRotationJson: JSON.stringify(this.specTypeFunctions.rotationToJson(rot)),
+							cooldowns: proto.cooldowns,
+						},
+					});
+				} else {
+					proto.rotation = APLRotation.create({
+						type: APLRotationType.TypeAuto,
+					});
+				}
+			}
+		}
+
 		TypedEvent.freezeAllAndDo(() => {
 			this.setName(eventID, proto.name);
 			this.setRace(eventID, proto.race);
 			this.setGear(eventID, proto.equipment ? this.sim.db.lookupEquipmentSpec(proto.equipment) : new Gear({}));
+			//this.setBulkEquipmentSpec(eventID, BulkEquipmentSpec.create()); // Do not persist the bulk equipment settings.
 			this.setConsumes(eventID, proto.consumes || Consumes.create());
 			this.setBonusStats(eventID, Stats.fromProto(proto.bonusStats || UnitStats.create()));
 			this.setBuffs(eventID, proto.buffs || IndividualBuffs.create());
-			this.setCooldowns(eventID, proto.cooldowns || Cooldowns.create());
 			this.setTalentsString(eventID, proto.talentsString);
 			this.setGlyphs(eventID, proto.glyphs || Glyphs.create());
 			this.setProfession1(eventID, proto.profession1);
 			this.setProfession2(eventID, proto.profession2);
+			this.setReactionTime(eventID, proto.reactionTimeMs);
+			this.setChannelClipDelay(eventID, proto.channelClipDelayMs);
 			this.setInFrontOfTarget(eventID, proto.inFrontOfTarget);
 			this.setDistanceFromTarget(eventID, proto.distanceFromTarget);
 			this.setHealingModel(eventID, proto.healingModel || HealingModel.create());
-			this.setRotation(eventID, this.specTypeFunctions.rotationFromPlayer(proto));
+			if (aplLaunchStatuses[this.spec] != LaunchStatus.Launched) {
+				this.setCooldowns(eventID, proto.cooldowns || Cooldowns.create());
+				this.setRotation(eventID, this.specTypeFunctions.rotationFromPlayer(proto));
+			}
+			this.setAplRotation(eventID, proto.rotation || APLRotation.create())
 			this.setSpecOptions(eventID, this.specTypeFunctions.optionsFromPlayer(proto));
+
+			this.aplRotation = proto.rotation || APLRotation.create();
+			this.rotationChangeEmitter.emit(eventID);
+
+			const options = this.getSpecOptions();
+			for (let key in options) {
+				if ((options[key] as any)?.['targetIndex']) {
+					const targetIndex = (options[key] as any)['targetIndex'] as number;
+					if (targetIndex == -1) {
+						(options[key] as any) = UnitReference.create();
+					} else {
+						(options[key] as any) = UnitReference.create({type: UnitReference_Type.Player, index: targetIndex});
+					}
+					this.setSpecOptions(eventID, options);
+					break;
+				}
+			}
+
+			if (this.spec == Spec.SpecHunter) {
+				const rot = this.getRotation() as SpecRotation<Spec.SpecHunter>;
+				if (rot.timeToTrapWeaveMs) {
+					const options = this.getSpecOptions() as SpecOptions<Spec.SpecHunter>;
+					options.timeToTrapWeaveMs = rot.timeToTrapWeaveMs;
+					this.setSpecOptions(eventID, options as SpecOptions<SpecType>);
+					rot.timeToTrapWeaveMs = 0;
+					this.setRotation(eventID, rot as SpecRotation<SpecType>);
+				}
+			}
+
+			if (this.spec == Spec.SpecShadowPriest) {
+				const options = this.getSpecOptions() as SpecOptions<Spec.SpecShadowPriest>;
+				if (options.latency) {
+					this.setChannelClipDelay(eventID, options.latency);
+					options.latency = 0;
+					this.setSpecOptions(eventID, options as SpecOptions<SpecType>)
+				}
+			}
+
+			if ([Spec.SpecEnhancementShaman, Spec.SpecRestorationShaman, Spec.SpecElementalShaman].includes(this.spec)) {
+				const rot = this.getRotation() as SpecRotation<ShamanSpecs>;
+				if (rot.totems) {
+					const options = this.getSpecOptions() as SpecOptions<ShamanSpecs>;
+					options.totems = rot.totems;
+					this.setSpecOptions(eventID, options as SpecOptions<SpecType>);
+					rot.totems = undefined;
+					this.setRotation(eventID, rot as SpecRotation<SpecType>);
+				}
+			}
 		});
 	}
 
@@ -974,6 +1394,8 @@ export class Player<SpecType extends Spec> {
 
 	applySharedDefaults(eventID: EventID) {
 		TypedEvent.freezeAllAndDo(() => {
+			this.setReactionTime(eventID, 200);
+			this.setChannelClipDelay(eventID, this.spec == Spec.SpecShadowPriest ? 100 : 0);
 			this.setInFrontOfTarget(eventID, isTankSpec(this.spec));
 			this.setHealingModel(eventID, HealingModel.create({
 				burstWindow: isTankSpec(this.spec) ? 6 : 0,
@@ -982,6 +1404,12 @@ export class Player<SpecType extends Spec> {
 				hpPercentForDefensives: isTankSpec(this.spec) ? 0.35 : 0,
 			}));
 			this.setBonusStats(eventID, new Stats());
+
+			if (aplLaunchStatuses[this.spec] >= LaunchStatus.Beta) {
+				this.setAplRotation(eventID, APLRotation.create({
+					type: APLRotationType.TypeAuto,
+				}))
+			}
 		});
 	}
 }

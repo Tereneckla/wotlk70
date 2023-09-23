@@ -12,6 +12,7 @@ func (druid *Druid) registerTigersFurySpell() {
 	instantEnergy := 20.0 * float64(druid.Talents.KingOfTheJungle)
 
 	dmgBonus := 40.0
+	cdReduction := core.TernaryDuration(druid.HasSetBonus(ItemSetDreamwalkerBattlegear, 4), time.Second*3, 0)
 
 	druid.TigersFuryAura = druid.RegisterAura(core.Aura{
 		Label:    "Tiger's Fury Aura",
@@ -25,13 +26,13 @@ func (druid *Druid) registerTigersFurySpell() {
 		},
 	})
 
-	spell := druid.RegisterSpell(core.SpellConfig{
+	spell := druid.RegisterSpell(Cat, core.SpellConfig{
 		ActionID: actionID,
-
+		Flags:    core.SpellFlagAPL,
 		Cast: core.CastConfig{
 			CD: core.Cooldown{
 				Timer:    druid.NewTimer(),
-				Duration: time.Second * 30,
+				Duration: time.Second*30 - cdReduction,
 			},
 		},
 

@@ -12,48 +12,24 @@ func getMasterOfSubtletySpellID(talentPoints int32) int32 {
 }
 
 func (rogue *Rogue) registerMasterOfSubtletyCD() {
-	if rogue.Talents.MasterOfSubtlety == 0 {
-		return
-	}
-
 	var MasterOfSubtletyID = core.ActionID{SpellID: getMasterOfSubtletySpellID(rogue.Talents.MasterOfSubtlety)}
 
-	percent := []float64{0, 0.04, 0.07, 0.1}[rogue.Talents.MasterOfSubtlety]
+	percent := []float64{1, 1.04, 1.07, 1.1}[rogue.Talents.MasterOfSubtlety]
+
+	effectDuration := time.Second * 6
+	if rogue.StealthAura.IsActive() {
+		effectDuration = core.NeverExpires
+	}
 
 	rogue.MasterOfSubtletyAura = rogue.RegisterAura(core.Aura{
 		Label:    "Master of Subtlety",
 		ActionID: MasterOfSubtletyID,
-		Duration: time.Second * 6,
+		Duration: effectDuration,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
-			rogue.PseudoStats.DamageDealtMultiplier *= 1 + percent
+			rogue.PseudoStats.DamageDealtMultiplier *= percent
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-			rogue.PseudoStats.DamageDealtMultiplier *= 1 / (1 + percent)
-		},
-	})
-
-	rogue.MasterOfSubtlety = rogue.RegisterSpell(core.SpellConfig{
-		ActionID: MasterOfSubtletyID,
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: 0,
-			},
-			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    rogue.NewTimer(),
-				Duration: time.Second * time.Duration(180-30*rogue.Talents.Elusiveness),
-			},
-		},
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			rogue.MasterOfSubtletyAura.Activate(sim)
-		},
-	})
-
-	rogue.AddMajorCooldown(core.MajorCooldown{
-		Spell: rogue.MasterOfSubtlety,
-		Type:  core.CooldownTypeDPS,
-		ShouldActivate: func(s *core.Simulation, c *core.Character) bool {
-			return rogue.CurrentEnergy() > 90
+			rogue.PseudoStats.DamageDealtMultiplier *= 1 / percent
 		},
 	})
 }

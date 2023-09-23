@@ -14,7 +14,7 @@ func (rogue *Rogue) registerBackstabSpell() {
 		ActionID:    core.ActionID{SpellID: 26863},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | SpellFlagBuilder,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | SpellFlagBuilder | SpellFlagColdBlooded | core.SpellFlagAPL,
 
 		EnergyCost: core.EnergyCostOptions{
 			Cost:   rogue.costModifier(60 - 4*float64(rogue.Talents.SlaughterFromTheShadows)),
@@ -27,10 +27,11 @@ func (rogue *Rogue) registerBackstabSpell() {
 			IgnoreHaste: true,
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return !rogue.PseudoStats.InFrontOfTarget && rogue.GetMHWeapon().WeaponType == proto.WeaponType_WeaponTypeDagger
+			return !rogue.PseudoStats.InFrontOfTarget && rogue.HasDagger(core.MainHand)
 		},
 
-		BonusCritRating: []float64{0, 2, 4, 6}[rogue.Talents.TurnTheTables]*core.CritRatingPerCritChance +
+		BonusCritRating: core.TernaryFloat64(rogue.HasSetBonus(Tier9, 4), 5*core.CritRatingPerCritChance, 0) +
+			[]float64{0, 2, 4, 6}[rogue.Talents.TurnTheTables]*core.CritRatingPerCritChance +
 			10*core.CritRatingPerCritChance*float64(rogue.Talents.PuncturingWounds),
 		// All of these use "Apply Aura: Modifies Damage/Healing Done", and stack additively (up to 142%).
 		DamageMultiplier: 1.5 * (1 +
@@ -39,12 +40,13 @@ func (rogue *Rogue) registerBackstabSpell() {
 			0.03*float64(rogue.Talents.Aggression) +
 			0.05*float64(rogue.Talents.BladeTwisting) +
 			core.TernaryFloat64(rogue.Talents.SurpriseAttacks, 0.1, 0) +
-			core.TernaryFloat64(rogue.HasSetBonus(ItemSetSlayers, 4), 0.06, 0)) *
+			core.TernaryFloat64(rogue.HasSetBonus(Tier6, 4), 0.06, 0)) *
 			(1 + 0.02*float64(rogue.Talents.SinisterCalling)),
 		CritMultiplier:   rogue.MeleeCritMultiplier(true),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			rogue.BreakStealth(sim)
 			baseDamage := 170 +
 				spell.Unit.MHNormalizedWeaponDamage(sim, spell.MeleeAttackPower()) +
 				spell.BonusWeaponDamage()
@@ -53,12 +55,10 @@ func (rogue *Rogue) registerBackstabSpell() {
 
 			if result.Landed() {
 				rogue.AddComboPoints(sim, 1, spell.ComboPointMetrics())
-				// FIXME: Extension of a Rupture Dot can occur up to 3 times
-				ruptureDot := rogue.Rupture.Dot(target)
-				if hasGlyph && ruptureDot.IsActive() {
-					ruptureDot.NumberOfTicks += 1
-					ruptureDot.RecomputeAuraDuration()
-					ruptureDot.UpdateExpires(ruptureDot.ExpiresAt() + ruptureDot.TickLength)
+				if dot := rogue.Rupture.Dot(target); hasGlyph && dot.IsActive() && dot.NumberOfTicks < dot.MaxStacks+3 {
+					dot.NumberOfTicks += 1
+					dot.RecomputeAuraDuration()
+					dot.UpdateExpires(dot.ExpiresAt() + dot.TickLength)
 				}
 			} else {
 				spell.IssueRefund(sim)

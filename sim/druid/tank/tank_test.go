@@ -79,7 +79,7 @@ var StandardGlyphs = &proto.Glyphs{
 var PlayerOptionsDefault = &proto.Player_FeralTankDruid{
 	FeralTankDruid: &proto.FeralTankDruid{
 		Options: &proto.FeralTankDruid_Options{
-			InnervateTarget: &proto.RaidTarget{TargetIndex: -1}, // no Innervate
+			InnervateTarget: &proto.UnitReference{}, // no Innervate
 			StartingRage:    20,
 		},
 		Rotation: &proto.FeralTankDruid_Rotation{
@@ -96,8 +96,8 @@ var FullConsumes = &proto.Consumes{
 	Food:            proto.Food_FoodBlackenedDragonfin,
 	DefaultPotion:   proto.Potions_IndestructiblePotion,
 	DefaultConjured: proto.Conjured_ConjuredHealthstone,
-	SuperSapper:     true,
-	FillerExplosive: proto.Explosive_ExplosiveBiggerOne,
+	ThermalSapper:   true,
+	FillerExplosive: proto.Explosive_ExplosiveSaroniteBomb,
 }
 
 var P1Gear = core.EquipmentSpecFromJsonString(`{"items": [

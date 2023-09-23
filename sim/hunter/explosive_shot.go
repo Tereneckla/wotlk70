@@ -54,7 +54,7 @@ func (hunter *Hunter) makeExplosiveShotSpell(timer *core.Timer, downrank bool) *
 		DamageMultiplierAdditive: 1 +
 			.02*float64(hunter.Talents.TNT),
 		DamageMultiplier: 1,
-		CritMultiplier:   hunter.critMultiplier(true, false),
+		CritMultiplier:   hunter.critMultiplier(true, false, false),
 		ThreatMultiplier: 1,
 
 		Dot: core.DotConfig{
@@ -64,9 +64,9 @@ func (hunter *Hunter) makeExplosiveShotSpell(timer *core.Timer, downrank bool) *
 			NumberOfTicks: 2,
 			TickLength:    time.Second * 1,
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot, isRollover bool) {
-				dot.SnapshotBaseDamage = sim.Roll(minFlatDamage, maxFlatDamage) + 0.14*dot.Spell.RangedAttackPower(target) + hunter.talonOfAlarActive()
+				dot.SnapshotBaseDamage = sim.Roll(minFlatDamage, maxFlatDamage) + 0.14*dot.Spell.RangedAttackPower(target)
 				attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
-				dot.SnapshotCritChance = dot.Spell.PhysicalCritChance(target, attackTable)
+				dot.SnapshotCritChance = dot.Spell.PhysicalCritChance(attackTable)
 				dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {

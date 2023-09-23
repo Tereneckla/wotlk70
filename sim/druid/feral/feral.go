@@ -34,16 +34,19 @@ func NewFeralDruid(character core.Character, options *proto.Player) *FeralDruid 
 		latency: time.Duration(core.MaxInt32(feralOptions.Options.LatencyMs, 1)) * time.Millisecond,
 	}
 
-	cat.SelfBuffs.InnervateTarget = &proto.RaidTarget{TargetIndex: -1}
+	cat.SelfBuffs.InnervateTarget = &proto.UnitReference{}
 	if feralOptions.Options.InnervateTarget != nil {
 		cat.SelfBuffs.InnervateTarget = feralOptions.Options.InnervateTarget
 	}
 
 	cat.AssumeBleedActive = feralOptions.Options.AssumeBleedActive
 	cat.maxRipTicks = cat.MaxRipTicks()
-	cat.prepopOoc = feralOptions.Options.PrepopOoc
-	cat.RaidBuffTargets = int(core.MaxInt32(feralOptions.Rotation.RaidTargets, 1))
-	cat.PrePopBerserk = feralOptions.Options.PrePopBerserk
+	cat.prepopOoc = feralOptions.Rotation.PrePopOoc
+	cat.RaidBuffTargets = int(feralOptions.Rotation.RaidTargets)
+	if !feralOptions.Rotation.ManualParams {
+		cat.RaidBuffTargets = 30
+	}
+	cat.PrePopBerserk = feralOptions.Rotation.PrePopBerserk
 	cat.setupRotation(feralOptions.Rotation)
 
 	cat.EnableEnergyBar(100.0, cat.OnEnergyGain)
@@ -56,7 +59,7 @@ func NewFeralDruid(character core.Character, options *proto.Player) *FeralDruid 
 		AutoSwingMelee: true,
 	})
 	cat.ReplaceBearMHFunc = func(sim *core.Simulation, mhSwingSpell *core.Spell) *core.Spell {
-		return cat.checkReplaceMaul(sim)
+		return cat.checkReplaceMaul(sim, mhSwingSpell)
 	}
 
 	return cat
@@ -67,15 +70,17 @@ type FeralDruid struct {
 
 	Rotation FeralDruidRotation
 
-	prepopOoc      bool
-	missChance     float64
-	readyToShift   bool
-	readyToGift    bool
-	waitingForTick bool
-	latency        time.Duration
-	maxRipTicks    int32
-	berserkUsed    bool
-	bleedAura      *core.Aura
+	prepopOoc         bool
+	missChance        float64
+	readyToShift      bool
+	readyToGift       bool
+	waitingForTick    bool
+	latency           time.Duration
+	maxRipTicks       int32
+	berserkUsed       bool
+	bleedAura         *core.Aura
+	lastShift         time.Duration
+	ripRefreshPending bool
 
 	rotationAction *core.PendingAction
 }
@@ -86,7 +91,7 @@ func (cat *FeralDruid) GetDruid() *druid.Druid {
 
 func (cat *FeralDruid) MissChance() float64 {
 	at := cat.AttackTables[cat.CurrentTarget.UnitIndex]
-	miss := at.BaseMissChance - cat.Shred.PhysicalHitChance(cat.CurrentTarget)
+	miss := at.BaseMissChance - cat.Shred.PhysicalHitChance(at)
 	dodge := at.BaseDodgeChance - cat.Shred.ExpertisePercentage() - cat.CurrentTarget.PseudoStats.DodgeReduction
 	return miss + dodge
 }
@@ -95,15 +100,19 @@ func (cat *FeralDruid) Initialize() {
 	cat.Druid.Initialize()
 	cat.RegisterFeralCatSpells()
 
-	if cat.PrePopBerserk && cat.Talents.Berserk {
-		cat.RegisterPrepullAction(-time.Second, func(sim *core.Simulation) {
-			cat.Berserk.Cast(sim, nil)
-		})
+	if cat.IsUsingAPL {
+		return
 	}
 
 	if cat.prepopOoc && cat.Talents.OmenOfClarity {
-		cat.RegisterPrepullAction(-cat.SpellGCD(), func(sim *core.Simulation) {
+		cat.RegisterPrepullAction(-time.Second, func(sim *core.Simulation) {
 			cat.ProcOoc(sim)
+		})
+	}
+
+	if cat.PrePopBerserk && cat.Talents.Berserk {
+		cat.RegisterPrepullAction(-time.Second, func(sim *core.Simulation) {
+			cat.Berserk.Cast(sim, nil)
 		})
 	}
 }

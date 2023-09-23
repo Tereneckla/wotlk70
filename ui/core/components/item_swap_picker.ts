@@ -5,12 +5,11 @@ import { IconItemSwapPicker } from './gear_picker.js'
 import { Input, InputConfig } from './input.js'
 import { SimUI } from '../sim_ui.js';
 import { TypedEvent } from '../typed_event.js';
+import tippy from 'tippy.js';
 
-export interface ItemSwapPickerConfig<SpecType extends Spec, T> extends InputConfig<Player<SpecType>, T>{
+export interface ItemSwapPickerConfig<SpecType extends Spec, T> extends InputConfig<Player<SpecType>, T> {
 	itemSlots: Array<ItemSlot>;
 }
-
-declare var tippy: any;
 
 export class ItemSwapPicker<SpecType extends Spec, T> extends Component {
 
@@ -27,12 +26,12 @@ export class ItemSwapPicker<SpecType extends Spec, T> extends Component {
 		if (config.labelTooltip) {
 			tippy(label, {
 				'content': config.labelTooltip,
-				'allowHTML': true,
+				ignoreAttributes: true,
 			});
 		}
 
 		let itemSwapContainer = Input.newGroupContainer();
-		itemSwapContainer.classList.add('icon-group');
+		itemSwapContainer.classList.add('icon-group')
 		this.rootElem.appendChild(itemSwapContainer);
 
 		let swapButtonFragment = document.createElement('fragment');
@@ -63,17 +62,30 @@ export class ItemSwapPicker<SpecType extends Spec, T> extends Component {
 		});
 
 		config.itemSlots.forEach(itemSlot => {
-			new IconItemSwapPicker(itemSwapContainer, simUI, player,itemSlot, config);
+			new IconItemSwapPicker(itemSwapContainer, simUI, player, itemSlot, config);
 		});
 	}
 
-	swapWithGear(player : Player<SpecType>, config: ItemSwapPickerConfig<SpecType, T> ) {
+	swapWithGear(player: Player<SpecType>, config: ItemSwapPickerConfig<SpecType, T>) {
 		let gear = player.getGear()
+
+		const gearMap = new Map();
+		const itemSwapMap = new Map();
+
 		config.itemSlots.forEach(slot => {
 			const gearItem = player.getGear().getEquippedItem(slot)
 			const swapItem = player.getItemSwapGear().getEquippedItem(slot)
-			gear = gear.withEquippedItem(slot, swapItem, player.canDualWield2H())
-			player.getItemSwapGear().equipItem(slot, gearItem, player.canDualWield2H())
+
+			gearMap.set(slot, gearItem)
+			itemSwapMap.set(slot, swapItem)
+		})
+
+		itemSwapMap.forEach((item, slot) => {
+			gear = gear.withEquippedItem(slot, item, player.canDualWield2H())
+		})
+
+		gearMap.forEach((item, slot) => {
+			player.getItemSwapGear().equipItem(slot, item, player.canDualWield2H())
 		})
 
 		let eventID = TypedEvent.nextEventID()
@@ -82,7 +94,7 @@ export class ItemSwapPicker<SpecType extends Spec, T> extends Component {
 		const itemSwap = player.getItemSwapGear().toProto() as unknown as T
 		config.setValue(eventID, player, itemSwap)
 	}
-	
+
 }
 
 

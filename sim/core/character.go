@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/core/stats"
 	"google.golang.org/protobuf/encoding/protowire"
@@ -35,12 +37,13 @@ const CharacterBuildPhaseAll = CharacterBuildPhaseBase | CharacterBuildPhaseGear
 type Character struct {
 	Unit
 
-	Name         string // Different from Label, needed for returned results.
-	Race         proto.Race
-	Class        proto.Class
-	ShattFaction proto.ShattrathFaction
+	Name  string // Different from Label, needed for returned results.
+	Race  proto.Race
+	Class proto.Class
+	Spec  proto.Spec
+
 	// Current gear.
-	Equip Equipment
+	Equipment
 	//Item Swap Handler
 	ItemSwap ItemSwap
 
@@ -49,6 +52,19 @@ type Character struct {
 
 	// Base stats for this Character.
 	baseStats stats.Stats
+
+	// Handles scaling that only affects stats from items
+	itemStatMultipliers stats.Stats
+	// Used to track if we need to separately apply multipliers, because
+	// equipment was already applied
+	equipStatsApplied bool
+
+	// Bonus stats for this Character, specified in the UI and/or EP
+	// calculator
+	bonusStats     stats.Stats
+	bonusMHDps     float64
+	bonusOHDps     float64
+	bonusRangedDps float64
 
 	professions [2]proto.Profession
 
@@ -67,6 +83,8 @@ type Character struct {
 	defensiveTrinketCD *Timer
 	offensiveTrinketCD *Timer
 	conjuredCD         *Timer
+
+	Pets []*Pet // cached in AddPet, for advance()
 }
 
 func NewCharacter(party *Party, partyIndex int, player *proto.Player) Character {
@@ -85,14 +103,19 @@ func NewCharacter(party *Party, partyIndex int, player *proto.Player) Character 
 
 			StatDependencyManager: stats.NewStatDependencyManager(),
 
+			ReactionTime:       MaxDuration(0, time.Duration(player.ReactionTimeMs)*time.Millisecond),
+			ChannelClipDelay:   MaxDuration(0, time.Duration(player.ChannelClipDelayMs)*time.Millisecond),
 			DistanceFromTarget: player.DistanceFromTarget,
+			IsUsingAPL:         player.Rotation != nil && player.Rotation.Type == proto.APLRotation_TypeAPL,
 		},
 
-		Name:         player.Name,
-		Race:         player.Race,
-		Class:        player.Class,
-		ShattFaction: player.ShattFaction,
-		Equip:        ProtoToEquipment(player.Equipment),
+		Name:  player.Name,
+		Race:  player.Race,
+		Class: player.Class,
+		Spec:  PlayerProtoToSpec(player),
+
+		Equipment: ProtoToEquipment(player.Equipment),
+
 		professions: [2]proto.Profession{
 			player.Profession1,
 			player.Profession2,
@@ -129,20 +152,26 @@ func NewCharacter(party *Party, partyIndex int, player *proto.Player) Character 
 
 	character.AddStats(character.baseStats)
 	character.addUniversalStatDependencies()
+	for i := range character.itemStatMultipliers {
+		character.itemStatMultipliers[i] = 1
+	}
 
 	if player.BonusStats != nil {
 		if player.BonusStats.Stats != nil {
-			character.AddStats(stats.FromFloatArray(player.BonusStats.Stats))
+			character.bonusStats = stats.FromFloatArray(player.BonusStats.Stats)
 		}
 		if player.BonusStats.PseudoStats != nil {
 			ps := player.BonusStats.PseudoStats
-			character.PseudoStats.BonusMHDps += ps[proto.PseudoStat_PseudoStatMainHandDps]
-			character.PseudoStats.BonusOHDps += ps[proto.PseudoStat_PseudoStatOffHandDps]
-			character.PseudoStats.BonusRangedDps += ps[proto.PseudoStat_PseudoStatRangedDps]
+			character.bonusMHDps = ps[proto.PseudoStat_PseudoStatMainHandDps]
+			character.bonusOHDps = ps[proto.PseudoStat_PseudoStatOffHandDps]
+			character.bonusRangedDps = ps[proto.PseudoStat_PseudoStatRangedDps]
+			character.PseudoStats.BonusMHDps += character.bonusMHDps
+			character.PseudoStats.BonusOHDps += character.bonusOHDps
+			character.PseudoStats.BonusRangedDps += character.bonusRangedDps
 		}
 	}
 
-	if weapon := character.Equip[proto.ItemSlot_ItemSlotOffHand]; weapon.ID != 0 {
+	if weapon := character.OffHand(); weapon.ID != 0 {
 		if weapon.WeaponType == proto.WeaponType_WeaponTypeShield {
 			character.PseudoStats.CanBlock = true
 		}
@@ -152,10 +181,61 @@ func NewCharacter(party *Party, partyIndex int, player *proto.Player) Character 
 	return character
 }
 
+func (character *Character) applyEquipScaling(stat stats.Stat, multiplier float64) float64 {
+	var oldValue = character.EquipStats()[stat]
+	character.itemStatMultipliers[stat] *= multiplier
+	var newValue = character.EquipStats()[stat]
+	return newValue - oldValue
+}
+
+func (character *Character) ApplyEquipScaling(stat stats.Stat, multiplier float64) {
+	var statDiff stats.Stats
+	statDiff[stat] = character.applyEquipScaling(stat, multiplier)
+	// Equipment stats already applied, so need to manually at the bonus to
+	// the character now to ensure correct values
+	if character.equipStatsApplied {
+		character.AddStats(statDiff)
+	}
+}
+
+func (character *Character) ApplyDynamicEquipScaling(sim *Simulation, stat stats.Stat, multiplier float64) {
+	statDiff := character.applyEquipScaling(stat, multiplier)
+	character.AddStatDynamic(sim, stat, statDiff)
+}
+
+func (character *Character) RemoveEquipScaling(stat stats.Stat, multiplier float64) {
+	var statDiff stats.Stats
+	statDiff[stat] = character.applyEquipScaling(stat, 1/multiplier)
+	// Equipment stats already applied, so need to manually at the bonus to
+	// the character now to ensure correct values
+	if character.equipStatsApplied {
+		character.AddStats(statDiff)
+	}
+}
+
+func (character *Character) RemoveDynamicEquipScaling(sim *Simulation, stat stats.Stat, multiplier float64) {
+	statDiff := character.applyEquipScaling(stat, 1/multiplier)
+	character.AddStatDynamic(sim, stat, statDiff)
+}
+
+func (character *Character) EquipStats() stats.Stats {
+	var baseEquipStats = character.Equipment.Stats()
+	var bonusEquipStats = baseEquipStats.Add(character.bonusStats)
+	return bonusEquipStats.DotProduct(character.itemStatMultipliers)
+}
+
+func (character *Character) applyEquipment() {
+	if character.equipStatsApplied {
+		panic("Equipment stats already applied to character!")
+	}
+	character.AddStats(character.EquipStats())
+	character.equipStatsApplied = true
+}
+
 func (character *Character) addUniversalStatDependencies() {
+	character.AddStat(stats.Health, 20-10*20)
 	character.AddStatDependency(stats.Stamina, stats.Health, 10)
 	character.AddStatDependency(stats.Agility, stats.Armor, 2)
-	character.AddStat(stats.Health, -180)
 }
 
 // Returns a partially-filled PlayerStats proto for use in the CharacterStats api call.
@@ -174,7 +254,7 @@ func (character *Character) applyAllEffects(agent Agent, raidBuffs *proto.RaidBu
 	character.applyBuildPhaseAuras(CharacterBuildPhaseBase)
 	playerStats.BaseStats = measureStats()
 
-	character.AddStats(character.Equip.Stats())
+	character.applyEquipment()
 	character.applyItemEffects(agent)
 	character.applyItemSetBonusEffects(agent)
 	character.applyBuildPhaseAuras(CharacterBuildPhaseGear)
@@ -193,7 +273,7 @@ func (character *Character) applyAllEffects(agent Agent, raidBuffs *proto.RaidBu
 	playerStats.ConsumesStats = measureStats()
 	character.clearBuildPhaseAuras(CharacterBuildPhaseAll)
 
-	for _, petAgent := range character.Pets {
+	for _, petAgent := range character.PetAgents {
 		applyPetBuffEffects(petAgent, raidBuffs, partyBuffs, individualBuffs)
 	}
 
@@ -222,7 +302,7 @@ func (character *Character) clearBuildPhaseAuras(phase CharacterBuildPhase) {
 
 // Apply effects from all equipped core.
 func (character *Character) applyItemEffects(agent Agent) {
-	for slot, eq := range character.Equip {
+	for slot, eq := range character.Equipment {
 		if applyItemEffect, ok := itemEffects[eq.ID]; ok {
 			applyItemEffect(agent)
 		}
@@ -262,46 +342,20 @@ func (character *Character) AddPet(pet PetAgent) {
 		panic("Pets must be added during construction!")
 	}
 
-	character.Pets = append(character.Pets, pet)
-}
-
-func (character *Character) GetPet(name string) PetAgent {
-	for _, petAgent := range character.Pets {
-		if petAgent.GetPet().Name == name {
-			return petAgent
-		}
-	}
-	panic(character.Name + " has no pet with name " + name)
+	character.PetAgents = append(character.PetAgents, pet)
+	character.Pets = append(character.Pets, pet.GetPet())
 }
 
 func (character *Character) MultiplyMeleeSpeed(sim *Simulation, amount float64) {
 	character.Unit.MultiplyMeleeSpeed(sim, amount)
-
-	if len(character.Pets) > 0 {
-		for _, petAgent := range character.Pets {
-			petAgent.OwnerAttackSpeedChanged(sim)
-		}
-	}
 }
 
 func (character *Character) MultiplyRangedSpeed(sim *Simulation, amount float64) {
 	character.Unit.MultiplyRangedSpeed(sim, amount)
-
-	if len(character.Pets) > 0 {
-		for _, petAgent := range character.Pets {
-			petAgent.OwnerAttackSpeedChanged(sim)
-		}
-	}
 }
 
 func (character *Character) MultiplyAttackSpeed(sim *Simulation, amount float64) {
 	character.Unit.MultiplyAttackSpeed(sim, amount)
-
-	if len(character.Pets) > 0 {
-		for _, petAgent := range character.Pets {
-			petAgent.OwnerAttackSpeedChanged(sim)
-		}
-	}
 }
 
 func (character *Character) GetBaseStats() stats.Stats {
@@ -345,38 +399,48 @@ func (character *Character) DefaultHealingCritMultiplier() float64 {
 	return character.HealingCritMultiplier(1, 0)
 }
 
-func (character *Character) AddRaidBuffs(raidBuffs *proto.RaidBuffs) {
+func (character *Character) AddRaidBuffs(_ *proto.RaidBuffs) {
 }
 func (character *Character) AddPartyBuffs(partyBuffs *proto.PartyBuffs) {
 	if character.Race == proto.Race_RaceDraenei {
 		partyBuffs.HeroicPresence = true
 	}
 
-	if character.Equip[ItemSlotMainHand].ID == ItemIDAtieshMage {
+	switch character.MainHand().ID {
+	case ItemIDAtieshMage:
 		partyBuffs.AtieshMage += 1
-	}
-	if character.Equip[ItemSlotMainHand].ID == ItemIDAtieshWarlock {
+	case ItemIDAtieshWarlock:
 		partyBuffs.AtieshWarlock += 1
 	}
 
-	if character.Equip[ItemSlotNeck].ID == ItemIDBraidedEterniumChain {
+	switch character.Neck().ID {
+	case ItemIDBraidedEterniumChain:
 		partyBuffs.BraidedEterniumChain = true
-	}
-	if character.Equip[ItemSlotNeck].ID == ItemIDChainOfTheTwilightOwl {
+	case ItemIDChainOfTheTwilightOwl:
 		partyBuffs.ChainOfTheTwilightOwl = true
-	}
-	if character.Equip[ItemSlotNeck].ID == ItemIDEyeOfTheNight {
+	case ItemIDEyeOfTheNight:
 		partyBuffs.EyeOfTheNight = true
 	}
 }
 
 func (character *Character) initialize(agent Agent) {
 	character.majorCooldownManager.initialize(character)
+	if !character.IsUsingAPL {
+		character.DesyncTrinketProcs()
+	}
 
 	character.gcdAction = &PendingAction{
 		Priority: ActionPriorityGCD,
 		OnAction: func(sim *Simulation) {
 			if sim.CurrentTime < 0 {
+				return
+			}
+
+			if sim.Options.Interactive {
+				if character.GCD.IsReady(sim) {
+					sim.NeedsInput = true
+					character.doNothing = false
+				}
 				return
 			}
 
@@ -424,24 +488,20 @@ func (character *Character) FillPlayerStats(playerStats *proto.PlayerStats) {
 	}
 	character.clearBuildPhaseAuras(CharacterBuildPhaseAll)
 	playerStats.Sets = character.GetActiveSetBonusNames()
-	playerStats.Cooldowns = character.GetMajorCooldownIDs()
 
-	aplSpells := FilterSlice(character.Spellbook, func(spell *Spell) bool {
-		return spell.Flags.Matches(SpellFlagAPL)
-	})
-	playerStats.Spells = MapSlice(aplSpells, func(spell *Spell) *proto.ActionID {
-		return spell.ActionID.ToProto()
-	})
+	playerStats.Metadata = character.GetMetadata()
+	for _, pet := range character.Pets {
+		playerStats.Pets = append(playerStats.Pets, &proto.PetStats{
+			Metadata: pet.GetMetadata(),
+		})
+	}
 
-	aplAuras := FilterSlice(character.auras, func(aura *Aura) bool {
-		return !aura.ActionID.IsEmptyAction()
-	})
-	playerStats.Auras = MapSlice(aplAuras, func(aura *Aura) *proto.ActionID {
-		return aura.ActionID.ToProto()
-	})
+	if character.Rotation != nil {
+		playerStats.RotationStats = character.Rotation.getStats()
+	}
 }
 
-func (character *Character) init(sim *Simulation, agent Agent) {
+func (character *Character) init(sim *Simulation) {
 	character.Unit.init(sim)
 }
 
@@ -453,21 +513,18 @@ func (character *Character) reset(sim *Simulation, agent Agent) {
 
 	agent.Reset(sim)
 
-	for _, petAgent := range character.Pets {
+	for _, petAgent := range character.PetAgents {
 		petAgent.GetPet().reset(sim, petAgent)
 	}
 }
 
 // Advance moves time forward counting down auras, CDs, mana regen, etc
-func (character *Character) advance(sim *Simulation, elapsedTime time.Duration) {
-	character.Unit.advance(sim, elapsedTime)
+func (character *Character) advance(sim *Simulation) {
+	character.Unit.advance(sim)
 
-	if len(character.Pets) > 0 {
-		for _, petAgent := range character.Pets {
-			if !petAgent.GetPet().enabled {
-				continue
-			}
-			petAgent.GetPet().advance(sim, elapsedTime)
+	for _, pet := range character.Pets {
+		if pet.enabled {
+			pet.advance(sim)
 		}
 	}
 }
@@ -486,17 +543,16 @@ func (character *Character) HasGlyph(glyphID int32) bool {
 }
 
 func (character *Character) HasTrinketEquipped(itemID int32) bool {
-	return character.Equip[ItemSlotTrinket1].ID == itemID ||
-		character.Equip[ItemSlotTrinket2].ID == itemID
+	return character.Trinket1().ID == itemID ||
+		character.Trinket2().ID == itemID
 }
 
 func (character *Character) HasRingEquipped(itemID int32) bool {
-	return character.Equip[ItemSlotFinger1].ID == itemID ||
-		character.Equip[ItemSlotFinger2].ID == itemID
+	return character.Finger1().ID == itemID || character.Finger2().ID == itemID
 }
 
 func (character *Character) HasMetaGemEquipped(gemID int32) bool {
-	for _, gem := range character.Equip[ItemSlotHead].Gems {
+	for _, gem := range character.Head().Gems {
 		if gem.ID == gemID {
 			return true
 		}
@@ -506,12 +562,11 @@ func (character *Character) HasMetaGemEquipped(gemID int32) bool {
 
 // Returns the MH weapon if one is equipped, and null otherwise.
 func (character *Character) GetMHWeapon() *Item {
-	weapon := &character.Equip[proto.ItemSlot_ItemSlotMainHand]
+	weapon := character.MainHand()
 	if weapon.ID == 0 {
 		return nil
-	} else {
-		return weapon
 	}
+	return weapon
 }
 func (character *Character) HasMHWeapon() bool {
 	return character.GetMHWeapon() != nil
@@ -520,7 +575,7 @@ func (character *Character) HasMHWeapon() bool {
 // Returns the OH weapon if one is equipped, and null otherwise. Note that
 // shields / Held-in-off-hand items are NOT counted as weapons in this function.
 func (character *Character) GetOHWeapon() *Item {
-	weapon := &character.Equip[proto.ItemSlot_ItemSlotOffHand]
+	weapon := character.OffHand()
 	if weapon.ID == 0 ||
 		weapon.WeaponType == proto.WeaponType_WeaponTypeShield ||
 		weapon.WeaponType == proto.WeaponType_WeaponTypeOffHand {
@@ -535,7 +590,7 @@ func (character *Character) HasOHWeapon() bool {
 
 // Returns the ranged weapon if one is equipped, and null otherwise.
 func (character *Character) GetRangedWeapon() *Item {
-	weapon := &character.Equip[proto.ItemSlot_ItemSlotRanged]
+	weapon := character.Ranged()
 	if weapon.ID == 0 ||
 		weapon.RangedWeaponType == proto.RangedWeaponType_RangedWeaponTypeIdol ||
 		weapon.RangedWeaponType == proto.RangedWeaponType_RangedWeaponTypeLibram ||
@@ -549,27 +604,40 @@ func (character *Character) HasRangedWeapon() bool {
 	return character.GetRangedWeapon() != nil
 }
 
-// Returns the hands that the item is equipped in, as (MH, OH).
-func (character *Character) GetWeaponHands(itemID int32) (bool, bool) {
-	mh := false
-	oh := false
-	if weapon := character.GetMHWeapon(); weapon != nil && weapon.ID == itemID {
-		mh = true
+func (character *Character) GetProcMaskForEnchant(effectID int32) ProcMask {
+	return character.getProcMaskFor(func(weapon *Item) bool {
+		return weapon.Enchant.EffectID == effectID
+	})
+}
+
+func (character *Character) GetProcMaskForItem(itemID int32) ProcMask {
+	return character.getProcMaskFor(func(weapon *Item) bool {
+		return weapon.ID == itemID
+	})
+}
+
+func (character *Character) GetProcMaskForTypes(weaponTypes ...proto.WeaponType) ProcMask {
+	return character.getProcMaskFor(func(weapon *Item) bool {
+		return slices.Contains(weaponTypes, weapon.WeaponType)
+	})
+}
+
+func (character *Character) getProcMaskFor(pred func(weapon *Item) bool) ProcMask {
+	mask := ProcMaskUnknown
+	if pred(character.MainHand()) {
+		mask |= ProcMaskMeleeMH
 	}
-	if weapon := character.GetOHWeapon(); weapon != nil && weapon.ID == itemID {
-		oh = true
+	if pred(character.OffHand()) {
+		mask |= ProcMaskMeleeOH
 	}
-	return mh, oh
+	return mask
 }
 
 func (character *Character) doneIteration(sim *Simulation) {
-	// Need to do pets first so we can add their results to the owners.
-	if len(character.Pets) > 0 {
-		for _, petAgent := range character.Pets {
-			pet := petAgent.GetPet()
-			pet.doneIteration(sim)
-			character.Metrics.AddFinalPetMetrics(&pet.Metrics)
-		}
+	// Need to do pets first, so we can add their results to the owners.
+	for _, pet := range character.Pets {
+		pet.doneIteration(sim)
+		character.Metrics.AddFinalPetMetrics(&pet.Metrics)
 	}
 
 	character.Unit.doneIteration(sim)
@@ -577,9 +645,9 @@ func (character *Character) doneIteration(sim *Simulation) {
 
 func (character *Character) GetPseudoStatsProto() []float64 {
 	vals := make([]float64, stats.PseudoStatsLen)
-	vals[proto.PseudoStat_PseudoStatMainHandDps] = character.WeaponFromMainHand(0).DPS()
-	vals[proto.PseudoStat_PseudoStatOffHandDps] = character.WeaponFromOffHand(0).DPS()
-	vals[proto.PseudoStat_PseudoStatRangedDps] = character.WeaponFromRanged(0).DPS()
+	vals[proto.PseudoStat_PseudoStatMainHandDps] = character.AutoAttacks.MH.DPS()
+	vals[proto.PseudoStat_PseudoStatOffHandDps] = character.AutoAttacks.OH.DPS()
+	vals[proto.PseudoStat_PseudoStatRangedDps] = character.AutoAttacks.Ranged.DPS()
 	vals[proto.PseudoStat_PseudoStatBlockValueMultiplier] = character.PseudoStats.BlockValueMultiplier
 	// Base values are modified by Enemy attackTables, but we display for LVL 80 enemy as paperdoll default
 	vals[proto.PseudoStat_PseudoStatDodge] = character.PseudoStats.BaseDodge + character.GetDiminishedDodgeChance()
@@ -594,33 +662,13 @@ func (character *Character) GetMetricsProto() *proto.UnitMetrics {
 	metrics.UnitIndex = character.UnitIndex
 	metrics.Auras = character.auraTracker.GetMetricsProto()
 
-	metrics.Pets = []*proto.UnitMetrics{}
-	for _, petAgent := range character.Pets {
-		metrics.Pets = append(metrics.Pets, petAgent.GetPet().GetMetricsProto())
+	metrics.Pets = make([]*proto.UnitMetrics, len(character.Pets))
+	for i, pet := range character.Pets {
+		metrics.Pets[i] = pet.GetMetricsProto()
 	}
 
 	return metrics
 }
-
-type BaseStatsKey struct {
-	Race  proto.Race
-	Class proto.Class
-}
-
-var BaseStats = map[BaseStatsKey]stats.Stats{}
-
-// To calculate base stats, get a naked level 70 of the race/class you want, ideally without any talents to mess up base stats.
-//  Basic stats are as-shown (str/agi/stm/int/spirit)
-
-// Base Spell Crit is calculated by
-//   1. Take as-shown value (troll shaman have 3.5%)
-//   2. Calculate the bonus from int (for troll shaman that would be 104/78.1=1.331% crit)
-//   3. Subtract as-shown from int bouns (3.5-1.331=2.169)
-//   4. 2.169*22.08 (rating per crit percent) = 47.89 crit rating.
-
-// Base mana can be looked up here: https://wowwiki-archive.fandom.com/wiki/Base_mana
-
-// I assume a similar processes can be applied for other stats.
 
 func (character *Character) GetDefensiveTrinketCD() *Timer {
 	return character.GetOrInitTimer(&character.defensiveTrinketCD)
@@ -660,7 +708,7 @@ func GetPrimaryTalentTreeIndex(talentStr string) uint8 {
 // Uses proto reflection to set fields in a talents proto (e.g. MageTalents,
 // WarriorTalents) based on a talentsStr. treeSizes should contain the number
 // of talents in each tree, usually around 30. This is needed because talent
-// strings truncate 0's at the end of each tree so we can't infer the start index
+// strings truncate 0's at the end of each tree, so we can't infer the start index
 // of the tree from the string.
 func FillTalentsProto(data protoreflect.Message, talentsStr string, treeSizes [3]int) {
 	treeStrs := strings.Split(talentsStr, "-")

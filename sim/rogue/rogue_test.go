@@ -18,7 +18,7 @@ func TestCombat(t *testing.T) {
 		Race:        proto.Race_RaceHuman,
 		OtherRaces:  []proto.Race{proto.Race_RaceOrc},
 		GearSet:     core.GearSetCombo{Label: "P1", GearSet: P1Gear},
-		Talents:     CombatSwords,
+		Talents:     CombatTalents,
 		Glyphs:      CombatGlyphs,
 		Consumes:    FullConsumes,
 		SpecOptions: core.SpecOptionsCombo{Label: "MH Deadly OH Instant", SpecOptions: PlayerOptionsCombatDI},
@@ -68,6 +68,31 @@ func TestAssassination(t *testing.T) {
 	}))
 }
 
+func TestSubtlety(t *testing.T) {
+	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator(core.CharacterSuiteConfig{
+		Class:       proto.Class_ClassRogue,
+		Race:        proto.Race_RaceBloodElf,
+		OtherRaces:  []proto.Race{proto.Race_RaceOrc},
+		GearSet:     core.GearSetCombo{Label: "P2 Subtlety", GearSet: SubtletyP2Gear},
+		Talents:     SubtletyTalents,
+		Glyphs:      SubtletyGlyphs,
+		Consumes:    FullConsumes,
+		SpecOptions: core.SpecOptionsCombo{Label: "Subtlety", SpecOptions: PlayerOptionsSubtletyID},
+		ItemFilter: core.ItemFilter{
+			ArmorType: proto.ArmorType_ArmorTypeLeather,
+			RangedWeaponTypes: []proto.RangedWeaponType{
+				proto.RangedWeaponType_RangedWeaponTypeBow,
+				proto.RangedWeaponType_RangedWeaponTypeCrossbow,
+				proto.RangedWeaponType_RangedWeaponTypeGun,
+			},
+			WeaponTypes: []proto.WeaponType{
+				proto.WeaponType_WeaponTypeDagger,
+				proto.WeaponType_WeaponTypeFist,
+			},
+		},
+	}))
+}
+
 type AttackType int
 
 const (
@@ -93,7 +118,7 @@ func GenerateCriticalDamageMultiplierTestCase(
 		TalentsString: talents,
 	}, spec), nil, nil, nil)
 	encounter := core.MakeSingleTargetEncounter(0.0)
-	env, _ := core.NewEnvironment(raid, encounter)
+	env, _, _ := core.NewEnvironment(raid, encounter)
 	agent := env.Raid.Parties[0].Players[0]
 	rog := agent.(RogueAgent).GetRogue()
 	actualMultiplier := 0.0
@@ -121,12 +146,12 @@ func GenerateCriticalDamageMultiplierTestCase(
 // Verifies the critical damage multipliers conform to
 // https://github.com/where-fore/rogue-wotlk/issues/31
 func TestCritDamageMultipliers(t *testing.T) {
-	/*// Poison, no RED
+	// Poison, no RED
 	GenerateCriticalDamageMultiplierTestCase(t, "Poison", GearWithoutRED, CombatNoPotWTalents, PlayerOptionsNoPotW, Poison, 1.5)
 	// Poison, with RED
 	GenerateCriticalDamageMultiplierTestCase(t, "PoisonRED", GearWithRED, CombatNoPotWTalents, PlayerOptionsNoPotW, Poison, 1.545000)
 	// Poison, with RED & PotW
-	GenerateCriticalDamageMultiplierTestCase(t, "PoisonREDPotW", GearWithRED, CombatSwords, PlayerOptionsCombatDI, Poison, 1.854000)
+	GenerateCriticalDamageMultiplierTestCase(t, "PoisonREDPotW", GearWithRED, CombatTalents, PlayerOptionsCombatDI, Poison, 1.854000)
 	// Auto, no RED, no Lethality, no PotW
 	GenerateCriticalDamageMultiplierTestCase(t, "Auto", GearWithoutRED, CombatNoLethalityNoPotWTalents, PlayerOptionsNoLethalityNoPotW, MHAuto, 2.0)
 	// Auto, RED, no Lethality, no PotW
@@ -138,14 +163,13 @@ func TestCritDamageMultipliers(t *testing.T) {
 	// Builder, RED, Lethality, no PotW
 	GenerateCriticalDamageMultiplierTestCase(t, "BuilderREDLethality", GearWithRED, CombatNoPotWTalents, PlayerOptionsNoPotW, Builder, 2.378000)
 	// Builder, no RED, Lethality, PotW
-	GenerateCriticalDamageMultiplierTestCase(t, "BuilderLethalityPotW", GearWithoutRED, CombatSwords, PlayerOptionsCombatDI, Builder, 2.820000)
+	GenerateCriticalDamageMultiplierTestCase(t, "BuilderLethalityPotW", GearWithoutRED, CombatTalents, PlayerOptionsCombatDI, Builder, 2.820000)
 	// Builder, RED, Lethality, PotW
-	GenerateCriticalDamageMultiplierTestCase(t, "BuilderREDLethalityPotW", GearWithRED, CombatSwords, PlayerOptionsCombatDI, Builder, 2.913600)
+	GenerateCriticalDamageMultiplierTestCase(t, "BuilderREDLethalityPotW", GearWithRED, CombatTalents, PlayerOptionsCombatDI, Builder, 2.913600)
 	// Finisher, no RED, Lethality, PotW
-	GenerateCriticalDamageMultiplierTestCase(t, "FinisherLethalityPotW", GearWithoutRED, CombatSwords, PlayerOptionsCombatDI, Finisher, 2.4)
+	GenerateCriticalDamageMultiplierTestCase(t, "FinisherLethalityPotW", GearWithoutRED, CombatTalents, PlayerOptionsCombatDI, Finisher, 2.4)
 	// Finisher, no RED, Lethality, PotW
-	GenerateCriticalDamageMultiplierTestCase(t, "FinisherREDLethalityPotW", GearWithRED, CombatSwords, PlayerOptionsCombatDI, Finisher, 2.472)
-	*/
+	GenerateCriticalDamageMultiplierTestCase(t, "FinisherREDLethalityPotW", GearWithRED, CombatTalents, PlayerOptionsCombatDI, Finisher, 2.472)
 }
 
 func BenchmarkSimulate(b *testing.B) {
@@ -174,11 +198,12 @@ func BenchmarkSimulate(b *testing.B) {
 	core.RaidBenchmark(b, rsr)
 }
 
-var CombatSwords = "00532000523-0252051050035010223100501251"
+var CombatTalents = "00532000523-0252051050035010223100501251"
 var CombatNoLethalityTalents = "00532000023-0252051050035010223100501251"
 var CombatNoPotWTalents = "00532000523-0252051050035010223100501201"
 var CombatNoLethalityNoPotWTalents = "00532000023-0252051050035010223100501201"
 var AssassinationTalents = "005303005352100520103331051-005005003-502"
+var SubtletyTalents = "30532000235--512003203032012135011503113"
 var CombatGlyphs = &proto.Glyphs{
 	Major1: int32(proto.RogueMajorGlyph_GlyphOfKillingSpree),
 	Major2: int32(proto.RogueMajorGlyph_GlyphOfTricksOfTheTrade),
@@ -188,6 +213,11 @@ var AssassinationGlyphs = &proto.Glyphs{
 	Major1: int32(proto.RogueMajorGlyph_GlyphOfMutilate),
 	Major2: int32(proto.RogueMajorGlyph_GlyphOfTricksOfTheTrade),
 	Major3: int32(proto.RogueMajorGlyph_GlyphOfHungerForBlood),
+}
+var SubtletyGlyphs = &proto.Glyphs{
+	Major1: int32(proto.RogueMajorGlyph_GlyphOfHemorrhage),
+	Major2: int32(proto.RogueMajorGlyph_GlyphOfEviscerate),
+	Major3: int32(proto.RogueMajorGlyph_GlyphOfRupture),
 }
 
 var PlayerOptionsCombatDI = &proto.Player_Rogue{
@@ -261,6 +291,13 @@ var PlayerOptionsAssassinationII = &proto.Player_Rogue{
 	},
 }
 
+var PlayerOptionsSubtletyID = &proto.Player_Rogue{
+	Rogue: &proto.Rogue{
+		Options:  InstantDeadly,
+		Rotation: subtletyRotation,
+	},
+}
+
 var basicRotation = &proto.Rogue_Rotation{
 	ExposeArmorFrequency:                proto.Rogue_Rotation_Never,
 	TricksOfTheTradeFrequency:           proto.Rogue_Rotation_Maintain,
@@ -273,21 +310,31 @@ var basicRotation = &proto.Rogue_Rotation{
 	MinimumComboPointsMultiTargetSlice:  4,
 }
 
+var subtletyRotation = &proto.Rogue_Rotation{
+	ExposeArmorFrequency:                proto.Rogue_Rotation_Never,
+	TricksOfTheTradeFrequency:           proto.Rogue_Rotation_Never,
+	SubtletyFinisherPriority:            proto.Rogue_Rotation_SubtletyEviscerate,
+	MinimumComboPointsPrimaryFinisher:   5,
+	MinimumComboPointsSecondaryFinisher: 5,
+	OpenWithGarrote:                     true,
+	OpenWithPremeditation:               true,
+}
+
 var DeadlyInstant = &proto.Rogue_Options{
 	MhImbue: proto.Rogue_Options_DeadlyPoison,
 	OhImbue: proto.Rogue_Options_InstantPoison,
 }
 var InstantDeadly = &proto.Rogue_Options{
-	MhImbue: proto.Rogue_Options_DeadlyPoison,
-	OhImbue: proto.Rogue_Options_InstantPoison,
-}
-var InstantInstant = &proto.Rogue_Options{
-	MhImbue: proto.Rogue_Options_DeadlyPoison,
+	MhImbue: proto.Rogue_Options_InstantPoison,
 	OhImbue: proto.Rogue_Options_DeadlyPoison,
 }
-var DeadlyDeadly = &proto.Rogue_Options{
+var InstantInstant = &proto.Rogue_Options{
 	MhImbue: proto.Rogue_Options_InstantPoison,
 	OhImbue: proto.Rogue_Options_InstantPoison,
+}
+var DeadlyDeadly = &proto.Rogue_Options{
+	MhImbue: proto.Rogue_Options_DeadlyPoison,
+	OhImbue: proto.Rogue_Options_DeadlyPoison,
 }
 
 var FullConsumes = &proto.Consumes{
@@ -301,7 +348,7 @@ var P1Gear = core.EquipmentSpecFromJsonString(`{"items": [
       "id": 40499,
       "enchant": 3817,
       "gems": [
-        34220,
+        41398,
         42702
       ]
     },
@@ -647,5 +694,123 @@ var MutilateP1Gear = core.EquipmentSpecFromJsonString(`{"items": [
 	},
 	{
 		"id": 28772
+	}
+]}`)
+var SubtletyP2Gear = core.EquipmentSpecFromJsonString(`{"items": [
+	{
+	  "id": 46125,
+	  "enchant": 3817,
+	  "gems": [
+		41398,
+		42143
+	  ]
+	},
+	{
+	  "id": 45517,
+	  "gems": [
+		49110
+	  ]
+	},
+	{
+	  "id": 46127,
+	  "enchant": 3808,
+	  "gems": [
+		39997
+	  ]
+	},
+	{
+	  "id": 45461,
+	  "enchant": 3605,
+	  "gems": [
+		40044
+	  ]
+	},
+	{
+	  "id": 46123,
+	  "enchant": 3832,
+	  "gems": [
+		39997,
+		40044
+	  ]
+	},
+	{
+	  "id": 45611,
+	  "enchant": 3845,
+	  "gems": [
+		40044,
+		0
+	  ]
+	},
+	{
+	  "id": 46124,
+	  "enchant": 3604,
+	  "gems": [
+		39997,
+		0
+	  ]
+	},
+	{
+	  "id": 46095,
+	  "enchant": 3599,
+	  "gems": [
+		42143,
+		42143,
+		39997
+	  ]
+	},
+	{
+	  "id": 45536,
+	  "enchant": 3823,
+	  "gems": [
+		40044,
+		39997,
+		40023
+	  ]
+	},
+	{
+	  "id": 45564,
+	  "enchant": 3606,
+	  "gems": [
+		40023,
+		40003
+	  ]
+	},
+	{
+	  "id": 45608,
+	  "gems": [
+		39997
+	  ]
+	},
+	{
+	  "id": 46048,
+	  "gems": [
+		39997
+	  ]
+	},
+	{
+	  "id": 45609
+	},
+	{
+	  "id": 45931
+	},
+	{
+	  "id": 45132,
+	  "enchant": 3789,
+	  "gems": [
+		40044
+	  ]
+	},
+	{
+	  "id": 45484,
+	  "enchant": 3789,
+	  "gems": [
+		39997
+	  ]
+	},
+	{
+	  "id": 45296,
+	  "gems": [
+		39997
+	  ]
 	}
 ]}`)

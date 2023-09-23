@@ -7,17 +7,39 @@ import (
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 )
 
+const CryingWind int32 = 45270
+
 func (druid *Druid) registerInsectSwarmSpell() {
 	missAuras := druid.NewEnemyAuraArray(core.InsectSwarmAura)
 	hasGlyph := druid.HasMajorGlyph(proto.DruidMajorGlyph_GlyphOfInsectSwarm)
+	idolSpellPower := core.TernaryFloat64(druid.Ranged().ID == CryingWind, 396, 0)
 
 	impISMultiplier := 1 + 0.01*float64(druid.Talents.ImprovedInsectSwarm)
 
-	druid.InsectSwarm = druid.RegisterSpell(core.SpellConfig{
+	if druid.HasSetBonus(ItemSetNightsongGarb, 4) {
+		druid.MoonkinT84PCAura = druid.RegisterAura(core.Aura{
+			Label:    "Elune's Wrath",
+			ActionID: core.ActionID{SpellID: 64823},
+			Duration: time.Second * 10,
+			OnGain: func(aura *core.Aura, sim *core.Simulation) {
+				druid.Starfire.CastTimeMultiplier -= 1
+			},
+			OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+				druid.Starfire.CastTimeMultiplier += 1
+			},
+			OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+				if druid.Starfire.IsEqual(spell) && (druid.Starfire.CurCast.CastTime < (10*time.Second - aura.RemainingDuration(sim))) {
+					aura.Deactivate(sim)
+				}
+			},
+		})
+	}
+
+	druid.InsectSwarm = druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 27013},
 		SpellSchool: core.SpellSchoolNature,
 		ProcMask:    core.ProcMaskSpellDamage,
-		Flags:       SpellFlagOmenTrigger,
+		Flags:       SpellFlagOmenTrigger | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.08,
@@ -31,6 +53,7 @@ func (druid *Druid) registerInsectSwarmSpell() {
 
 		DamageMultiplier: 1 +
 			0.01*float64(druid.Talents.Genesis) +
+			core.TernaryFloat64(druid.HasSetBonus(ItemSetDreamwalkerGarb, 2), 0.1, 0) +
 			core.TernaryFloat64(druid.HasMajorGlyph(proto.DruidMajorGlyph_GlyphOfInsectSwarm), 0.3, 0),
 		ThreatMultiplier: 1,
 
@@ -48,7 +71,7 @@ func (druid *Druid) registerInsectSwarmSpell() {
 			TickLength:    time.Second * 2,
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot, isRollover bool) {
-				dot.SnapshotBaseDamage = 172 + 0.2*(dot.Spell.SpellPower())
+				dot.SnapshotBaseDamage = 172 + 0.2*(dot.Spell.SpellPower()+idolSpellPower)
 				dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(dot.Spell.Unit.AttackTables[target.UnitIndex])
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
@@ -71,4 +94,8 @@ func (druid *Druid) registerInsectSwarmSpell() {
 			spell.DealOutcome(sim, result)
 		},
 	})
+
+	if !hasGlyph {
+		druid.InsectSwarm.RelatedAuras = append(druid.InsectSwarm.RelatedAuras, missAuras)
+	}
 }

@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/emirpasic/gods v1.18.1
+	github.com/golang/protobuf v1.5.0
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/satori/go.uuid v1.2.0
 	golang.org/x/exp v0.0.0-20221028150844-83b7d23a625f

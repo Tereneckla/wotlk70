@@ -20,7 +20,7 @@ func (mage *Mage) registerFrostboltSpell() {
 		ActionID:     core.ActionID{SpellID: 27072},
 		SpellSchool:  core.SpellSchoolFrost,
 		ProcMask:     core.ProcMaskSpellDamage,
-		Flags:        SpellFlagMage | BarrageSpells,
+		Flags:        SpellFlagMage | BarrageSpells | core.SpellFlagAPL,
 		MissileSpeed: 28,
 
 		ManaCost: core.ManaCostOptions{
@@ -33,6 +33,8 @@ func (mage *Mage) registerFrostboltSpell() {
 			},
 		},
 
+		BonusCritRating: 0 +
+			core.TernaryFloat64(mage.HasSetBonus(ItemSetKhadgarsRegalia, 4), 5*core.CritRatingPerCritChance, 0),
 		DamageMultiplierAdditive: 1 +
 			.01*float64(mage.Talents.ChilledToTheBone) +
 			core.TernaryFloat64(mage.HasMajorGlyph(proto.MageMajorGlyph_GlyphOfFrostbolt), .05, 0) +

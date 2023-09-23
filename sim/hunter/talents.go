@@ -68,7 +68,7 @@ func (hunter *Hunter) ApplyTalents() {
 			hunterBonus = 0.1
 			petBonus = 0.2
 		}
-		hunter.AddStat(stats.Armor, hunter.Equip.Stats()[stats.Armor]*hunterBonus)
+		hunter.ApplyEquipScaling(stats.Armor, 1.0+hunterBonus)
 		if hunter.pet != nil {
 			hunter.pet.MultiplyStat(stats.Armor, 1.0+petBonus)
 		}
@@ -117,12 +117,17 @@ func (hunter *Hunter) ApplyTalents() {
 	hunter.registerReadinessCD()
 }
 
-func (hunter *Hunter) critMultiplier(isRanged bool, isMFDSpell bool) float64 {
+func (hunter *Hunter) critMultiplier(isRanged bool, isMFDSpell bool, doubleDipMS bool) float64 {
 	primaryModifier := 1.0
 	secondaryModifier := 0.0
+	mortalShotsFactor := 0.06
+
+	if doubleDipMS {
+		mortalShotsFactor = 0.12
+	}
 
 	if isRanged {
-		secondaryModifier += 0.06 * float64(hunter.Talents.MortalShots)
+		secondaryModifier += mortalShotsFactor * float64(hunter.Talents.MortalShots)
 		if isMFDSpell {
 			secondaryModifier += 0.02 * float64(hunter.Talents.MarkedForDeath)
 		}
@@ -236,7 +241,7 @@ func (hunter *Hunter) applyCobraStrikes() {
 				return
 			}
 
-			if spell != hunter.ArcaneShot && spell != hunter.SteadyShot {
+			if spell != hunter.ArcaneShot && spell != hunter.SteadyShot && spell != hunter.KillShot {
 				return
 			}
 
@@ -321,7 +326,7 @@ func (hunter *Hunter) applyWildQuiver() {
 		Flags:       core.SpellFlagNoOnCastComplete,
 
 		DamageMultiplier: 0.8,
-		CritMultiplier:   hunter.critMultiplier(false, false),
+		CritMultiplier:   hunter.critMultiplier(false, false, false),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
@@ -369,10 +374,10 @@ func (hunter *Hunter) applyFrenzy() {
 		ActionID: core.ActionID{SpellID: 19625},
 		Duration: time.Second * 8,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
-			aura.Unit.PseudoStats.MeleeSpeedMultiplier *= 1.3
+			aura.Unit.MultiplyMeleeSpeed(sim, 1.3)
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-			aura.Unit.PseudoStats.MeleeSpeedMultiplier /= 1.3
+			aura.Unit.MultiplyMeleeSpeed(sim, 1/1.3)
 		},
 	})
 
@@ -432,6 +437,7 @@ func (hunter *Hunter) registerBestialWrathCD() {
 			aura.Unit.PseudoStats.CostMultiplier += 0.5
 		},
 	})
+	core.RegisterPercentDamageModifierEffect(bestialWrathAura, 1.1)
 
 	bwSpell := hunter.RegisterSpell(core.SpellConfig{
 		ActionID: actionID,
@@ -512,7 +518,7 @@ func (hunter *Hunter) applyImprovedTracking() {
 			}
 			applied = true
 
-			for _, target := range hunter.Env.Encounter.Targets {
+			for _, target := range hunter.Env.Encounter.TargetUnits {
 				switch target.MobType {
 				case proto.MobType_MobTypeBeast, proto.MobType_MobTypeDemon,
 					proto.MobType_MobTypeDragonkin, proto.MobType_MobTypeElemental,
@@ -540,6 +546,7 @@ func (hunter *Hunter) applyLockAndLoad() {
 	}
 
 	hunter.LockAndLoadAura = hunter.RegisterAura(core.Aura{
+		Icd:       &icd,
 		Label:     "Lock and Load Proc",
 		ActionID:  actionID,
 		Duration:  time.Second * 12,
@@ -821,6 +828,7 @@ func (hunter *Hunter) registerReadinessCD() {
 			hunter.RapidFire.CD.Reset()
 			hunter.MultiShot.CD.Reset()
 			hunter.ArcaneShot.CD.Reset()
+			hunter.KillShot.CD.Reset()
 			hunter.RaptorStrike.CD.Reset()
 			hunter.ExplosiveTrap.CD.Reset()
 			if hunter.KillCommand != nil {

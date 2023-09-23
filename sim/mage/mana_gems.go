@@ -12,7 +12,11 @@ func (mage *Mage) registerManaGemsCD() {
 
 	actionID := core.ActionID{ItemID: 22044}
 	manaMetrics := mage.NewManaMetrics(actionID)
+	hasT7_2pc := mage.HasSetBonus(ItemSetFrostfireGarb, 2)
 	var gemAura *core.Aura
+	if hasT7_2pc {
+		gemAura = mage.NewTemporaryStatsAura("Improved Mana Gems T7", core.ActionID{SpellID: 61062}, stats.Stats{stats.SpellPower: 225}, 15*time.Second)
+	}
 
 	var serpentCoilAura *core.Aura
 	if mage.HasTrinketEquipped(30720) {
@@ -21,7 +25,8 @@ func (mage *Mage) registerManaGemsCD() {
 
 	manaMultiplier := core.TernaryFloat64(mage.HasMajorGlyph(proto.MageMajorGlyph_GlyphOfManaGem), 1.4, 1) *
 		(1 +
-			core.TernaryFloat64(serpentCoilAura != nil, 0.25, 0))
+			core.TernaryFloat64(serpentCoilAura != nil, 0.25, 0) +
+			core.TernaryFloat64(hasT7_2pc, 0.25, 0))
 
 	minManaEmeraldGain := 2340.0 * manaMultiplier
 	maxManaEmeraldGain := 2460.0 * manaMultiplier
@@ -32,12 +37,12 @@ func (mage *Mage) registerManaGemsCD() {
 
 	var remainingManaGems int
 	mage.RegisterResetEffect(func(sim *core.Simulation) {
-		remainingManaGems = 6
+		remainingManaGems = 4
 	})
 
 	spell := mage.RegisterSpell(core.SpellConfig{
 		ActionID: actionID,
-		Flags:    core.SpellFlagNoOnCastComplete,
+		Flags:    core.SpellFlagNoOnCastComplete | core.SpellFlagAPL,
 
 		Cast: core.CastConfig{
 			CD: core.Cooldown{
@@ -52,10 +57,10 @@ func (mage *Mage) registerManaGemsCD() {
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
 			var manaGain float64
 			if remainingManaGems > 3 {
-				// Mana Emerald
+				// Mana Sapphire: Restores 3330 to 3500 mana. (2 Min Cooldown)
 				manaGain = sim.Roll(minManaEmeraldGain, maxManaEmeraldGain)
 			} else {
-				// Mana Ruby
+				// Mana Emerald: Restores 2340 to 2460 mana. (2 Min Cooldown)
 				manaGain = sim.Roll(minManaRubyGain, maxManaRubyGain)
 			}
 

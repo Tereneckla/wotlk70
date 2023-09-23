@@ -12,6 +12,7 @@ import * as OtherInputs from '../core/components/other_inputs.js';
 
 import * as ShamanInputs from './inputs.js';
 import * as Presets from './presets.js';
+import { FireElementalSection } from '../core/components/fire_elemental_inputs.js';
 
 export class EnhancementShamanSimUI extends IndividualSimUI<Spec.SpecEnhancementShaman> {
 	constructor(parentElem: HTMLElement, player: Player<Spec.SpecEnhancementShaman>) {
@@ -49,7 +50,6 @@ export class EnhancementShamanSimUI extends IndividualSimUI<Spec.SpecEnhancement
 			// Which stats to display in the Character Stats section, at the bottom of the left-hand sidebar.
 			displayStats: [
 				Stat.StatHealth,
-				Stat.StatMana,
 				Stat.StatStamina,
 				Stat.StatStrength,
 				Stat.StatAgility,
@@ -68,7 +68,7 @@ export class EnhancementShamanSimUI extends IndividualSimUI<Spec.SpecEnhancement
 
 			defaults: {
 				// Default equipped gear.
-				gear: Presets.PreRaid_PRESET.gear,
+				gear: Presets.P1_PRESET.gear,
 				// Default EP weights for sorting gear in the gear picker.
 				epWeights: Stats.fromMap({
 					[Stat.StatIntellect]: 1.48,
@@ -137,7 +137,8 @@ export class EnhancementShamanSimUI extends IndividualSimUI<Spec.SpecEnhancement
 				],
 			},
 			customSections: [
-				TotemsSection
+				TotemsSection,
+				FireElementalSection
 			],
 			encounterPicker: {
 				// Whether to include 'Execute Duration (%)' in the 'Encounter' section of the settings tab.
@@ -149,9 +150,20 @@ export class EnhancementShamanSimUI extends IndividualSimUI<Spec.SpecEnhancement
 				talents: [
 					Presets.StandardTalents,
 				],
+				// Preset rotations that the user can quickly select.
+				rotations: [
+					Presets.ROTATION_FT_DEFAULT,
+					Presets.ROTATION_WF_DEFAULT,
+					Presets.ROTATION_PHASE_3,
+				],
 				// Preset gear configurations that the user can quickly select.
 				gear: [
 					Presets.PreRaid_PRESET,
+					Presets.P1_PRESET,
+					Presets.P2_PRESET_FT,
+					Presets.P2_PRESET_WF,
+					Presets.P3_PRESET_ALLIANCE,
+					Presets.P3_PRESET_HORDE,
 				],
 			},
 		});

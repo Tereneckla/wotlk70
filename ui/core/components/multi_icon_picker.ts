@@ -43,6 +43,8 @@ export class MultiIconPicker<ModObject> extends Component {
 					role="button"
 					data-bs-toggle="dropdown"
 					aria-expanded="false"
+					data-disable-wowhead-touch-tooltip='true'
+					data-whtticon='false'
 				></a>
 				<ul class="dropdown-menu"></ul>
 			</div>
@@ -62,7 +64,7 @@ export class MultiIconPicker<ModObject> extends Component {
 
 		this.buttonElem.addEventListener('hide.bs.dropdown', event => {
 			if (event.hasOwnProperty('clickEvent'))
-				event.preventDefault();	
+				event.preventDefault();
 		})
 
 		this.buttonElem.addEventListener('contextmenu', event => {

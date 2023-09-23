@@ -12,10 +12,10 @@ func (paladin *Paladin) registerExorcismSpell() {
 		core.TernaryFloat64(paladin.Equip[proto.ItemSlot_ItemSlotRanged].ID == 28065, 120, 0)
 
 	paladin.Exorcism = paladin.RegisterSpell(core.SpellConfig{
-		ActionID:        core.ActionID{SpellID: 27138},
-		SpellSchool:     core.SpellSchoolHoly,
-		ProcMask:        core.ProcMaskSpellDamage,
-		Flags:           core.SpellFlagMeleeMetrics,
+		ActionID:    core.ActionID{SpellID: 27138},
+		SpellSchool: core.SpellSchoolHoly,
+		ProcMask:    core.ProcMaskSpellDamage,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		BonusSpellPower: bonusSpellPower,
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.08,
@@ -32,7 +32,7 @@ func (paladin *Paladin) registerExorcismSpell() {
 			},
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
 				if paladin.CurrentMana() >= cast.Cost {
-					castTime := time.Duration(float64(cast.CastTime) * spell.CastTimeMultiplier)
+					castTime := paladin.ApplyCastSpeedForSpell(cast.CastTime, spell)
 					if castTime > 0 {
 						paladin.AutoAttacks.StopMeleeUntil(sim, sim.CurrentTime+castTime, false)
 					}
@@ -42,7 +42,8 @@ func (paladin *Paladin) registerExorcismSpell() {
 
 		DamageMultiplierAdditive: 1 +
 			paladin.getTalentSanctityOfBattleBonus() +
-			paladin.getMajorGlyphOfExorcismBonus(),
+			paladin.getMajorGlyphOfExorcismBonus() +
+			paladin.getItemSetAegisBattlegearBonus2(),
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
 		CritMultiplier:   paladin.SpellCritMultiplier(),

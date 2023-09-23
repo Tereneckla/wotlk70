@@ -8,7 +8,7 @@ import (
 )
 
 func (warrior *Warrior) registerRevengeSpell(cdTimer *core.Timer) {
-	actionID := core.ActionID{SpellID: 57823}
+	actionID := core.ActionID{SpellID: 30357}
 
 	warrior.revengeProcAura = warrior.RegisterAura(core.Aura{
 		Label:    "Revenge",
@@ -23,17 +23,13 @@ func (warrior *Warrior) registerRevengeSpell(cdTimer *core.Timer) {
 			Duration: core.NeverExpires,
 			ActionID: core.ActionID{SpellID: 58398},
 			OnGain: func(aura *core.Aura, sim *core.Simulation) {
-				if warrior.HeroicStrikeOrCleave.SpellID == 30324 {
-					warrior.HeroicStrikeOrCleave.CostMultiplier -= 1
-				}
+				warrior.HeroicStrike.CostMultiplier -= 1
 			},
 			OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-				if warrior.HeroicStrikeOrCleave.SpellID == 30324 {
-					warrior.HeroicStrikeOrCleave.CostMultiplier += 1
-				}
+				warrior.HeroicStrike.CostMultiplier += 1
 			},
 			OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
-				if spell == warrior.HeroicStrikeOrCleave && warrior.HeroicStrikeOrCleave.SpellID == 30324 {
+				if spell == warrior.HeroicStrike {
 					aura.Deactivate(sim)
 				}
 			},
@@ -69,7 +65,7 @@ func (warrior *Warrior) registerRevengeSpell(cdTimer *core.Timer) {
 		ActionID:    actionID,
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
 			Cost:   5 - float64(warrior.Talents.FocusedRage),
@@ -104,7 +100,7 @@ func (warrior *Warrior) registerRevengeSpell(cdTimer *core.Timer) {
 			if extraHit {
 				if sim.RandomFloat("Revenge Target Roll") <= 0.5*float64(warrior.Talents.ImprovedRevenge) {
 					otherTarget := sim.Environment.NextTargetUnit(target)
-					baseDamage := sim.Roll(1636, 1998) + 0.31*spell.MeleeAttackPower()
+					baseDamage := sim.Roll(963, 1175) + 0.31*spell.MeleeAttackPower()
 					spell.CalcAndDealDamage(sim, otherTarget, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 				}
 			}

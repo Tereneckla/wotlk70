@@ -27,7 +27,7 @@ func NewWowheadItemTooltipManager(filePath string) *WowheadTooltipManager {
 	return &WowheadTooltipManager{
 		TooltipManager{
 			FilePath:   filePath,
-			UrlPattern: "https://nether.wowhead.com/wotlk/tooltip/item/%s",
+			UrlPattern: "https://nether.wowhead.com/wotlk/tooltip/item/%s?lvl=80",
 		},
 	}
 }
@@ -161,6 +161,7 @@ var staminaRegex = regexp.MustCompile(`<!--stat7-->\+([0-9]+) Stamina`)
 var spellPowerRegex = regexp.MustCompile(`Increases spell power by ([0-9]+)\.`)
 var spellPowerRegex2 = regexp.MustCompile(`Increases spell power by <!--rtg45-->([0-9]+)\.`)
 
+/*
 // Not sure these exist anymore?
 var arcaneSpellPowerRegex = regexp.MustCompile(`Increases Arcane power by ([0-9]+)\.`)
 var fireSpellPowerRegex = regexp.MustCompile(`Increases Fire power by ([0-9]+)\.`)
@@ -168,6 +169,7 @@ var frostSpellPowerRegex = regexp.MustCompile(`Increases Frost power by ([0-9]+)
 var holySpellPowerRegex = regexp.MustCompile(`Increases Holy power by ([0-9]+)\.`)
 var natureSpellPowerRegex = regexp.MustCompile(`Increases Nature power by ([0-9]+)\.`)
 var shadowSpellPowerRegex = regexp.MustCompile(`Increases Shadow power by ([0-9]+)\.`)
+*/
 
 var hitRegex = regexp.MustCompile(`Improves hit rating by <!--rtg31-->([0-9]+)\.`)
 var critRegex = regexp.MustCompile(`Improves critical strike rating by <!--rtg32-->([0-9]+)\.`)
@@ -210,9 +212,10 @@ var bonusArmorRegex = regexp.MustCompile(`Has ([0-9]+) bonus armor`)
 func (item WowheadItemResponse) GetStats() Stats {
 	sp := float64(item.GetIntValue(spellPowerRegex)) + float64(item.GetIntValue(spellPowerRegex2))
 	baseAP := float64(item.GetIntValue(attackPowerRegex)) + float64(item.GetIntValue(attackPowerRegex2))
+	armor, bonusArmor := item.GetArmorValues()
 	return Stats{
-		proto.Stat_StatArmor:             float64(item.GetIntValue(armorRegex)),
-		proto.Stat_StatBonusArmor:        float64(item.GetIntValue(bonusArmorRegex)),
+		proto.Stat_StatArmor:             float64(armor),
+		proto.Stat_StatBonusArmor:        float64(bonusArmor),
 		proto.Stat_StatStrength:          float64(item.GetIntValue(strengthRegex)),
 		proto.Stat_StatAgility:           float64(item.GetIntValue(agilityRegex)),
 		proto.Stat_StatStamina:           float64(item.GetIntValue(staminaRegex)),
@@ -301,7 +304,8 @@ func (item WowheadItemResponse) IsRandomEnchant() bool {
 
 func (item WowheadItemResponse) IsEquippable() bool {
 	return item.GetItemType() != proto.ItemType_ItemTypeUnknown &&
-		!item.IsPattern()
+		!item.IsPattern() &&
+		!item.IsRandomEnchant()
 }
 
 var itemLevelRegex = regexp.MustCompile(`Item Level <!--ilvl-->([0-9]+)<`)
@@ -313,30 +317,34 @@ func (item WowheadItemResponse) GetItemLevel() int {
 var phaseRegex = regexp.MustCompile(`Phase ([0-9])`)
 
 func (item WowheadItemResponse) GetPhase() int {
-
-	ilvl := item.GetItemLevel()
-	phase := 1
-	if item.Quality > int(proto.ItemQuality_ItemQualityRare) {
-		if ilvl == 110 {
-			phase = 1
-		} else if ilvl == 115 || ilvl == 120 || ilvl == 125 || ilvl == 123 {
-			phase = 2
-		} else if ilvl == 133 || ilvl == 128 || ilvl == 134 || ilvl == 138 || ilvl == 136 || ilvl == 127 {
-			phase = 3
-		} else if ilvl == 141 || ilvl == 151 || ilvl == 156 || ilvl == 146 {
-			phase = 4
-		} else if ilvl == 154 || ilvl == 159 || ilvl == 164 {
-			phase = 6
-		} else if strings.Contains(item.Name, "Crimson Spinel") || strings.Contains(item.Name, "Empyrean Sapphire") || strings.Contains(item.Name, "Lionseye") || strings.Contains(item.Name, "Seaspray Emerald") || strings.Contains(item.Name, "Pyrestone") || strings.Contains(item.Name, "Shadowsong Amethyst") {
-			phase = 4
-		}
+	phase := item.GetIntValue(phaseRegex)
+	if phase != 0 {
+		return phase
 	}
 
-	return phase
+	ilvl := item.GetItemLevel()
+	if ilvl <= 164 { // TBC items
+		return 0
+	}
+
+	if ilvl < 200 || ilvl == 200 || ilvl == 213 || ilvl == 226 {
+		return 1
+	} else if ilvl == 219 || ilvl == 226 || ilvl == 239 {
+		return 2
+	} else if ilvl == 232 || ilvl == 245 || ilvl == 258 {
+		return 3
+	} else if ilvl == 251 || ilvl == 258 || ilvl == 259 || ilvl == 264 || ilvl == 268 || ilvl == 270 || ilvl == 271 || ilvl == 272 {
+		return 4
+	} else if ilvl == 277 || ilvl == 284 {
+		return 5
+	}
+
+	// default to 1
+	return 1
 }
 
 var uniqueRegex = regexp.MustCompile(`Unique`)
-var jcGemsRegex = regexp.MustCompile(`Soulbound`)
+var jcGemsRegex = regexp.MustCompile(`Jeweler's Gems`)
 
 func (item WowheadItemResponse) GetUnique() bool {
 	return uniqueRegex.MatchString(item.Tooltip) && !jcGemsRegex.MatchString(item.Tooltip)
@@ -368,11 +376,43 @@ func (item WowheadItemResponse) GetItemType() proto.ItemType {
 	return proto.ItemType_ItemTypeUnknown
 }
 
+func (item WowheadItemResponse) IsScalableArmorSlot() bool {
+	// Special case shields as Base Armor
+	if item.GetWeaponType() == proto.WeaponType_WeaponTypeShield {
+		return true
+	}
+
+	itemType := item.GetItemType()
+	switch itemType {
+	case
+		proto.ItemType_ItemTypeNeck,
+		proto.ItemType_ItemTypeFinger,
+		proto.ItemType_ItemTypeTrinket,
+		proto.ItemType_ItemTypeWeapon:
+		return false
+	}
+	return true
+}
+
+func (item WowheadItemResponse) GetArmorValues() (int, int) {
+	armorValue := item.GetIntValue(armorRegex)
+	bonusArmorValue := item.GetIntValue(bonusArmorRegex)
+
+	if item.IsScalableArmorSlot() {
+		armorValue = armorValue - bonusArmorValue
+	} else {
+		bonusArmorValue = armorValue
+		armorValue = 0
+	}
+
+	return armorValue, bonusArmorValue
+}
+
 var armorTypePatterns = map[proto.ArmorType]*regexp.Regexp{
-	proto.ArmorType_ArmorTypeCloth:   regexp.MustCompile(`<span class="q1">Cloth</span>`),
-	proto.ArmorType_ArmorTypeLeather: regexp.MustCompile(`<span class="q1">Leather</span>`),
-	proto.ArmorType_ArmorTypeMail:    regexp.MustCompile(`<span class="q1">Mail</span>`),
-	proto.ArmorType_ArmorTypePlate:   regexp.MustCompile(`<span class="q1">Plate</span>`),
+	proto.ArmorType_ArmorTypeCloth:   regexp.MustCompile(`<span class="q1">(?:<!--asc1-->)?Cloth</span>`),
+	proto.ArmorType_ArmorTypeLeather: regexp.MustCompile(`<span class="q1">(?:<!--asc2-->)?Leather</span>`),
+	proto.ArmorType_ArmorTypeMail:    regexp.MustCompile(`<span class="q1">(?:<!--asc3-->)?Mail</span>`),
+	proto.ArmorType_ArmorTypePlate:   regexp.MustCompile(`<span class="q1">(?:<!--asc4-->)?Plate</span>`),
 }
 
 func (item WowheadItemResponse) GetArmorType() proto.ArmorType {
@@ -601,7 +641,7 @@ func (item WowheadItemResponse) ToItemProto() *proto.UIItem {
 		WeaponDamageMax: weaponDamageMax,
 		WeaponSpeed:     item.GetWeaponSpeed(),
 
-		Ilvl:    int32(item.GetItemLevel()),
+		ilvl:    int32(item.GetItemLevel()),
 		Phase:   int32(item.GetPhase()),
 		Quality: proto.ItemQuality(item.GetQuality()),
 		Unique:  item.GetUnique(),

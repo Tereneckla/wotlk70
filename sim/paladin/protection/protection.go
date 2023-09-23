@@ -92,17 +92,24 @@ func (prot *ProtectionPaladin) Initialize() {
 	if prot.Options.UseAvengingWrath {
 		prot.RegisterAvengingWrathCD()
 	}
+
+	if !prot.IsUsingAPL {
+		prot.RegisterPrepullAction(-3*time.Second, func(sim *core.Simulation) {
+			prot.HolyShield.Cast(sim, nil)
+		})
+	}
+
+	if !prot.IsUsingAPL {
+		prot.RegisterPrepullAction(-1500*time.Millisecond, func(sim *core.Simulation) {
+			prot.DivinePlea.Cast(sim, nil)
+		})
+	}
 }
 
 func (prot *ProtectionPaladin) Reset(sim *core.Simulation) {
 	prot.Paladin.Reset(sim)
 
-	// Pre-activate Holy Shield before combat starts.
-	// Assume it gets cast 3s before entering combat.
-	prot.HolyShieldAura.Activate(sim)
-	prot.HolyShield.CD.Timer.Set(time.Second * 7)
-
-	sim.RegisterExecutePhaseCallback(func(sim *core.Simulation, isExecute int) {
+	sim.RegisterExecutePhaseCallback(func(sim *core.Simulation, isExecute int32) {
 		if isExecute == 20 {
 			prot.OnGCDReady(sim)
 		}
@@ -120,6 +127,6 @@ func (prot *ProtectionPaladin) Reset(sim *core.Simulation) {
 		prot.SealOfRighteousnessAura.Activate(sim)
 	}
 
-	//prot.DivinePleaAura.Activate(sim)
-	//prot.DivinePlea.CD.Use(sim)
+	prot.RighteousFuryAura.Activate(sim)
+	prot.Paladin.PseudoStats.Stunned = false
 }

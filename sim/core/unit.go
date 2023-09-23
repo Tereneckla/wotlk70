@@ -49,6 +49,13 @@ type Unit struct {
 
 	MobType proto.MobType
 
+	// Amount of time it takes for the human agent to react to in-game events.
+	// Used by certain APL values and actions.
+	ReactionTime time.Duration
+
+	// Amount of time following a post-GCD channel tick, to when the next action can be performed.
+	ChannelClipDelay time.Duration
+
 	// How far this unit is from its target(s). Measured in yards, this is used
 	// for calculating spell travel time for certain spells.
 	DistanceFromTarget float64
@@ -104,13 +111,17 @@ type Unit struct {
 	spellRegistrationHandlers []SpellRegisteredHandler
 
 	// Pets owned by this Unit.
-	Pets []PetAgent
+	PetAgents []PetAgent
+
+	DynamicStatsPets      []*Pet
+	DynamicMeleeSpeedPets []*Pet
 
 	// AutoAttacks is the manager for auto attack swings.
 	// Must be enabled to use, with "EnableAutoAttacks()".
 	AutoAttacks AutoAttacks
 
-	Rotation *APLRotation
+	IsUsingAPL bool // Used for checks before the finalize() stage, when apl rotations are created.
+	Rotation   *APLRotation
 
 	// Statistics describing the results of the sim.
 	Metrics UnitMetrics
@@ -145,6 +156,11 @@ type Unit struct {
 
 	CurrentTarget *Unit
 	defaultTarget *Unit
+
+	// The currently-channeled DOT spell, otherwise nil.
+	ChanneledDot *Dot
+
+	DummyProcSpell *Spell
 }
 
 // Units can be disabled for several reasons:
@@ -224,7 +240,7 @@ func (unit *Unit) AddStatsDynamic(sim *Simulation, bonus stats.Stats) {
 		}
 	}
 
-	unit.statsWithoutDeps = unit.statsWithoutDeps.Add(bonus)
+	unit.statsWithoutDeps.AddInplace(&bonus)
 
 	bonus = unit.ApplyStatDependencies(bonus)
 
@@ -232,29 +248,29 @@ func (unit *Unit) AddStatsDynamic(sim *Simulation, bonus stats.Stats) {
 		unit.Log(sim, "Dynamic stat change: %s", bonus.FlatString())
 	}
 
-	unit.stats = unit.stats.Add(bonus)
+	unit.stats.AddInplace(&bonus)
 	unit.processDynamicBonus(sim, bonus)
 }
+
 func (unit *Unit) AddStatDynamic(sim *Simulation, stat stats.Stat, amount float64) {
 	bonus := stats.Stats{}
 	bonus[stat] = amount
 	unit.AddStatsDynamic(sim, bonus)
 }
+
 func (unit *Unit) processDynamicBonus(sim *Simulation, bonus stats.Stats) {
 	if bonus[stats.MP5] != 0 || bonus[stats.Intellect] != 0 || bonus[stats.Spirit] != 0 {
 		unit.UpdateManaRegenRates()
 	}
 	if bonus[stats.MeleeHaste] != 0 {
-		unit.AutoAttacks.UpdateSwingTime(sim)
+		unit.AutoAttacks.UpdateSwingTimers(sim)
 	}
 	if bonus[stats.SpellHaste] != 0 {
 		unit.updateCastSpeed()
 	}
 
-	if len(unit.Pets) > 0 {
-		for _, petAgent := range unit.Pets {
-			petAgent.GetPet().addOwnerStats(sim, bonus)
-		}
+	for _, pet := range unit.DynamicStatsPets {
+		pet.addOwnerStats(sim, bonus)
 	}
 }
 
@@ -347,18 +363,27 @@ func (unit *Unit) RangedSwingSpeed() float64 {
 // MultiplyMeleeSpeed will alter the attack speed multiplier and change swing speed of all autoattack swings in progress.
 func (unit *Unit) MultiplyMeleeSpeed(sim *Simulation, amount float64) {
 	unit.PseudoStats.MeleeSpeedMultiplier *= amount
-	unit.AutoAttacks.UpdateSwingTime(sim)
+
+	for _, pet := range unit.DynamicMeleeSpeedPets {
+		pet.dynamicMeleeSpeedInheritance(amount)
+	}
+	unit.AutoAttacks.UpdateSwingTimers(sim)
 }
 
 func (unit *Unit) MultiplyRangedSpeed(sim *Simulation, amount float64) {
 	unit.PseudoStats.RangedSpeedMultiplier *= amount
+	unit.AutoAttacks.UpdateSwingTimers(sim)
 }
 
 // Helper for when both MultiplyMeleeSpeed and MultiplyRangedSpeed are needed.
 func (unit *Unit) MultiplyAttackSpeed(sim *Simulation, amount float64) {
 	unit.PseudoStats.MeleeSpeedMultiplier *= amount
 	unit.PseudoStats.RangedSpeedMultiplier *= amount
-	unit.AutoAttacks.UpdateSwingTime(sim)
+
+	for _, pet := range unit.DynamicMeleeSpeedPets {
+		pet.dynamicMeleeSpeedInheritance(amount)
+	}
+	unit.AutoAttacks.UpdateSwingTimers(sim)
 }
 
 func (unit *Unit) AddBonusRangedHitRating(amount float64) {
@@ -421,10 +446,11 @@ func (unit *Unit) init(sim *Simulation) {
 	unit.auraTracker.init(sim)
 }
 
-func (unit *Unit) reset(sim *Simulation, agent Agent) {
+func (unit *Unit) reset(sim *Simulation, _ Agent) {
 	unit.enabled = true
 	unit.resetCDs(sim)
 	unit.Hardcast.Expires = startingCDTime
+	unit.ChanneledDot = nil
 	unit.Metrics.reset()
 	unit.ResetStatDeps()
 	unit.statsWithoutDeps = unit.initialStatsWithoutDeps
@@ -446,6 +472,13 @@ func (unit *Unit) reset(sim *Simulation, agent Agent) {
 	unit.RunicPowerBar.reset(sim)
 
 	unit.AutoAttacks.reset(sim)
+
+	if unit.Rotation != nil {
+		unit.Rotation.reset(sim)
+	}
+
+	unit.DynamicStatsPets = unit.DynamicStatsPets[:0]
+	unit.DynamicMeleeSpeedPets = unit.DynamicMeleeSpeedPets[:0]
 }
 
 func (unit *Unit) startPull(sim *Simulation) {
@@ -457,7 +490,7 @@ func (unit *Unit) startPull(sim *Simulation) {
 }
 
 // Advance moves time forward counting down auras, CDs, mana regen, etc
-func (unit *Unit) advance(sim *Simulation, elapsedTime time.Duration) {
+func (unit *Unit) advance(sim *Simulation) {
 	unit.auraTracker.advance(sim)
 
 	if hc := &unit.Hardcast; hc.Expires != startingCDTime && hc.Expires <= sim.CurrentTime {
@@ -489,4 +522,41 @@ func (unit *Unit) GetSpellsMatchingSchool(school SpellSchool) []*Spell {
 		}
 	}
 	return spells
+}
+
+func (unit *Unit) GetUnit(ref *proto.UnitReference) *Unit {
+	return unit.Env.GetUnit(ref, unit)
+}
+
+func (unit *Unit) GetMetadata() *proto.UnitMetadata {
+	metadata := &proto.UnitMetadata{
+		Name: unit.Label,
+	}
+
+	metadata.Spells = MapSlice(unit.Spellbook, func(spell *Spell) *proto.SpellStats {
+		return &proto.SpellStats{
+			Id: spell.ActionID.ToProto(),
+
+			IsCastable:      spell.Flags.Matches(SpellFlagAPL),
+			IsChanneled:     spell.Flags.Matches(SpellFlagChanneled),
+			IsMajorCooldown: spell.Flags.Matches(SpellFlagMCD),
+			HasDot:          spell.dots != nil || spell.aoeDot != nil,
+			HasShield:       spell.shields != nil || spell.selfShield != nil,
+			PrepullOnly:     spell.Flags.Matches(SpellFlagPrepullOnly),
+		}
+	})
+
+	aplAuras := FilterSlice(unit.auras, func(aura *Aura) bool {
+		return !aura.ActionID.IsEmptyAction()
+	})
+	metadata.Auras = MapSlice(aplAuras, func(aura *Aura) *proto.AuraStats {
+		return &proto.AuraStats{
+			Id:                 aura.ActionID.ToProto(),
+			MaxStacks:          aura.MaxStacks,
+			HasIcd:             aura.Icd != nil,
+			HasExclusiveEffect: len(aura.ExclusiveEffects) > 0,
+		}
+	})
+
+	return metadata
 }

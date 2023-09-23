@@ -2,6 +2,7 @@ package database
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 
@@ -50,6 +51,8 @@ func ParseWowheadDB(dbContents string) WowheadDatabase {
 		}
 	}
 
+	fmt.Printf("\n--\nWowhead DB items loaded: %d\n--\n", len(wowheadDB.Items))
+
 	return wowheadDB
 }
 
@@ -63,7 +66,7 @@ type WowheadItem struct {
 	Icon string `json:"icon"`
 
 	Quality int32 `json:"quality"`
-	Ilvl    int32 `json:"itemLevel"`
+	ilvl    int32 `json:"itemLevel"`
 	Phase   int32 `json:"contentPhase"`
 
 	Stats WowheadItemStats `json:"stats"`
@@ -124,7 +127,8 @@ func (wi WowheadItem) ToProto() *proto.UIItem {
 		Id:      wi.ID,
 		Name:    wi.Name,
 		Icon:    wi.Icon,
-		Ilvl:    wi.Ilvl,
+		ilvl:    wi.ilvl,
+		Phase:   wi.Phase,
 		Sources: sources,
 	}
 }

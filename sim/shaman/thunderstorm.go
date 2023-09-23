@@ -22,6 +22,7 @@ func (shaman *Shaman) registerThunderstormSpell() {
 
 	shaman.Thunderstorm = shaman.RegisterSpell(core.SpellConfig{
 		ActionID:    actionID,
+		Flags:       core.SpellFlagAPL,
 		SpellSchool: core.SpellSchoolNature,
 		ProcMask:    core.ProcMaskSpellDamage,
 
@@ -46,10 +47,10 @@ func (shaman *Shaman) registerThunderstormSpell() {
 
 			if shaman.thunderstormInRange {
 				dmgFromSP := 0.172 * spell.SpellPower()
-				for _, aoeTarget := range sim.Encounter.Targets {
+				for _, aoeTarget := range sim.Encounter.TargetUnits {
 					baseDamage := sim.Roll(1074, 1226) + dmgFromSP
 					baseDamage *= sim.Encounter.AOECapMultiplier()
-					spell.CalcAndDealDamage(sim, &aoeTarget.Unit, baseDamage, spell.OutcomeMagicHitAndCrit)
+					spell.CalcAndDealDamage(sim, aoeTarget, baseDamage, spell.OutcomeMagicHitAndCrit)
 				}
 			}
 		},

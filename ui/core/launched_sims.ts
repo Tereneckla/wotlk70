@@ -11,31 +11,56 @@ export enum LaunchStatus {
 	Launched,
 }
 
-export const raidSimStatus: LaunchStatus = LaunchStatus.Alpha;
+export const raidSimStatus: LaunchStatus = LaunchStatus.Beta;
 
 // This list controls which links are shown in the top-left dropdown menu.
 export const simLaunchStatuses: Record<Spec, LaunchStatus> = {
-	[Spec.SpecBalanceDruid]: LaunchStatus.Beta,
-	[Spec.SpecFeralDruid]: LaunchStatus.Beta,
-	[Spec.SpecFeralTankDruid]: LaunchStatus.Beta,
+	[Spec.SpecBalanceDruid]: LaunchStatus.Launched,
+	[Spec.SpecFeralDruid]: LaunchStatus.Launched,
+	[Spec.SpecFeralTankDruid]: LaunchStatus.Launched,
 	[Spec.SpecRestorationDruid]: LaunchStatus.Unlaunched,
-	[Spec.SpecElementalShaman]: LaunchStatus.Beta,
-	[Spec.SpecEnhancementShaman]: LaunchStatus.Beta,
+	[Spec.SpecElementalShaman]: LaunchStatus.Launched,
+	[Spec.SpecEnhancementShaman]: LaunchStatus.Launched,
 	[Spec.SpecRestorationShaman]: LaunchStatus.Unlaunched,
 	[Spec.SpecHunter]: LaunchStatus.Launched,
-	[Spec.SpecMage]: LaunchStatus.Beta,
-	[Spec.SpecRogue]: LaunchStatus.Beta,
+	[Spec.SpecMage]: LaunchStatus.Launched,
+	[Spec.SpecRogue]: LaunchStatus.Launched,
 	[Spec.SpecHolyPaladin]: LaunchStatus.Unlaunched,
-	[Spec.SpecProtectionPaladin]: LaunchStatus.Beta,
-	[Spec.SpecRetributionPaladin]: LaunchStatus.Beta,
+	[Spec.SpecProtectionPaladin]: LaunchStatus.Launched,
+	[Spec.SpecRetributionPaladin]: LaunchStatus.Launched,
 	[Spec.SpecHealingPriest]: LaunchStatus.Alpha,
-	[Spec.SpecShadowPriest]: LaunchStatus.Beta,
-	[Spec.SpecSmitePriest]: LaunchStatus.Beta,
-	[Spec.SpecWarlock]: LaunchStatus.Beta,
-	[Spec.SpecWarrior]: LaunchStatus.Beta,
-	[Spec.SpecProtectionWarrior]: LaunchStatus.Beta,
+	[Spec.SpecShadowPriest]: LaunchStatus.Launched,
+	[Spec.SpecSmitePriest]: LaunchStatus.Launched,
+	[Spec.SpecWarlock]: LaunchStatus.Launched,
+	[Spec.SpecWarrior]: LaunchStatus.Launched,
+	[Spec.SpecProtectionWarrior]: LaunchStatus.Launched,
 	[Spec.SpecDeathknight]: LaunchStatus.Unlaunched,
 	[Spec.SpecTankDeathknight]: LaunchStatus.Unlaunched,
+};
+
+// Alpha and Beta show an info notice at the top of the page.
+export const aplLaunchStatuses: Record<Spec, LaunchStatus> = {
+	[Spec.SpecBalanceDruid]: LaunchStatus.Alpha,
+	[Spec.SpecFeralDruid]: LaunchStatus.Alpha,
+	[Spec.SpecFeralTankDruid]: LaunchStatus.Alpha,
+	[Spec.SpecRestorationDruid]: LaunchStatus.Alpha,
+	[Spec.SpecElementalShaman]: LaunchStatus.Alpha,
+	[Spec.SpecEnhancementShaman]: LaunchStatus.Alpha,
+	[Spec.SpecRestorationShaman]: LaunchStatus.Alpha,
+	[Spec.SpecHunter]: LaunchStatus.Launched,
+	[Spec.SpecMage]: LaunchStatus.Alpha,
+	[Spec.SpecRogue]: LaunchStatus.Alpha,
+	[Spec.SpecHolyPaladin]: LaunchStatus.Alpha,
+	[Spec.SpecProtectionPaladin]: LaunchStatus.Alpha,
+	[Spec.SpecRetributionPaladin]: LaunchStatus.Alpha,
+	[Spec.SpecHealingPriest]: LaunchStatus.Alpha,
+	[Spec.SpecShadowPriest]: LaunchStatus.Alpha,
+	[Spec.SpecSmitePriest]: LaunchStatus.Alpha,
+	[Spec.SpecWarlock]: LaunchStatus.Alpha,
+	[Spec.SpecWarrior]: LaunchStatus.Alpha,
+	[Spec.SpecProtectionWarrior]: LaunchStatus.Alpha,
+	[Spec.SpecDeathknight]: LaunchStatus.Beta,
+	[Spec.SpecTankDeathknight]: LaunchStatus.Alpha,
 };
 
 // Meme specs are excluded from title drop-down menu.

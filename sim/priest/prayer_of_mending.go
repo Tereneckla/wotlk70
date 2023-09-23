@@ -17,7 +17,7 @@ func (priest *Priest) registerPrayerOfMendingSpell() {
 		}
 	}
 
-	maxJumps := 5
+	maxJumps := 5 + core.TernaryInt(priest.HasSetBonus(ItemSetRegaliaOfFaith, 2), 1, 0)
 
 	var curTarget *core.Unit
 	var remainingJumps int
@@ -56,7 +56,7 @@ func (priest *Priest) registerPrayerOfMendingSpell() {
 		ActionID:    actionID,
 		SpellSchool: core.SpellSchoolHoly,
 		ProcMask:    core.ProcMaskSpellHealing,
-		Flags:       core.SpellFlagHelpful,
+		Flags:       core.SpellFlagHelpful | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost: 0.15,
@@ -80,7 +80,8 @@ func (priest *Priest) registerPrayerOfMendingSpell() {
 			(1 + .01*float64(priest.Talents.BlessedResilience)) *
 			(1 + .02*float64(priest.Talents.FocusedPower)) *
 			(1 + .02*float64(priest.Talents.DivineProvidence)) *
-			(1 + .01*float64(priest.Talents.TwinDisciplines)),
+			(1 + .01*float64(priest.Talents.TwinDisciplines)) *
+			core.TernaryFloat64(priest.HasSetBonus(ItemSetZabrasRaiment, 2), 1.2, 1),
 		CritMultiplier:   priest.DefaultHealingCritMultiplier(),
 		ThreatMultiplier: 1 - []float64{0, .07, .14, .20}[priest.Talents.SilentResolve],
 

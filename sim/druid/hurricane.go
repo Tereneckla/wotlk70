@@ -7,11 +7,11 @@ import (
 )
 
 func (druid *Druid) registerHurricaneSpell() {
-	druid.Hurricane = druid.RegisterSpell(core.SpellConfig{
+	druid.Hurricane = druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 27012},
 		SpellSchool: core.SpellSchoolNature,
 		ProcMask:    core.ProcMaskSpellDamage,
-		Flags:       core.SpellFlagChanneled | SpellFlagOmenTrigger,
+		Flags:       core.SpellFlagChanneled | SpellFlagOmenTrigger | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.81,
@@ -48,8 +48,8 @@ func (druid *Druid) registerHurricaneSpell() {
 				dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				for _, aoeTarget := range sim.Encounter.Targets {
-					dot.CalcAndDealPeriodicSnapshotDamage(sim, &aoeTarget.Unit, dot.OutcomeMagicHitAndSnapshotCrit)
+				for _, aoeTarget := range sim.Encounter.TargetUnits {
+					dot.CalcAndDealPeriodicSnapshotDamage(sim, aoeTarget, dot.OutcomeMagicHitAndSnapshotCrit)
 				}
 			},
 		},

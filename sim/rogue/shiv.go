@@ -17,7 +17,7 @@ func (rogue *Rogue) registerShivSpell() {
 		ActionID:    core.ActionID{SpellID: 5938},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeOHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | SpellFlagBuilder,
+		Flags:       core.SpellFlagMeleeMetrics | SpellFlagBuilder | core.SpellFlagAPL,
 
 		EnergyCost: core.EnergyCostOptions{
 			Cost: baseCost,
@@ -36,8 +36,9 @@ func (rogue *Rogue) registerShivSpell() {
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			rogue.BreakStealth(sim)
 			baseDamage := spell.Unit.OHNormalizedWeaponDamage(sim, spell.MeleeAttackPower())
-			result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
+			result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialNoBlockDodgeParryNoCrit)
 
 			if result.Landed() {
 				rogue.AddComboPoints(sim, 1, spell.ComboPointMetrics())

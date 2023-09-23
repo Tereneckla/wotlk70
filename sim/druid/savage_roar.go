@@ -1,6 +1,13 @@
 package druid
-
 /*
+import (
+	"time"
+
+	"github.com/Tereneckla/wotlk/sim/core"
+	"github.com/Tereneckla/wotlk/sim/core/proto"
+	"github.com/Tereneckla/wotlk/sim/core/stats"
+)
+
 func (druid *Druid) getSavageRoarMultiplier() float64 {
 	return 1.3 + core.TernaryFloat64(druid.HasMajorGlyph(proto.DruidMajorGlyph_GlyphOfSavageRoar), 0.03, 0)
 }
@@ -33,9 +40,9 @@ func (druid *Druid) registerSavageRoarSpell() {
 		},
 	})
 
-	srSpell := druid.RegisterSpell(core.SpellConfig{
+	srSpell := druid.RegisterSpell(Cat, core.SpellConfig{
 		ActionID: actionID,
-
+		Flags:    core.SpellFlagAPL,
 		EnergyCost: core.EnergyCostOptions{
 			Cost: 25,
 		},
@@ -46,7 +53,7 @@ func (druid *Druid) registerSavageRoarSpell() {
 			IgnoreHaste: true,
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return druid.InForm(Cat) && druid.ComboPoints() > 0
+			return druid.ComboPoints() > 0
 		},
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {

@@ -39,7 +39,6 @@ func NewProtectionWarrior(character core.Character, options *proto.Player) *Prot
 	war := &ProtectionWarrior{
 		Warrior: warrior.NewWarrior(character, options.TalentsString, warrior.WarriorInputs{
 			ShoutType: warOptions.Options.Shout,
-			Munch:     warOptions.Options.Munch,
 		}),
 		Rotation: warOptions.Rotation,
 		Options:  warOptions.Options,
@@ -96,15 +95,14 @@ func (war *ProtectionWarrior) Initialize() {
 	war.DefensiveStanceAura.BuildPhase = core.CharacterBuildPhaseTalents
 
 	war.CustomRotation = war.makeCustomRotation()
-	/*
-		if war.Options.UseShatteringThrow {
-			war.RegisterShatteringThrowCD()
-		}
-	*/
+	if war.Options.UseShatteringThrow {
+		war.RegisterShatteringThrowCD()
+	}
 }
 
 func (war *ProtectionWarrior) Reset(sim *core.Simulation) {
 	war.Warrior.Reset(sim)
 	war.DefensiveStanceAura.Activate(sim)
 	war.Stance = warrior.DefensiveStance
+	war.Warrior.PseudoStats.Stunned = false
 }

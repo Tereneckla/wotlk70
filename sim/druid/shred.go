@@ -5,21 +5,21 @@ import (
 
 	"github.com/Tereneckla/wotlk/sim/core"
 	"github.com/Tereneckla/wotlk/sim/core/proto"
-	"github.com/Tereneckla/wotlk/sim/core/stats"
 )
 
 func (druid *Druid) registerShredSpell() {
 	flatDamageBonus := (405 +
-		core.TernaryFloat64(druid.Equip[core.ItemSlotRanged].ID == 29390, 88, 0)) / 2.25
+		core.TernaryFloat64(druid.Ranged().ID == 29390, 88, 0) +
+		core.TernaryFloat64(druid.Ranged().ID == 40713, 203, 0)) / 2.25
 
 	hasGlyphofShred := druid.HasMajorGlyph(proto.DruidMajorGlyph_GlyphOfShred)
 	maxRipTicks := druid.MaxRipTicks()
 
-	druid.Shred = druid.RegisterSpell(core.SpellConfig{
+	druid.Shred = druid.RegisterSpell(Cat, core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 27002},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		EnergyCost: core.EnergyCostOptions{
 			Cost:   60 - 9*float64(druid.Talents.ShreddingAttacks),
@@ -30,6 +30,9 @@ func (druid *Druid) registerShredSpell() {
 				GCD: time.Second,
 			},
 			IgnoreHaste: true,
+		},
+		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
+			return !druid.PseudoStats.InFrontOfTarget
 		},
 
 		DamageMultiplier: 2.25,
@@ -81,9 +84,9 @@ func (druid *Druid) registerShredSpell() {
 			baseDamage *= modifier
 			baseres := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeExpectedMagicAlwaysHit)
 
-			critRating := druid.GetStat(stats.MeleeCrit) + spell.BonusCritRating
-			critChance := critRating / (core.CritRatingPerCritChance * 100)
-			critMod := (critChance * (spell.FinalCritMultiplier() - 1))
+			attackTable := spell.Unit.AttackTables[target.UnitIndex]
+			critChance := spell.PhysicalCritChance(attackTable)
+			critMod := (critChance * (spell.CritMultiplier - 1))
 
 			baseres.Damage *= (1 + critMod)
 

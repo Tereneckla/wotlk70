@@ -9,30 +9,17 @@ const CharacterLevel = 70
 const GCDMin = time.Second * 1
 const GCDDefault = time.Millisecond * 1500
 
-const MeleeAttackRatingPerDamage = 14.0
-const ExpertisePerQuarterPercentReduction = 15.77 / 4 // TODO: Does it still cutoff at 1/4 percents?
+const DefaultAttackPowerPerDPS = 14.0
 const ArmorPenPerPercentArmor = 5.92
 
-const HasteRatingPerHastePercent = 15.77
-const CritRatingPerCritChance = 22.08
-
-const SpellHitRatingPerHitChance = 12.62
-const MeleeHitRatingPerHitChance = 15.77
-
-const DefenseRatingPerDefense = 2.37
-const DodgeRatingPerDodgeChance = 21.76
-const ParryRatingPerParryChance = 21.76
-const BlockRatingPerBlockChance = 7.88
 const MissDodgeParryBlockCritChancePerDefense = 0.04
 
 const DefenseRatingToChanceReduction = (1.0 / DefenseRatingPerDefense) * MissDodgeParryBlockCritChancePerDefense / 100
 
-const ResilienceRatingPerCritReductionChance = 82.0
 const ResilienceRatingPerCritDamageReductionPercent = 39.4231 / 2.2
 
-// TODO: More log scraping to verify this value for WOTLK.
-// Assuming 574 AP debuffs go to exactly zero and achieve -14.2%
-const EnemyAutoAttackAPCoefficient = 0.0002883296
+// Updated based on formulas supplied by InDebt on WoWSims Discord
+const EnemyAutoAttackAPCoefficient = 1.0 / (14.0 * 177.0)
 
 const AverageMagicPartialResistMultiplier = 0.94
 

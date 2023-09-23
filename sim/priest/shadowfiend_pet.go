@@ -17,15 +17,15 @@ type Shadowfiend struct {
 }
 
 var baseStats = stats.Stats{
-	stats.Strength:  173,
-	stats.Agility:   119,
-	stats.Stamina:   80,
-	stats.Intellect: 291,
+	stats.Strength:  314,
+	stats.Agility:   90,
+	stats.Stamina:   348,
+	stats.Intellect: 201,
 }
 
 func (priest *Priest) NewShadowfiend() *Shadowfiend {
 	shadowfiend := &Shadowfiend{
-		Pet:    core.NewPet("Shadowfiend", &priest.Character, baseStats, priest.shadowfiendStatInheritance(), nil, false, false),
+		Pet:    core.NewPet("Shadowfiend", &priest.Character, baseStats, priest.shadowfiendStatInheritance(), false, false),
 		Priest: priest,
 	}
 
@@ -66,10 +66,9 @@ func (priest *Priest) NewShadowfiend() *Shadowfiend {
 	shadowfiend.EnableAutoAttacks(shadowfiend, core.AutoAttackOptions{
 		MainHand: core.Weapon{
 			BaseDamageMin:        125,
-			BaseDamageMax:        287,
+			BaseDamageMax:        210,
 			SwingSpeed:           1.5,
 			NormalizedSwingSpeed: 1.5,
-			SwingDuration:        time.Millisecond * 1500,
 			CritMultiplier:       2,
 			SpellSchool:          core.SpellSchoolShadow,
 		},
@@ -77,7 +76,7 @@ func (priest *Priest) NewShadowfiend() *Shadowfiend {
 	})
 
 	shadowfiend.AddStatDependency(stats.Strength, stats.AttackPower, 1.0)
-	shadowfiend.AddStat(stats.AttackPower, -10)
+
 	core.ApplyPetConsumeEffects(&shadowfiend.Character, priest.Consumes)
 
 	priest.AddPet(shadowfiend)
@@ -90,8 +89,7 @@ func (priest *Priest) shadowfiendStatInheritance() core.PetStatInheritance {
 		hitPercentage := ownerStats[stats.SpellHit] / core.SpellHitRatingPerHitChance
 
 		return stats.Stats{ //still need to nail down shadow fiend crit scaling, but removing owner crit scaling after further investigation
-			stats.AttackPower: ownerStats[stats.SpellPower] * 3,
-			stats.SpellPower:  ownerStats[stats.SpellPower] * 0.3,
+			stats.AttackPower: ownerStats[stats.SpellPower] * 5.377,
 			stats.MeleeHit:    hitPercentage * core.MeleeHitRatingPerHitChance,
 			stats.SpellHit:    ownerStats[stats.SpellHit],
 			//stats.MeleeCrit:   ownerStats[stats.SpellCrit],
@@ -102,7 +100,7 @@ func (priest *Priest) shadowfiendStatInheritance() core.PetStatInheritance {
 	}
 }
 
-func (shadowfiend *Shadowfiend) OnAutoAttack(sim *core.Simulation, spell *core.Spell) {
+func (shadowfiend *Shadowfiend) OnAutoAttack(sim *core.Simulation, _ *core.Spell) {
 	priest := shadowfiend.Priest
 	restoreMana := priest.MaxMana() * 0.05
 
@@ -123,6 +121,10 @@ func (shadowfiend *Shadowfiend) OnGCDReady(sim *core.Simulation) {
 func (shadowfiend *Shadowfiend) Reset(sim *core.Simulation) {
 	shadowfiend.ShadowcrawlAura.Deactivate(sim)
 	shadowfiend.Disable(sim)
+}
+
+func (shadowfiend *Shadowfiend) OnPetDisable(sim *core.Simulation) {
+	shadowfiend.ShadowcrawlAura.Deactivate(sim)
 }
 
 func (shadowfiend *Shadowfiend) GetPet() *core.Pet {

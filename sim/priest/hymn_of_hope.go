@@ -1,6 +1,6 @@
 package priest
-
-/*import (
+/*
+import (
 	"time"
 
 	"github.com/Tereneckla/wotlk/sim/core"

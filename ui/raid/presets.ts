@@ -104,10 +104,122 @@ export interface PresetSpecSettings<SpecType extends Spec> {
 }
 
 export const playerPresets: Array<PresetSpecSettings<any>> = [
+	// {
+	// 	spec: Spec.SpecTankDeathknight,
+	// 	rotation: TankDeathknightPresets.DefaultRotation,
+	// 	talents: TankDeathknightPresets.BloodTalents.data,
+	// 	specOptions: TankDeathknightPresets.DefaultOptions,
+	// 	consumes: TankDeathknightPresets.DefaultConsumes,
+	// 	defaultName: 'Blood Tank',
+	// 	defaultFactionRaces: {
+	// 		[Faction.Unknown]: Race.RaceUnknown,
+	// 		[Faction.Alliance]: Race.RaceHuman,
+	// 		[Faction.Horde]: Race.RaceTroll,
+	// 	},
+	// 	defaultGear: {
+	// 		[Faction.Unknown]: {},
+	// 		[Faction.Alliance]: {
+	// 			1: TankDeathknightPresets.P1_BLOOD_PRESET.gear,
+	// 			2: TankDeathknightPresets.P2_BLOOD_PRESET.gear,
+	// 		},
+	// 		[Faction.Horde]: {
+	// 			1: TankDeathknightPresets.P1_BLOOD_PRESET.gear,
+	// 			2: TankDeathknightPresets.P2_BLOOD_PRESET.gear,
+	// 		},
+	// 	},
+	// 	tooltip: 'Blood Tank Death Knight',
+	// 	iconUrl: getSpecIcon(Class.ClassDeathknight, 0),
+	// },
+	// {
+	// 	spec: Spec.SpecDeathknight,
+	// 	rotation: DeathknightPresets.DefaultBloodRotation,
+	// 	talents: DeathknightPresets.BloodTalents.data,
+	// 	specOptions: DeathknightPresets.DefaultBloodOptions,
+	// 	consumes: DeathknightPresets.DefaultConsumes,
+	// 	defaultName: 'Blood DPS',
+	// 	defaultFactionRaces: {
+	// 		[Faction.Unknown]: Race.RaceUnknown,
+	// 		[Faction.Alliance]: Race.RaceHuman,
+	// 		[Faction.Horde]: Race.RaceOrc,
+	// 	},
+	// 	defaultGear: {
+	// 		[Faction.Unknown]: {},
+	// 		[Faction.Alliance]: {
+	// 			1: DeathknightPresets.P1_BLOOD_BIS_PRESET.gear,
+	// 			2: DeathknightPresets.P2_BLOOD_BIS_PRESET.gear,
+	// 			3: DeathknightPresets.P3_BLOOD_BIS_PRESET.gear,
+	// 		},
+	// 		[Faction.Horde]: {
+	// 			1: DeathknightPresets.P1_BLOOD_BIS_PRESET.gear,
+	// 			2: DeathknightPresets.P2_BLOOD_BIS_PRESET.gear,
+	// 			3: DeathknightPresets.P3_BLOOD_BIS_PRESET.gear,
+	// 		},
+	// 	},
+	// 	tooltip: 'Blood DPS Death Knight',
+	// 	iconUrl: getSpecIcon(Class.ClassDeathknight, 3),
+	// },
+	// {
+	// 	spec: Spec.SpecDeathknight,
+	// 	rotation: DeathknightPresets.DefaultFrostRotation,
+	// 	talents: DeathknightPresets.FrostTalents.data,
+	// 	specOptions: DeathknightPresets.DefaultFrostOptions,
+	// 	consumes: DeathknightPresets.DefaultConsumes,
+	// 	defaultName: 'Frost',
+	// 	defaultFactionRaces: {
+	// 		[Faction.Unknown]: Race.RaceUnknown,
+	// 		[Faction.Alliance]: Race.RaceHuman,
+	// 		[Faction.Horde]: Race.RaceTroll,
+	// 	},
+	// 	defaultGear: {
+	// 		[Faction.Unknown]: {},
+	// 		[Faction.Alliance]: {
+	// 			1: DeathknightPresets.P1_FROST_BIS_PRESET.gear,
+	// 			2: DeathknightPresets.P2_FROST_BIS_PRESET.gear,
+	// 			3: DeathknightPresets.P3_FROST_BIS_PRESET.gear,
+	// 		},
+	// 		[Faction.Horde]: {
+	// 			1: DeathknightPresets.P1_FROST_BIS_PRESET.gear,
+	// 			2: DeathknightPresets.P2_FROST_BIS_PRESET.gear,
+	// 			3: DeathknightPresets.P3_FROST_BIS_PRESET.gear,
+	// 		},
+	// 	},
+	// 	otherDefaults: DeathknightPresets.OtherDefaults,
+	// 	tooltip: 'Frost Death Knight',
+	// 	iconUrl: getSpecIcon(Class.ClassDeathknight, 1),
+	// },
+	// {
+	// 	spec: Spec.SpecDeathknight,
+	// 	rotation: DeathknightPresets.DefaultUnholyRotation,
+	// 	talents: DeathknightPresets.UnholyDualWieldTalents.data,
+	// 	specOptions: DeathknightPresets.DefaultUnholyOptions,
+	// 	consumes: DeathknightPresets.DefaultConsumes,
+	// 	defaultName: 'Unholy',
+	// 	defaultFactionRaces: {
+	// 		[Faction.Unknown]: Race.RaceUnknown,
+	// 		[Faction.Alliance]: Race.RaceHuman,
+	// 		[Faction.Horde]: Race.RaceTroll,
+	// 	},
+	// 	defaultGear: {
+	// 		[Faction.Unknown]: {},
+	// 		[Faction.Alliance]: {
+	// 			1: DeathknightPresets.P1_UNHOLY_DW_BIS_PRESET.gear,
+	// 			2: DeathknightPresets.P2_UNHOLY_DW_BIS_PRESET.gear,
+	// 			3: DeathknightPresets.P3_UNHOLY_DW_BIS_PRESET.gear,
+	// 		},
+	// 		[Faction.Horde]: {
+	// 			1: DeathknightPresets.P1_UNHOLY_DW_BIS_PRESET.gear,
+	// 			2: DeathknightPresets.P2_UNHOLY_DW_BIS_PRESET.gear,
+	// 			3: DeathknightPresets.P3_UNHOLY_DW_BIS_PRESET.gear,
+	// 		},
+	// 	},
+	// 	otherDefaults: DeathknightPresets.OtherDefaults,
+	// 	tooltip: 'Dual-Wield Unholy DK',
+	// 	iconUrl: getSpecIcon(Class.ClassDeathknight, 2),
+	// },
 	{
 		spec: Spec.SpecBalanceDruid,
 		rotation: BalanceDruidPresets.DefaultRotation,
-		talents: BalanceDruidPresets.StandardTalents.data,
+		talents: BalanceDruidPresets.Phase1Talents.data,
 		specOptions: BalanceDruidPresets.DefaultOptions,
 		consumes: BalanceDruidPresets.DefaultConsumes,
 		otherDefaults: BalanceDruidPresets.OtherDefaults,
@@ -144,12 +256,10 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 		defaultGear: {
 			[Faction.Unknown]: {},
 			[Faction.Alliance]: {
-				1: FeralDruidPresets.P1_PRESET.gear,
-				2: FeralDruidPresets.P2_PRESET.gear,
+				1: FeralDruidPresets.PreRaid_PRESET.gear,
 			},
 			[Faction.Horde]: {
-				1: FeralDruidPresets.P1_PRESET.gear,
-				2: FeralDruidPresets.P2_PRESET.gear,
+				1: FeralDruidPresets.PreRaid_PRESET.gear,
 			},
 		},
 		tooltip: specNames[Spec.SpecFeralDruid],
@@ -224,10 +334,14 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 			[Faction.Alliance]: {
 				1: HunterPresets.MM_P1_PRESET.gear,
 				2: HunterPresets.MM_P2_PRESET.gear,
+				3: HunterPresets.MM_P3_PRESET.gear,
+				4: HunterPresets.MM_P4_PRESET.gear,
 			},
 			[Faction.Horde]: {
 				1: HunterPresets.MM_P1_PRESET.gear,
 				2: HunterPresets.MM_P2_PRESET.gear,
+				3: HunterPresets.MM_P3_PRESET.gear,
+				4: HunterPresets.MM_P4_PRESET.gear,
 			},
 		},
 		tooltip: 'Beast Mastery Hunter',
@@ -250,10 +364,14 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 			[Faction.Alliance]: {
 				1: HunterPresets.MM_P1_PRESET.gear,
 				2: HunterPresets.MM_P2_PRESET.gear,
+				3: HunterPresets.MM_P3_PRESET.gear,
+				4: HunterPresets.MM_P4_PRESET.gear,
 			},
 			[Faction.Horde]: {
 				1: HunterPresets.MM_P1_PRESET.gear,
 				2: HunterPresets.MM_P2_PRESET.gear,
+				3: HunterPresets.MM_P3_PRESET.gear,
+				4: HunterPresets.MM_P4_PRESET.gear,
 			},
 		},
 		tooltip: 'Marksmanship Hunter',
@@ -276,10 +394,14 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 			[Faction.Alliance]: {
 				1: HunterPresets.SV_P1_PRESET.gear,
 				2: HunterPresets.SV_P2_PRESET.gear,
+				3: HunterPresets.SV_P3_PRESET.gear,
+				4: HunterPresets.SV_P4_PRESET.gear,
 			},
 			[Faction.Horde]: {
 				1: HunterPresets.SV_P1_PRESET.gear,
 				2: HunterPresets.SV_P2_PRESET.gear,
+				3: HunterPresets.SV_P3_PRESET.gear,
+				4: HunterPresets.SV_P4_PRESET.gear,
 			},
 		},
 		tooltip: 'Survival Hunter',
@@ -301,10 +423,14 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 		defaultGear: {
 			[Faction.Unknown]: {},
 			[Faction.Alliance]: {
-				1: MagePresets.ARCANE_PRERAID_PRESET.gear,
+				1: MagePresets.ARCANE_P1_PRESET.gear,
+				2: MagePresets.ARCANE_P2_PRESET.gear,
+				3: MagePresets.ARCANE_P3_PRESET_ALLIANCE.gear,
 			},
 			[Faction.Horde]: {
-				1: MagePresets.ARCANE_PRERAID_PRESET.gear,
+				1: MagePresets.ARCANE_P1_PRESET.gear,
+				2: MagePresets.ARCANE_P2_PRESET.gear,
+				3: MagePresets.ARCANE_P3_PRESET_HORDE.gear,
 			},
 		},
 		tooltip: 'Arcane Mage',
@@ -313,11 +439,11 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 	{
 		spec: Spec.SpecMage,
 		rotation: MagePresets.DefaultFireRotation,
-		talents: MagePresets.FireBomb.data,
+		talents: MagePresets.FireTalents.data,
 		specOptions: MagePresets.DefaultFireOptions,
 		consumes: MagePresets.DefaultFireConsumes,
-		otherDefaults: MagePresets.OtherDefaults,		
-		defaultName: 'Fire',
+		otherDefaults: MagePresets.OtherDefaults,
+		defaultName: 'TTW Fire',
 		defaultFactionRaces: {
 			[Faction.Unknown]: Race.RaceUnknown,
 			[Faction.Alliance]: Race.RaceGnome,
@@ -326,23 +452,27 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 		defaultGear: {
 			[Faction.Unknown]: {},
 			[Faction.Alliance]: {
-				1: MagePresets.ARCANE_PRERAID_PRESET.gear,
+				1: MagePresets.FIRE_P1_PRESET.gear,
+				2: MagePresets.FIRE_P2_PRESET.gear,
+				3: MagePresets.FIRE_P3_PRESET_ALLIANCE.gear,
 			},
 			[Faction.Horde]: {
-				1: MagePresets.ARCANE_PRERAID_PRESET.gear,
+				1: MagePresets.FIRE_P1_PRESET.gear,
+				2: MagePresets.FIRE_P2_PRESET.gear,
+				3: MagePresets.FIRE_P3_PRESET_HORDE.gear,
 			},
 		},
-		tooltip: 'Fire Mage',
+		tooltip: 'TTW Fire Mage',
 		iconUrl: getSpecIcon(Class.ClassMage, 1),
 	},
 	{
 		spec: Spec.SpecMage,
-		rotation: MagePresets.DefaultFrostRotation,
-		talents: MagePresets.FrostTalents.data,
-		specOptions: MagePresets.DefaultFrostOptions,
-		consumes: MagePresets.DefaultFrostConsumes,
-		otherDefaults: MagePresets.OtherDefaults,		
-		defaultName: 'Frost',
+		rotation: MagePresets.DefaultFFBRotation,
+		talents: MagePresets.FrostfireTalents.data,
+		specOptions: MagePresets.DefaultFFBOptions,
+		consumes: MagePresets.DefaultFireConsumes,
+		otherDefaults: MagePresets.OtherDefaults,
+		defaultName: 'FFB Fire',
 		defaultFactionRaces: {
 			[Faction.Unknown]: Race.RaceUnknown,
 			[Faction.Alliance]: Race.RaceGnome,
@@ -351,19 +481,23 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 		defaultGear: {
 			[Faction.Unknown]: {},
 			[Faction.Alliance]: {
-				1: MagePresets.ARCANE_PRERAID_PRESET.gear,
+				1: MagePresets.FIRE_P1_PRESET.gear,
+				2: MagePresets.FFB_P2_PRESET.gear,
+				3: MagePresets.FFB_P3_PRESET_ALLIANCE.gear,
 			},
 			[Faction.Horde]: {
-				1: MagePresets.ARCANE_PRERAID_PRESET.gear,
+				1: MagePresets.FIRE_P1_PRESET.gear,
+				2: MagePresets.FFB_P2_PRESET.gear,
+				3: MagePresets.FFB_P3_PRESET_HORDE.gear,
 			},
 		},
-		tooltip: 'Frost Mage',
-		iconUrl: getSpecIcon(Class.ClassMage, 2),
+		tooltip: 'FFB Fire Mage',
+		iconUrl: "https://wow.zamimg.com/images/wow/icons/medium/ability_mage_frostfirebolt.jpg",
 	},
 	{
 		spec: Spec.SpecRogue,
 		rotation: RoguePresets.DefaultRotation,
-		talents: RoguePresets.AssassinationTalents.data,
+		talents: RoguePresets.AssassinationTalents137.data,
 		specOptions: RoguePresets.DefaultOptions,
 		consumes: RoguePresets.DefaultConsumes,
 		defaultName: 'Assassination',
@@ -377,10 +511,12 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 			[Faction.Alliance]: {
 				1: RoguePresets.P1_PRESET_ASSASSINATION.gear,
 				2: RoguePresets.P2_PRESET_ASSASSINATION.gear,
+				3: RoguePresets.P3_PRESET_ASSASSINATION.gear,
 			},
 			[Faction.Horde]: {
 				1: RoguePresets.P1_PRESET_ASSASSINATION.gear,
 				2: RoguePresets.P2_PRESET_ASSASSINATION.gear,
+				3: RoguePresets.P3_PRESET_ASSASSINATION.gear,
 			},
 		},
 		tooltip: 'Assassination Rogue',
@@ -389,7 +525,7 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 	{
 		spec: Spec.SpecRogue,
 		rotation: RoguePresets.DefaultRotation,
-		talents: RoguePresets.CombatSwords.data,
+		talents: RoguePresets.CombatCQCTalents.data,
 		specOptions: RoguePresets.DefaultOptions,
 		consumes: RoguePresets.DefaultConsumes,
 		defaultName: 'Combat',
@@ -403,10 +539,12 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 			[Faction.Alliance]: {
 				1: RoguePresets.P1_PRESET_COMBAT.gear,
 				2: RoguePresets.P2_PRESET_COMBAT.gear,
+				3: RoguePresets.P3_PRESET_COMBAT.gear,
 			},
 			[Faction.Horde]: {
 				1: RoguePresets.P1_PRESET_COMBAT.gear,
 				2: RoguePresets.P2_PRESET_COMBAT.gear,
+				3: RoguePresets.P3_PRESET_COMBAT.gear,
 			},
 		},
 		tooltip: 'Combat Rogue',
@@ -429,10 +567,12 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 			[Faction.Alliance]: {
 				1: ElementalShamanPresets.P1_PRESET.gear,
 				2: ElementalShamanPresets.P2_PRESET.gear,
+				3: ElementalShamanPresets.P3_PRESET_ALLI.gear,
 			},
 			[Faction.Horde]: {
 				1: ElementalShamanPresets.P1_PRESET.gear,
 				2: ElementalShamanPresets.P2_PRESET.gear,
+				3: ElementalShamanPresets.P3_PRESET_HORDE.gear,
 			},
 		},
 		tooltip: specNames[Spec.SpecElementalShaman],
@@ -453,11 +593,14 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 		defaultGear: {
 			[Faction.Unknown]: {},
 			[Faction.Alliance]: {
-				1: EnhancementShamanPresets.PreRaid_PRESET.gear,
-				2: EnhancementShamanPresets.PreRaid_PRESET.gear,
+				1: EnhancementShamanPresets.P1_PRESET.gear,
+				2: EnhancementShamanPresets.P2_PRESET_FT.gear,
+				3: EnhancementShamanPresets.P3_PRESET_ALLIANCE.gear,
 			},
 			[Faction.Horde]: {
-				1: EnhancementShamanPresets.PreRaid_PRESET.gear,
+				1: EnhancementShamanPresets.P1_PRESET.gear,
+				2: EnhancementShamanPresets.P2_PRESET_FT.gear,
+				3: EnhancementShamanPresets.P3_PRESET_HORDE.gear,
 			},
 		},
 		tooltip: specNames[Spec.SpecEnhancementShaman],
@@ -558,10 +701,12 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 			[Faction.Alliance]: {
 				1: ShadowPriestPresets.P1_PRESET.gear,
 				2: ShadowPriestPresets.P2_PRESET.gear,
+				3: ShadowPriestPresets.P3_PRESET.gear,
 			},
 			[Faction.Horde]: {
 				1: ShadowPriestPresets.P1_PRESET.gear,
 				2: ShadowPriestPresets.P2_PRESET.gear,
+				3: ShadowPriestPresets.P3_PRESET.gear,
 			},
 		},
 		tooltip: specNames[Spec.SpecShadowPriest],
@@ -610,10 +755,12 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 			[Faction.Alliance]: {
 				1: WarriorPresets.P1_ARMS_PRESET.gear,
 				2: WarriorPresets.P2_ARMS_PRESET.gear,
+				3: WarriorPresets.P3_ARMS_4P_PRESET_ALLIANCE.gear,
 			},
 			[Faction.Horde]: {
 				1: WarriorPresets.P1_ARMS_PRESET.gear,
 				2: WarriorPresets.P2_ARMS_PRESET.gear,
+				3: WarriorPresets.P3_ARMS_4P_PRESET_HORDE.gear,
 			},
 		},
 		tooltip: 'Arms Warrior',
@@ -636,10 +783,12 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 			[Faction.Alliance]: {
 				1: WarriorPresets.P1_FURY_PRESET.gear,
 				2: WarriorPresets.P2_FURY_PRESET.gear,
+				3: WarriorPresets.P3_FURY_PRESET_ALLIANCE.gear,
 			},
 			[Faction.Horde]: {
 				1: WarriorPresets.P1_FURY_PRESET.gear,
 				2: WarriorPresets.P2_FURY_PRESET.gear,
+				3: WarriorPresets.P3_FURY_PRESET_HORDE.gear,
 			},
 		},
 		tooltip: 'Fury Warrior',
@@ -726,7 +875,7 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 	{
 		spec: Spec.SpecRetributionPaladin,
 		rotation: RetributionPaladinPresets.DefaultRotation,
-		talents: RetributionPaladinPresets.BasicTalents.data,
+		talents: RetributionPaladinPresets.AuraMasteryTalents.data,
 		specOptions: RetributionPaladinPresets.DefaultOptions,
 		consumes: RetributionPaladinPresets.DefaultConsumes,
 		defaultName: 'Retribution',
@@ -770,10 +919,14 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 		defaultGear: {
 			[Faction.Unknown]: {},
 			[Faction.Alliance]: {
-				1: WarlockPresets.P1_PreBiS_11.gear,
+				1: WarlockPresets.P1_Preset_Affliction.gear,
+				2: WarlockPresets.P2_Preset_Affliction.gear,
+				3: WarlockPresets.P3_Preset_Affliction_Alliance.gear,
 			},
 			[Faction.Horde]: {
-				1: WarlockPresets.P1_PreBiS_11.gear,
+				1: WarlockPresets.P1_Preset_Affliction.gear,
+				2: WarlockPresets.P2_Preset_Affliction.gear,
+				3: WarlockPresets.P3_Preset_Affliction_Horde.gear,
 			},
 		},
 		otherDefaults: WarlockPresets.OtherDefaults,
@@ -795,10 +948,14 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 		defaultGear: {
 			[Faction.Unknown]: {},
 			[Faction.Alliance]: {
-				1: WarlockPresets.P1_PreBiS_11.gear,
+				1: WarlockPresets.P1_Preset_Demo_Destro.gear,
+				2: WarlockPresets.P2_Preset_Demo_Destro.gear,
+				3: WarlockPresets.P3_Preset_Demo_Alliance.gear,
 			},
 			[Faction.Horde]: {
-				1: WarlockPresets.P1_PreBiS_11.gear,
+				1: WarlockPresets.P1_Preset_Demo_Destro.gear,
+				2: WarlockPresets.P2_Preset_Demo_Destro.gear,
+				3: WarlockPresets.P3_Preset_Demo_Horde.gear,
 			},
 		},
 		otherDefaults: WarlockPresets.OtherDefaults,
@@ -820,10 +977,14 @@ export const playerPresets: Array<PresetSpecSettings<any>> = [
 		defaultGear: {
 			[Faction.Unknown]: {},
 			[Faction.Alliance]: {
-				1: WarlockPresets.P1_PreBiS_11.gear,
+				1: WarlockPresets.P1_Preset_Demo_Destro.gear,
+				2: WarlockPresets.P2_Preset_Demo_Destro.gear,
+				3: WarlockPresets.P3_Preset_Destro_Alliance.gear,
 			},
 			[Faction.Horde]: {
-				1: WarlockPresets.P1_PreBiS_11.gear,
+				1: WarlockPresets.P1_Preset_Demo_Destro.gear,
+				2: WarlockPresets.P2_Preset_Demo_Destro.gear,
+				3: WarlockPresets.P3_Preset_Destro_Horde.gear,
 			},
 		},
 		otherDefaults: WarlockPresets.OtherDefaults,

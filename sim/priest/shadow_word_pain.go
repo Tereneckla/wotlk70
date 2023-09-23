@@ -9,6 +9,8 @@ import (
 
 func (priest *Priest) registerShadowWordPainSpell() {
 	twistedFaithMultiplier := 1 + 0.02*float64(priest.Talents.TwistedFaith)
+	mentalAgility := []float64{0, .04, .07, .10}[priest.Talents.MentalAgility]
+	shadowFocus := 0.02 * float64(priest.Talents.ShadowFocus)
 	mindFlayMod := twistedFaithMultiplier +
 		core.TernaryFloat64(priest.HasGlyph(int32(proto.PriestMajorGlyph_GlyphOfMindFlay)), 0.1, 0)
 
@@ -21,10 +23,11 @@ func (priest *Priest) registerShadowWordPainSpell() {
 		ActionID:    core.ActionID{SpellID: 25368},
 		SpellSchool: core.SpellSchoolShadow,
 		ProcMask:    core.ProcMaskSpellDamage,
+		Flags:       core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.22,
-			Multiplier: 1 - []float64{0, .04, .07, .10}[priest.Talents.MentalAgility],
+			Multiplier: 1 - (shadowFocus + mentalAgility),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -33,7 +36,7 @@ func (priest *Priest) registerShadowWordPainSpell() {
 		},
 
 		BonusHitRating:  float64(priest.Talents.ShadowFocus) * 1 * core.SpellHitRatingPerHitChance,
-		BonusCritRating: float64(priest.Talents.MindMelt) * 3 * core.CritRatingPerCritChance,
+		BonusCritRating: float64(priest.Talents.MindMelt)*3*core.CritRatingPerCritChance + core.TernaryFloat64(priest.HasSetBonus(ItemSetCrimsonAcolyte, 2), 5, 0)*core.CritRatingPerCritChance,
 		DamageMultiplier: 1 +
 			float64(priest.Talents.Darkness)*0.02 +
 			float64(priest.Talents.TwinDisciplines)*0.01 +
@@ -63,7 +66,7 @@ func (priest *Priest) registerShadowWordPainSpell() {
 			},
 
 			NumberOfTicks: 6 +
-				core.TernaryInt32(priest.HasSetBonus(ItemSetAbsolutionRegalia, 2), 1, 0),
+				core.TernaryInt32(priest.HasSetBonus(ItemSetAbsolution, 2), 1, 0),
 			TickLength: time.Second * 3,
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot, isRollover bool) {
@@ -89,6 +92,7 @@ func (priest *Priest) registerShadowWordPainSpell() {
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			result := spell.CalcOutcome(sim, target, spell.OutcomeMagicHit)
 			if result.Landed() {
+				spell.SpellMetrics[target.UnitIndex].Hits--
 				priest.AddShadowWeavingStack(sim)
 				spell.Dot(target).Apply(sim)
 			}

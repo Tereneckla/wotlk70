@@ -77,6 +77,7 @@ const (
 	SchoolIndexHoly
 	SchoolIndexNature
 	SchoolIndexShadow
+
 	SchoolLen
 )
 
@@ -189,29 +190,32 @@ func FromFloatArray(values []float64) Stats {
 
 // Adds two Stats together, returning the new Stats.
 func (stats Stats) Add(other Stats) Stats {
-	newStats := Stats{}
-
-	for i, thisStat := range stats {
-		newStats[i] = thisStat + other[i]
+	var newStats Stats
+	for k, v := range stats {
+		newStats[k] = v + other[k]
 	}
-
 	return newStats
+}
+
+// Adds another to Stats to this, in-place.
+func (stats *Stats) AddInplace(other *Stats) {
+	for k := range stats {
+		stats[k] += other[k]
+	}
 }
 
 // Subtracts another Stats from this one, returning the new Stats.
 func (stats Stats) Subtract(other Stats) Stats {
-	newStats := Stats{}
-
+	var newStats Stats
 	for k, v := range stats {
 		newStats[k] = v - other[k]
 	}
-
 	return newStats
 }
 
 func (stats Stats) Multiply(multiplier float64) Stats {
-	newStats := stats
-	for k, v := range newStats {
+	var newStats Stats
+	for k, v := range stats {
 		newStats[k] = v * multiplier
 	}
 	return newStats
@@ -220,32 +224,28 @@ func (stats Stats) Multiply(multiplier float64) Stats {
 // Multiplies two Stats together by multiplying the values of corresponding
 // stats, like a dot product operation.
 func (stats Stats) DotProduct(other Stats) Stats {
-	newStats := Stats{}
-
+	var newStats Stats
 	for k, v := range stats {
 		newStats[k] = v * other[k]
 	}
-
 	return newStats
 }
 
 func (stats Stats) Equals(other Stats) bool {
-	for i := range stats {
-		if stats[i] != other[i] {
+	for k, v := range stats {
+		if v != other[k] {
 			return false
 		}
 	}
-
 	return true
 }
 
 func (stats Stats) EqualsWithTolerance(other Stats, tolerance float64) bool {
-	for i := range stats {
-		if stats[i] < other[i]-tolerance || stats[i] > other[i]+tolerance {
+	for k, v := range stats {
+		if v < other[k]-tolerance || v > other[k]+tolerance {
 			return false
 		}
 	}
-
 	return true
 }
 
@@ -254,12 +254,12 @@ func (stats Stats) String() string {
 	sb.WriteString("\n{\n")
 
 	for statIdx, statValue := range stats {
-		name := Stat(statIdx).StatName()
-		if name == "none" || statValue == 0 {
+		if statValue == 0 {
 			continue
 		}
-
-		fmt.Fprintf(&sb, "\t%s: %0.3f,\n", name, statValue)
+		if name := Stat(statIdx).StatName(); name != "none" {
+			_, _ = fmt.Fprintf(&sb, "\t%s: %0.3f,\n", name, statValue)
+		}
 	}
 
 	sb.WriteString("\n}")
@@ -272,11 +272,12 @@ func (stats Stats) FlatString() string {
 	sb.WriteString("{")
 
 	for statIdx, statValue := range stats {
-		name := Stat(statIdx).StatName()
-		if name == "none" || statValue == 0 {
+		if statValue == 0 {
 			continue
 		}
-		fmt.Fprintf(&sb, "\"%s\": %0.3f,", name, statValue)
+		if name := Stat(statIdx).StatName(); name != "none" {
+			_, _ = fmt.Fprintf(&sb, "\"%s\": %0.3f,", name, statValue)
+		}
 	}
 
 	sb.WriteString("}")
@@ -331,14 +332,14 @@ type PseudoStats struct {
 	DamageDealtMultiplier       float64            // All damage
 	SchoolDamageDealtMultiplier [SchoolLen]float64 // For specific spell schools (arcane, fire, shadow, etc).
 
-	// Apply Aura: Mod Melee Critical Damage % (Arcane, Fire, Frost, Holy, Nature, Physical, Shadow)
-	SchoolCritMultiplier [SchoolLen]float64 // For specific spell schools (arcane, fire, shadow, etc).
-
 	// Treat melee haste as a pseudostat so that shamans, death knights, paladins, and druids can get the correct scaling
 	MeleeHasteRatingPerHastePercent float64
 
 	// Important when unit is attacker or target
 	BlockValueMultiplier float64
+
+	// Only used for NPCs, governs variance in enemy auto-attack damage
+	DamageSpread float64
 
 	///////////////////////////////////////////////////
 	// Effects that apply when this unit is the target.
@@ -346,9 +347,9 @@ type PseudoStats struct {
 
 	CanBlock bool
 	CanParry bool
+	Stunned  bool // prevents blocks, dodges, and parries
 
-	ParryHaste       bool
-	TightEnemyDamage bool
+	ParryHaste bool
 
 	// Avoidance % not affected by Diminishing Returns
 	BaseDodge float64
@@ -397,11 +398,12 @@ func NewPseudoStats() PseudoStats {
 
 		DamageDealtMultiplier:       1,
 		SchoolDamageDealtMultiplier: NewSchoolFloatArray(),
-		SchoolCritMultiplier:        NewSchoolFloatArray(),
 
-		MeleeHasteRatingPerHastePercent: 15.77,
+		MeleeHasteRatingPerHastePercent: 32.79,
 
 		BlockValueMultiplier: 1,
+
+		DamageSpread: 0.3333,
 
 		// Target effects.
 		DamageTakenMultiplier:       1,

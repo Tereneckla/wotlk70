@@ -16,7 +16,7 @@ func (shaman *Shaman) registerFireNovaSpell() {
 		ActionID:    core.ActionID{SpellID: 25547},
 		SpellSchool: core.SpellSchoolFire,
 		ProcMask:    core.ProcMaskSpellDamage,
-		Flags:       SpellFlagFocusable,
+		Flags:       SpellFlagFocusable | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost: 0.22,
@@ -39,11 +39,11 @@ func (shaman *Shaman) registerFireNovaSpell() {
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			// FIXME: double check spell coefficients
 			dmgFromSP := 0.2142 * spell.SpellPower()
-			for _, aoeTarget := range sim.Encounter.Targets {
+			for _, aoeTarget := range sim.Encounter.TargetUnits {
 				baseDamage := sim.Roll(772, 813) + dmgFromSP
 				// TODO: Uncomment this
 				//baseDamage *= sim.Encounter.AOECapMultiplier()
-				spell.CalcAndDealDamage(sim, &aoeTarget.Unit, baseDamage, spell.OutcomeMagicHitAndCrit)
+				spell.CalcAndDealDamage(sim, aoeTarget, baseDamage, spell.OutcomeMagicHitAndCrit)
 			}
 		},
 	})

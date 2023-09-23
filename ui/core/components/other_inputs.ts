@@ -1,18 +1,11 @@
 import { BooleanPicker } from '../components/boolean_picker.js';
-import { EnumPicker, EnumPickerConfig } from '../components/enum_picker.js';
-import { Conjured } from '../proto/common.js';
-import { RaidTarget } from '../proto/common.js';
-import { TristateEffect } from '../proto/common.js';
-import { Party } from '../party.js';
+import { EnumPicker } from '../components/enum_picker.js';
+import { UnitReference } from '../proto/common.js';
 import { Player } from '../player.js';
 import { Sim } from '../sim.js';
-import { Target } from '../target.js';
-import { Encounter } from '../encounter.js';
-import { Raid } from '../raid.js';
-import { SimUI } from '../sim_ui.js';
-import { IndividualSimUI } from '../individual_sim_ui.js';
 import { EventID, TypedEvent } from '../typed_event.js';
-import { emptyRaidTarget } from '../proto_utils/utils.js';
+import { emptyUnitReference } from '../proto_utils/utils.js';
+import { APLRotation_Type } from '../proto/apl.js';
 
 export function makeShow1hWeaponsSelector(parent: HTMLElement, sim: Sim): BooleanPicker<Sim> {
 	return new BooleanPicker<Sim>(parent, sim, {
@@ -59,6 +52,19 @@ export function makeShowMatchingGemsSelector(parent: HTMLElement, sim: Sim): Boo
 	});
 }
 
+export function makeShowEPValuesSelector(parent: HTMLElement, sim: Sim): BooleanPicker<Sim> {
+	return new BooleanPicker<Sim>(parent, sim, {
+		extraCssClasses: ['show-ep-values-selector', 'input-inline', 'mb-0'],
+		label: 'Show EP',
+		inline: true,
+		changedEvent: (sim: Sim) => sim.showEPValuesChangeEmitter,
+		getValue: (sim: Sim) => sim.getShowEPValues(),
+		setValue: (eventID: EventID, sim: Sim, newValue: boolean) => {
+			sim.setShowEPValues(eventID, newValue);
+		},
+	});
+}
+
 export function makePhaseSelector(parent: HTMLElement, sim: Sim): EnumPicker<Sim> {
 	return new EnumPicker<Sim>(parent, sim, {
 		extraCssClasses: ['phase-selector'],
@@ -77,6 +83,28 @@ export function makePhaseSelector(parent: HTMLElement, sim: Sim): EnumPicker<Sim
 		},
 	});
 }
+
+export const ReactionTime = {
+	type: 'number' as const,
+	label: 'Reaction Time',
+	labelTooltip: 'Reaction time of the player, in milliseconds. Used with certain APL values (such as \'Aura Is Active With Reaction Time\').',
+	changedEvent: (player: Player<any>) => player.miscOptionsChangeEmitter,
+	getValue: (player: Player<any>) => player.getReactionTime(),
+	setValue: (eventID: EventID, player: Player<any>, newValue: number) => {
+		player.setReactionTime(eventID, newValue);
+	},
+};
+
+export const ChannelClipDelay = {
+	type: 'number' as const,
+	label: 'Channel Clip Delay',
+	labelTooltip: 'Clip delay following channeled spells, in milliseconds. This delay occurs following any full or partial channel ending after the GCD becomes available, due to the player not being able to queue the next spell.',
+	changedEvent: (player: Player<any>) => player.miscOptionsChangeEmitter,
+	getValue: (player: Player<any>) => player.getChannelClipDelay(),
+	setValue: (eventID: EventID, player: Player<any>, newValue: number) => {
+		player.setChannelClipDelay(eventID, newValue);
+	},
+};
 
 export const InFrontOfTarget = {
 	type: 'boolean' as const,
@@ -117,14 +145,14 @@ export const TankAssignment = {
 		{ name: 'Tank 4', value: 3 },
 	],
 	changedEvent: (player: Player<any>) => player.getRaid()!.tanksChangeEmitter,
-	getValue: (player: Player<any>) => (player.getRaid()?.getTanks() || []).findIndex(tank => RaidTarget.equals(tank, player.makeRaidTarget())),
+	getValue: (player: Player<any>) => (player.getRaid()?.getTanks() || []).findIndex(tank => UnitReference.equals(tank, player.makeUnitReference())),
 	setValue: (eventID: EventID, player: Player<any>, newValue: number) => {
 		const newTanks = [];
 		if (newValue != -1) {
 			for (let i = 0; i < newValue; i++) {
-				newTanks.push(emptyRaidTarget());
+				newTanks.push(emptyUnitReference());
 			}
-			newTanks.push(player.makeRaidTarget());
+			newTanks.push(player.makeUnitReference());
 		}
 		player.getRaid()!.setTanks(eventID, newTanks);
 	},
@@ -135,7 +163,7 @@ export const IncomingHps = {
 	label: 'Incoming HPS',
 	labelTooltip: `
 		<p>Average amount of healing received per second. Used for calculating chance of death.</p>
-		<p>If set to 0, defaults to 150% of DTPS.</p>
+		<p>If set to 0, defaults to 17.5% of the primary target's base DPS.</p>
 	`,
 	changedEvent: (player: Player<any>) => player.getRaid()!.changeEmitter,
 	getValue: (player: Player<any>) => player.getHealingModel().hps,
@@ -144,7 +172,7 @@ export const IncomingHps = {
 		healingModel.hps = newValue;
 		player.setHealingModel(eventID, healingModel);
 	},
-	enableWhen: (player: Player<any>) => (player.getRaid()?.getTanks() || []).find(tank => RaidTarget.equals(tank, player.makeRaidTarget())) != null,
+	enableWhen: (player: Player<any>) => (player.getRaid()?.getTanks() || []).find(tank => UnitReference.equals(tank, player.makeUnitReference())) != null,
 };
 
 export const HealingCadence = {
@@ -154,7 +182,7 @@ export const HealingCadence = {
 	labelTooltip: `
 		<p>How often the incoming heal 'ticks', in seconds. Generally, longer durations favor Effective Hit Points (EHP) for minimizing Chance of Death, while shorter durations favor avoidance.</p>
 		<p>Example: if Incoming HPS is set to 1000 and this is set to 1s, then every 1s a heal will be received for 1000. If this is instead set to 2s, then every 2s a heal will be recieved for 2000.</p>
-		<p>If set to 0, defaults to 2.0 seconds.</p>
+		<p>If set to 0, defaults to 1.5 times the primary target's base swing timer, and half that for dual wielding targets.</p>
 	`,
 	changedEvent: (player: Player<any>) => player.getRaid()!.changeEmitter,
 	getValue: (player: Player<any>) => player.getHealingModel().cadenceSeconds,
@@ -163,7 +191,26 @@ export const HealingCadence = {
 		healingModel.cadenceSeconds = newValue;
 		player.setHealingModel(eventID, healingModel);
 	},
-	enableWhen: (player: Player<any>) => (player.getRaid()?.getTanks() || []).find(tank => RaidTarget.equals(tank, player.makeRaidTarget())) != null,
+	enableWhen: (player: Player<any>) => (player.getRaid()?.getTanks() || []).find(tank => UnitReference.equals(tank, player.makeUnitReference())) != null,
+};
+
+export const HealingCadenceVariation = {
+	type: 'number' as const,
+	float: true,
+	label: 'Cadence +/-',
+	labelTooltip: `
+		<p>Magnitude of random variation in healing intervals, in seconds.</p>
+		<p>Example: if Healing Cadence is set to 1s with 0.5s variation, then the interval between successive heals will vary uniformly between 0.5 and 1.5s. If the variation is instead set to 2s, then 50% of healing intervals will fall between 0s and 1s, and the other 50% will fall between 1s and 3s.</p>
+		<p>The amount of healing per 'tick' is automatically scaled up or down based on the randomized time since the last tick, so as to keep HPS constant.</p>
+	`,
+	changedEvent: (player: Player<any>) => player.getRaid()!.changeEmitter,
+	getValue: (player: Player<any>) => player.getHealingModel().cadenceVariation,
+	setValue: (eventID: EventID, player: Player<any>, newValue: number) => {
+		const healingModel = player.getHealingModel();
+		healingModel.cadenceVariation = newValue;
+		player.setHealingModel(eventID, healingModel);
+	},
+	enableWhen: (player: Player<any>) => (player.getRaid()?.getTanks() || []).find(tank => UnitReference.equals(tank, player.makeUnitReference())) != null,
 };
 
 export const BurstWindow = {
@@ -181,7 +228,7 @@ export const BurstWindow = {
 		healingModel.burstWindow = newValue;
 		player.setHealingModel(eventID, healingModel);
 	},
-	enableWhen: (player: Player<any>) => (player.getRaid()?.getTanks() || []).find(tank => RaidTarget.equals(tank, player.makeRaidTarget())) != null,
+	enableWhen: (player: Player<any>) => (player.getRaid()?.getTanks() || []).find(tank => UnitReference.equals(tank, player.makeUnitReference())) != null,
 };
 
 export const HpPercentForDefensives = {
@@ -202,18 +249,18 @@ export const HpPercentForDefensives = {
 };
 
 export const InspirationUptime = {
-    type: 'number' as const,
-    float: true,
-    label: 'Inspiration % Uptime',
-    labelTooltip: `
+	type: 'number' as const,
+	float: true,
+	label: 'Inspiration % Uptime',
+	labelTooltip: `
 		<p>% average of Encounter Duration, during which you have the Inspiration buff.</p>
 		<p>If set to 0, the buff isn't applied.</p>
 	`,
-    changedEvent: (player: Player<any>) => player.healingModelChangeEmitter,
-    getValue: (player: Player<any>) => player.getHealingModel().inspirationUptime * 100,
-    setValue: (eventID: EventID, player: Player<any>, newValue: number) => {
-        const healingModel = player.getHealingModel();
-        healingModel.inspirationUptime = newValue / 100;
-        player.setHealingModel(eventID, healingModel);
-    },
+	changedEvent: (player: Player<any>) => player.healingModelChangeEmitter,
+	getValue: (player: Player<any>) => player.getHealingModel().inspirationUptime * 100,
+	setValue: (eventID: EventID, player: Player<any>, newValue: number) => {
+		const healingModel = player.getHealingModel();
+		healingModel.inspirationUptime = newValue / 100;
+		player.setHealingModel(eventID, healingModel);
+	},
 };

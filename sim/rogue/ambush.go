@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/Tereneckla/wotlk/sim/core"
-	"github.com/Tereneckla/wotlk/sim/core/proto"
 )
 
 func (rogue *Rogue) registerAmbushSpell() {
@@ -12,7 +11,7 @@ func (rogue *Rogue) registerAmbushSpell() {
 		ActionID:    core.ActionID{SpellID: 48689},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | SpellFlagBuilder,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | SpellFlagBuilder | SpellFlagColdBlooded | core.SpellFlagAPL,
 
 		EnergyCost: core.EnergyCostOptions{
 			Cost:   rogue.costModifier(60 - 4*float64(rogue.Talents.SlaughterFromTheShadows)),
@@ -25,7 +24,7 @@ func (rogue *Rogue) registerAmbushSpell() {
 			IgnoreHaste: true,
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return !rogue.PseudoStats.InFrontOfTarget && rogue.GetMHWeapon().WeaponType == proto.WeaponType_WeaponTypeDagger
+			return !rogue.PseudoStats.InFrontOfTarget && rogue.HasDagger(core.MainHand) && rogue.IsStealthed()
 		},
 
 		BonusCritRating: []float64{0, 2, 4, 6}[rogue.Talents.TurnTheTables]*core.CritRatingPerCritChance +
@@ -38,6 +37,7 @@ func (rogue *Rogue) registerAmbushSpell() {
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			rogue.BreakStealth(sim)
 			baseDamage := 185 +
 				spell.Unit.MHNormalizedWeaponDamage(sim, spell.MeleeAttackPower()) +
 				spell.BonusWeaponDamage()

@@ -11,10 +11,11 @@ func (druid *Druid) registerDemoralizingRoarSpell() {
 		return core.DemoralizingRoarAura(target, druid.Talents.FeralAggression)
 	})
 
-	druid.DemoralizingRoar = druid.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: 48560},
+	druid.DemoralizingRoar = druid.RegisterSpell(Bear, core.SpellConfig{
+		ActionID:    core.ActionID{SpellID: 26988},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskEmpty,
+		Flags:       core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
 			Cost: 10,
@@ -37,6 +38,8 @@ func (druid *Druid) registerDemoralizingRoarSpell() {
 				}
 			}
 		},
+
+		RelatedAuras: []core.AuraArray{druid.DemoralizingRoarAuras},
 	})
 }
 

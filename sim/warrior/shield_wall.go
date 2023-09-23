@@ -8,11 +8,11 @@ import (
 )
 
 func (warrior *Warrior) RegisterShieldWallCD() {
-	if warrior.Equip[proto.ItemSlot_ItemSlotOffHand].WeaponType != proto.WeaponType_WeaponTypeShield {
+	if warrior.OffHand().WeaponType != proto.WeaponType_WeaponTypeShield {
 		return
 	}
 
-	duration := time.Second * 12
+	duration := time.Second*12 + core.TernaryDuration(warrior.HasSetBonus(ItemSetDreadnaughtPlate, 4), time.Second*3, 0)
 	hasGlyph := warrior.HasMajorGlyph(proto.WarriorMajorGlyph_GlyphOfShieldWall)
 	//This is the inverse of the tooltip since it is a damage TAKEN coefficient
 	damageTaken := core.TernaryFloat64(hasGlyph, 0.4, 0.6)

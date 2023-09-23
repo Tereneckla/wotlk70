@@ -1,6 +1,7 @@
 package balance
 
 import (
+	"github.com/Tereneckla/wotlk/sim/common/wotlk"
 	"github.com/Tereneckla/wotlk/sim/core"
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/core/stats"
@@ -33,12 +34,13 @@ func NewBalanceDruid(character core.Character, options *proto.Player) *BalanceDr
 		Rotation: balanceOptions.Rotation,
 	}
 
-	moonkin.SelfBuffs.InnervateTarget = &proto.RaidTarget{TargetIndex: -1}
+	moonkin.SelfBuffs.InnervateTarget = &proto.UnitReference{}
 	if balanceOptions.Options.InnervateTarget != nil {
 		moonkin.SelfBuffs.InnervateTarget = balanceOptions.Options.InnervateTarget
 	}
 
 	moonkin.EnableResumeAfterManaWait(moonkin.tryUseGCD)
+	wotlk.ConstructValkyrPets(&moonkin.Character)
 	return moonkin
 }
 
@@ -52,11 +54,13 @@ type BalanceDruid struct {
 
 	Rotation           *proto.BalanceDruid_Rotation
 	CooldownsAvailable []*core.MajorCooldown
+	LastCast           *druid.DruidSpell
 
 	// CDS
 	hyperSpeedMCD      *core.MajorCooldown
 	potionSpeedMCD     *core.MajorCooldown
 	potionWildMagicMCD *core.MajorCooldown
+	powerInfusion      *core.MajorCooldown
 	onUseTrinket1      BalanceOnUseTrinket
 	onUseTrinket2      BalanceOnUseTrinket
 	potionUsed         bool
@@ -75,12 +79,20 @@ func (moonkin *BalanceDruid) Reset(sim *core.Simulation) {
 	moonkin.Druid.Reset(sim)
 	moonkin.RebirthTiming = moonkin.Env.BaseDuration.Seconds() * sim.RandomFloat("Rebirth Timing")
 
-	if moonkin.Rotation.Type == proto.BalanceDruid_Rotation_Adaptive {
+	if moonkin.Talents.OwlkinFrenzy > 0 {
+		for i := int32(0); i < int32(moonkin.Env.BaseDuration.Minutes()); i++ {
+			if sim.RandomFloat("Owlkin Frenzy Proc") < float64(moonkin.Rotation.OkfPpm) {
+				moonkin.OwlkinFrenzyTimings = append(moonkin.OwlkinFrenzyTimings, sim.RandomFloat("Owlkin Frenzy Timing")*moonkin.Env.BaseDuration.Seconds())
+			}
+		}
+	}
+
+	if moonkin.Rotation.Type == proto.BalanceDruid_Rotation_Default {
 		moonkin.Rotation.MfUsage = proto.BalanceDruid_Rotation_BeforeLunar
-		moonkin.Rotation.IsUsage = proto.BalanceDruid_Rotation_MaximizeIs
+		moonkin.Rotation.IsUsage = proto.BalanceDruid_Rotation_OptimizeIs
+		moonkin.Rotation.WrathUsage = proto.BalanceDruid_Rotation_RegularWrath
 		moonkin.Rotation.UseBattleRes = false
 		moonkin.Rotation.UseStarfire = true
-		moonkin.Rotation.UseWrath = true
 		moonkin.Rotation.UseTyphoon = false
 		moonkin.Rotation.UseHurricane = false
 		moonkin.Rotation.UseSmartCooldowns = true
@@ -92,29 +104,30 @@ func (moonkin *BalanceDruid) Reset(sim *core.Simulation) {
 		moonkin.potionUsed = false
 		consumes := moonkin.Consumes
 
-		if consumes.DefaultPotion == proto.Potions_PotionOfSpeed {
-			moonkin.potionSpeedMCD = moonkin.getBalanceMajorCooldown(core.ActionID{ItemID: 40211})
+		if consumes.DefaultPotion == proto.Potions_HastePotion {
+			moonkin.potionSpeedMCD = moonkin.getBalanceMajorCooldown(core.ActionID{ItemID: 22838})
 		}
-		if consumes.DefaultPotion == proto.Potions_PotionOfWildMagic {
-			moonkin.potionWildMagicMCD = moonkin.getBalanceMajorCooldown(core.ActionID{ItemID: 40212})
+		if consumes.DefaultPotion == proto.Potions_DestructionPotion {
+			moonkin.potionWildMagicMCD = moonkin.getBalanceMajorCooldown(core.ActionID{ItemID: 22839})
 		}
 		if moonkin.HasProfession(proto.Profession_Engineering) {
 			moonkin.hyperSpeedMCD = moonkin.getBalanceMajorCooldown(core.ActionID{SpellID: 54758})
 		}
+		moonkin.powerInfusion = moonkin.getBalanceMajorCooldown(core.ActionID{SpellID: 10060})
 		moonkin.onUseTrinket1 = BalanceOnUseTrinket{
-			Cooldown: moonkin.getBalanceMajorCooldown(core.ActionID{ItemID: moonkin.Equip[core.ItemSlotTrinket1].ID}),
-			Stat:     getOnUseTrinketStat(moonkin.Equip[core.ItemSlotTrinket1].ID),
+			Cooldown: moonkin.getBalanceMajorCooldown(core.ActionID{ItemID: moonkin.Trinket1().ID}),
+			Stat:     getOnUseTrinketStat(moonkin.Trinket1().ID),
 		}
 		moonkin.onUseTrinket2 = BalanceOnUseTrinket{
-			Cooldown: moonkin.getBalanceMajorCooldown(core.ActionID{ItemID: moonkin.Equip[core.ItemSlotTrinket2].ID}),
-			Stat:     getOnUseTrinketStat(moonkin.Equip[core.ItemSlotTrinket2].ID),
+			Cooldown: moonkin.getBalanceMajorCooldown(core.ActionID{ItemID: moonkin.Trinket2().ID}),
+			Stat:     getOnUseTrinketStat(moonkin.Trinket2().ID),
 		}
 	}
 }
 
 // Takes out a Cooldown from the generic MajorCooldownManager and adds it to a custom Slice of Cooldowns
 func (moonkin *BalanceDruid) getBalanceMajorCooldown(actionID core.ActionID) *core.MajorCooldown {
-	if majorCd := moonkin.Character.GetMajorCooldown(actionID); majorCd != nil {
+	if majorCd := moonkin.Character.GetMajorCooldownIgnoreTag(actionID); majorCd != nil {
 		majorCd.Disable()
 		return majorCd
 	}

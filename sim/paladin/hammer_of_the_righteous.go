@@ -15,7 +15,7 @@ func (paladin *Paladin) registerHammerOfTheRighteousSpell() {
 		ActionID:    core.ActionID{SpellID: 53595},
 		SpellSchool: core.SpellSchoolHoly,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		Flags:       core.SpellFlagMeleeMetrics,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.06,
@@ -31,9 +31,13 @@ func (paladin *Paladin) registerHammerOfTheRighteousSpell() {
 				Duration: time.Second * 6,
 			},
 		},
+		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
+			return paladin.MainHand().HandType != proto.HandType_HandTypeTwoHand
+		},
 
-		CritMultiplier:   paladin.MeleeCritMultiplier(),
-		ThreatMultiplier: 1,
+		DamageMultiplierAdditive: 1 + paladin.getItemSetRedemptionPlateBonus2() + paladin.getItemSetT9PlateBonus2() + paladin.getItemSetLightswornPlateBonus2(),
+		CritMultiplier:           paladin.MeleeCritMultiplier(),
+		ThreatMultiplier:         1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			avgWeaponDamage := spell.Unit.AutoAttacks.MH.CalculateAverageWeaponDamage(spell.MeleeAttackPower())

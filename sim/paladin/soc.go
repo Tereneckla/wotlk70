@@ -33,13 +33,15 @@ func (paladin *Paladin) registerSealOfCommandSpellAndAura() {
 	onJudgementProc := paladin.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 20467}, // Judgement of Command
 		SpellSchool: core.SpellSchoolHoly,
-		ProcMask:    core.ProcMaskMeleeOrRangedSpecial,
+		ProcMask:    core.ProcMaskMeleeSpecial,
 		Flags:       core.SpellFlagMeleeMetrics | SpellFlagSecondaryJudgement,
 
-		BonusCritRating: (6 * float64(paladin.Talents.Fanaticism) * core.CritRatingPerCritChance),
+		BonusCritRating: (6 * float64(paladin.Talents.Fanaticism) * core.CritRatingPerCritChance) +
+			(core.TernaryFloat64(paladin.HasSetBonus(ItemSetTuralyonsBattlegear, 4), 5, 0) * core.CritRatingPerCritChance),
 
 		DamageMultiplier: 1 *
-			(1 + paladin.getMajorGlyphOfJudgementBonus() + paladin.getTalentTheArtOfWarBonus()) *
+			(1 + paladin.getItemSetLightswornBattlegearBonus4() +
+				paladin.getMajorGlyphOfJudgementBonus() + paladin.getTalentTheArtOfWarBonus()) *
 			(1 + paladin.getTalentTwoHandedWeaponSpecializationBonus()) *
 			(1 + core.TernaryFloat64(paladin.HasSetBonus(ItemSetJusticarBattlegear, 4), 0.1, 0)),
 		CritMultiplier:   paladin.MeleeCritMultiplier(),
@@ -51,7 +53,8 @@ func (paladin *Paladin) registerSealOfCommandSpellAndAura() {
 				spell.BonusWeaponDamage()
 			baseDamage := 0.19*mhWeaponDamage +
 				0.08*spell.MeleeAttackPower() +
-				0.13*spell.SpellPower() + justicarBattle2
+				0.13*spell.SpellPower() +
+				justicarBattle2
 
 			// Secondary Judgements cannot miss if the Primary Judgement hit, only roll for crit.
 			spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialCritOnly)
@@ -66,6 +69,7 @@ func (paladin *Paladin) registerSealOfCommandSpellAndAura() {
 		Flags:       core.SpellFlagMeleeMetrics,
 
 		DamageMultiplier: 1 *
+			(1 + paladin.getItemSetLightswornBattlegearBonus4()) *
 			(1 + paladin.getTalentTwoHandedWeaponSpecializationBonus()) *
 			(1 + justicarArmor2) *
 			0.36, // Only 36% of weapon damage.
@@ -94,10 +98,11 @@ func (paladin *Paladin) registerSealOfCommandSpellAndAura() {
 	onSpecialOrSwingProc := paladin.RegisterSpell(core.SpellConfig{
 		ActionID:    onSpecialOrSwingActionID,
 		SpellSchool: core.SpellSchoolHoly,
-		ProcMask:    core.ProcMaskEmpty,
+		ProcMask:    core.ProcMaskEmpty, // unlike SoV, SoC crits don't proc Vengeance
 		Flags:       core.SpellFlagMeleeMetrics,
 
 		DamageMultiplier: 1 *
+			(1 + paladin.getItemSetLightswornBattlegearBonus4()) *
 			(1 + paladin.getTalentTwoHandedWeaponSpecializationBonus()) *
 			(1 + justicarArmor2) *
 			0.36, // Only 36% of weapon damage.
@@ -161,6 +166,7 @@ func (paladin *Paladin) registerSealOfCommandSpellAndAura() {
 		ActionID:    auraActionID, // Seal of Command self buff.
 		SpellSchool: core.SpellSchoolHoly,
 		ProcMask:    core.ProcMaskEmpty,
+		Flags:       core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.14,

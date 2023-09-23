@@ -1,33 +1,27 @@
 package druid
 
 import (
-	"time"
-
 	"github.com/Tereneckla/wotlk/sim/core"
 )
 
 // Returns the time to wait before the next action, or 0 if innervate is on CD
 // or disabled.
 func (druid *Druid) registerInnervateCD() {
-	innervateTargetAgent := druid.Party.Raid.GetPlayerFromRaidTarget(druid.SelfBuffs.InnervateTarget)
-	if innervateTargetAgent == nil {
+	innervateTarget := druid.GetUnit(druid.SelfBuffs.InnervateTarget)
+	if innervateTarget == nil {
 		return
 	}
-	innervateTarget := innervateTargetAgent.GetCharacter()
+	innervateTargetChar := druid.Env.Raid.GetPlayerFromUnit(innervateTarget).GetCharacter()
 
 	actionID := core.ActionID{SpellID: 29166, Tag: druid.Index}
-	var innervateSpell *core.Spell
+	var innervateSpell *DruidSpell
 
 	innervateCD := core.InnervateCD
-
-	if druid.HasSetBonus(ItemSetMalorneRegalia, 4) {
-		innervateCD -= time.Second * 48
-	}
 
 	var innervateAura *core.Aura
 	var innervateManaThreshold float64
 	druid.RegisterResetEffect(func(sim *core.Simulation) {
-		if innervateTarget == druid.GetCharacter() {
+		if innervateTarget == &druid.Unit {
 			if druid.StartingForm.Matches(Cat) {
 				// double shift + innervate cost.
 				// Prevents not having enough mana to shift back into form if more powershift are executed
@@ -37,12 +31,12 @@ func (druid *Druid) registerInnervateCD() {
 				innervateManaThreshold = 500
 			}
 		} else {
-			innervateManaThreshold = core.InnervateManaThreshold(innervateTarget)
+			innervateManaThreshold = core.InnervateManaThreshold(innervateTargetChar)
 		}
-		innervateAura = core.InnervateAura(innervateTarget, actionID.Tag)
+		innervateAura = core.InnervateAura(innervateTargetChar, actionID.Tag)
 	})
 
-	innervateSpell = druid.RegisterSpell(core.SpellConfig{
+	innervateSpell = druid.RegisterSpell(Humanoid|Moonkin|Tree, core.SpellConfig{
 		ActionID: actionID,
 		Flags:    SpellFlagOmenTrigger,
 
@@ -61,17 +55,8 @@ func (druid *Druid) registerInnervateCD() {
 		},
 
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			// Technically this shouldn't be allowed in bear form either, but bear
-			// doesn't have shifting implemented in its rotation.
-			if druid.InForm(Cat) {
-				return false
-			}
 			// If target already has another innervate, don't cast.
-			if innervateTarget.HasActiveAuraWithTag(core.InnervateAuraTag) {
-				return false
-			}
-
-			return true
+			return innervateTarget.HasActiveAuraWithTag(core.InnervateAuraTag)
 		},
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
@@ -80,7 +65,7 @@ func (druid *Druid) registerInnervateCD() {
 	})
 
 	druid.AddMajorCooldown(core.MajorCooldown{
-		Spell: innervateSpell,
+		Spell: innervateSpell.Spell,
 		Type:  core.CooldownTypeMana,
 		ShouldActivate: func(sim *core.Simulation, character *core.Character) bool {
 			// Innervate needs to be activated as late as possible to maximize DPS. The issue is that

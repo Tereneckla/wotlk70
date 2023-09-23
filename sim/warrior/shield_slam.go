@@ -28,7 +28,7 @@ func (warrior *Warrior) registerShieldSlamSpell() {
 		ActionID:    core.ActionID{SpellID: 30356},
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskMeleeMHSpecial, // TODO: Is this right?
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
+		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage | core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
 			Cost:   20 - float64(warrior.Talents.FocusedRage),
@@ -51,7 +51,9 @@ func (warrior *Warrior) registerShieldSlamSpell() {
 		BonusCritRating: 5 * core.CritRatingPerCritChance * float64(warrior.Talents.CriticalBlock),
 		DamageMultiplier: 1 +
 			.05*float64(warrior.Talents.GagOrder) +
-			core.TernaryFloat64(warrior.HasSetBonus(ItemSetOnslaughtArmor, 4), .10, 0),
+			core.TernaryFloat64(warrior.HasSetBonus(ItemSetOnslaughtArmor, 4), .10, 0) +
+			core.TernaryFloat64(warrior.HasSetBonus(ItemSetDreadnaughtPlate, 2), .10, 0) +
+			core.TernaryFloat64(warrior.HasSetBonus(ItemSetYmirjarLordsPlate, 2), .20, 0), // TODO: All additive multipliers?
 		CritMultiplier:   warrior.critMultiplier(mh),
 		ThreatMultiplier: 1.3,
 		FlatThreatBonus:  770,

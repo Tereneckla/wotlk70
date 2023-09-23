@@ -7,19 +7,17 @@ import { sum } from '../utils.js';
 
 import { Player } from '../proto/api.js';
 import { ResourceType } from '../proto/api.js';
-import { ArmorType } from '../proto/common.js';
+import { ArmorType, UnitReference_Type } from '../proto/common.js';
 import { Class } from '../proto/common.js';
 import { EnchantType } from '../proto/common.js';
-import { GemColor } from '../proto/common.js';
 import { HandType } from '../proto/common.js';
 import { ItemSlot } from '../proto/common.js';
 import { ItemType } from '../proto/common.js';
 import { Race } from '../proto/common.js';
 import { Faction } from '../proto/common.js';
-import { RaidTarget } from '../proto/common.js';
+import { UnitReference } from '../proto/common.js';
 import { RangedWeaponType } from '../proto/common.js';
 import { Spec } from '../proto/common.js';
-import { Stat } from '../proto/common.js';
 import { WeaponType } from '../proto/common.js';
 import { Blessings } from '../proto/paladin.js';
 import {
@@ -229,6 +227,10 @@ export const talentTreeIcons: Record<Class, Array<string>> = {
 		'ability_hunter_beasttaming.jpg',
 		'ability_marksmanship.jpg',
 		'ability_hunter_swiftstrike.jpg',
+		// Pet specializations
+		'ability_druid_swipe.jpg',
+		'ability_hunter_pet_bear.jpg',
+		'ability_hunter_combatexperience.jpg',
 	],
 	[Class.ClassMage]: [
 		'spell_holy_magicalsentry.jpg',
@@ -268,7 +270,7 @@ export const talentTreeIcons: Record<Class, Array<string>> = {
 	],
 };
 
-export const titleIcons: Record<Class|Spec, string> = {
+export const titleIcons: Record<Class | Spec, string> = {
 	[Spec.SpecBalanceDruid]: '/wotlk/assets/img/balance_druid_icon.png',
 	[Spec.SpecFeralDruid]: '/wotlk/assets/img/feral_druid_icon.png',
 	[Spec.SpecFeralTankDruid]: '/wotlk/assets/img/feral_druid_tank_icon.png',
@@ -320,7 +322,7 @@ enum IconSizes {
 // Returns the icon for a given spec
 export function getSpecIcon(klass: Class, specNumber: number, size: IconSizes = IconSizes.Medium): string {
 	const fileName = talentTreeIcons[klass][specNumber];
-		
+
 	return `https://wow.zamimg.com/images/wow/icons/${size}/${fileName}`;
 }
 
@@ -335,12 +337,12 @@ export function getTalentTreeIcon(spec: Spec, talentsString: string, size: IconS
 	// Cat Druid and Smite Priest are being considered a "4th spec"
 	if (spec == Spec.SpecFeralDruid)
 		specNumber += 2;
-	
+
 	if (spec == Spec.SpecSmitePriest)
 		specNumber += 3;
-	
+
 	const fileName = talentTreeIcons[specToClass[spec]][specNumber];
-		
+
 	return `https://wow.zamimg.com/images/wow/icons/${size}/${fileName}`;
 }
 
@@ -1548,7 +1550,6 @@ export const classToEligibleRangedWeaponTypes: Record<Class, Array<RangedWeaponT
 		RangedWeaponType.RangedWeaponTypeBow,
 		RangedWeaponType.RangedWeaponTypeCrossbow,
 		RangedWeaponType.RangedWeaponTypeGun,
-		RangedWeaponType.RangedWeaponTypeThrown,
 	],
 	[Class.ClassMage]: [RangedWeaponType.RangedWeaponTypeWand],
 	[Class.ClassPaladin]: [RangedWeaponType.RangedWeaponTypeLibram],
@@ -1679,7 +1680,7 @@ export function isBluntWeaponType(weaponType: WeaponType): boolean {
 // Custom functions for determining the EP value of meta gem effects.
 // Default meta effect EP value is 0, so just handle the ones relevant to your spec.
 const metaGemEffectEPs: Partial<Record<Spec, (gem: Gem, playerStats: Stats) => number>> = {
-	[Spec.SpecBalanceDruid]: (gem, playerStats) => {
+	[Spec.SpecBalanceDruid]: (gem, _) => {
 		if (gem.id == Gems.CHAOTIC_SKYFIRE_DIAMOND.id) {
 			// TODO: Fix this
 			return (12 * 0.65) + (3 * 45);
@@ -1689,14 +1690,17 @@ const metaGemEffectEPs: Partial<Record<Spec, (gem: Gem, playerStats: Stats) => n
 		}
 		return 0;
 	},
-	[Spec.SpecElementalShaman]: (gem, playerStats) => {
+	[Spec.SpecElementalShaman]: (gem, _) => {
+		if (gem.id == Gems.CHAOTIC_SKYFLARE_DIAMOND.id) {
+			return 84;
+		}
 		if (gem.id == Gems.CHAOTIC_SKYFIRE_DIAMOND.id) {
-			return (((playerStats.getStat(Stat.StatSpellPower) * 0.795) + 603) * 2 * (playerStats.getStat(Stat.StatSpellCrit) / 2208) * 0.045) / 0.795;
+			return 80;
 		}
 
 		return 0;
 	},
-	[Spec.SpecWarlock]: (gem, playerStats) => {
+	[Spec.SpecWarlock]: (gem, _) => {
 		// TODO: make it gear dependant
 		if (gem.id == Gems.CHAOTIC_SKYFLARE_DIAMOND.id) {
 			return 84;
@@ -1710,7 +1714,7 @@ const metaGemEffectEPs: Partial<Record<Spec, (gem: Gem, playerStats: Stats) => n
 	[Spec.SpecFeralDruid]: (gem, _) => {
 		// Unknown actual EP, but this is the only effect that matters
 		if (gem.id == Gems.RELENTLESS_EARTHSIEGE_DIAMOND.id || gem.id == Gems.CHAOTIC_SKYFLARE_DIAMOND.id || gem.id == Gems.CHAOTIC_SKYFIRE_DIAMOND.id) {
-    		return 80;
+			return 80;
 		}
 		return 0;
 	}
@@ -1792,6 +1796,8 @@ export function getEligibleItemSlots(item: Item): Array<ItemSlot> {
 			return [ItemSlot.ItemSlotMainHand];
 		} else if (item.handType == HandType.HandTypeOffHand) {
 			return [ItemSlot.ItemSlotOffHand];
+			// Missing HandTypeTwoHand 
+			// We allow 2H weapons to be wielded in mainhand and offhand for Fury Warriors
 		} else {
 			return [ItemSlot.ItemSlotMainHand, ItemSlot.ItemSlotOffHand];
 		}
@@ -1809,6 +1815,16 @@ export function validWeaponCombo(mainHand: Item | null | undefined, offHand: Ite
 	}
 
 	if (mainHand.handType == HandType.HandTypeTwoHand && !canDW2h) {
+		return false;
+	} else if (mainHand.handType == HandType.HandTypeTwoHand &&
+		(mainHand.weaponType == WeaponType.WeaponTypePolearm || mainHand.weaponType == WeaponType.WeaponTypeStaff)) {
+		return false;
+	}
+
+	if (offHand.handType == HandType.HandTypeTwoHand && !canDW2h) {
+		return false;
+	} else if (offHand.handType == HandType.HandTypeTwoHand &&
+		(offHand.weaponType == WeaponType.WeaponTypePolearm || offHand.weaponType == WeaponType.WeaponTypeStaff)) {
 		return false;
 	}
 
@@ -1872,16 +1888,15 @@ export function canEquipEnchant(enchant: Enchant, spec: Spec): boolean {
 	return true;
 }
 
-export const NO_TARGET = -1;
-
-export function newRaidTarget(raidIndex: number): RaidTarget {
-	return RaidTarget.create({
-		targetIndex: raidIndex,
+export function newUnitReference(raidIndex: number): UnitReference {
+	return UnitReference.create({
+		type: UnitReference_Type.Player,
+		index: raidIndex,
 	});
 }
 
-export function emptyRaidTarget(): RaidTarget {
-	return newRaidTarget(NO_TARGET);
+export function emptyUnitReference(): UnitReference {
+	return UnitReference.create();
 }
 
 // Makes a new set of assignments with everything 0'd out.

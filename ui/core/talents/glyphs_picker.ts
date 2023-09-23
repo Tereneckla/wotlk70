@@ -9,6 +9,7 @@ import { stringComparator } from '../utils.js';
 import { Component } from '../components/component.js';
 import { Input } from '../components/input.js';
 import { BaseModal } from '../components/base_modal.js';
+import { ContentBlock } from '../components/content_block.js';
 
 export type GlyphConfig = {
 	name: string,
@@ -56,8 +57,19 @@ export class GlyphsPicker extends Component {
 		majorGlyphsData.sort((a, b) => stringComparator(a.name, b.name));
 		minorGlyphsData.sort((a, b) => stringComparator(a.name, b.name));
 
-		this.majorGlyphPickers = (['major1', 'major2', 'major3'] as Array<keyof Glyphs>).map(glyphField => new GlyphPicker(this.rootElem, player, majorGlyphsData, glyphField, true));
-		this.minorGlyphPickers = (['minor1', 'minor2', 'minor3'] as Array<keyof Glyphs>).map(glyphField => new GlyphPicker(this.rootElem, player, minorGlyphsData, glyphField, false));
+		const majorGlyphsBlock = new ContentBlock(this.rootElem, 'major-glyphs', {
+			header: { title: 'Major', extraCssClasses: ['border-0', 'mb-1'] }
+		});
+		const minorGlyphsBlock = new ContentBlock(this.rootElem, 'minor-glyphs', {
+			header: { title: 'Minor', extraCssClasses: ['border-0', 'mb-1'] }
+		});
+
+		this.majorGlyphPickers = (['major1', 'major2', 'major3'] as Array<keyof Glyphs>).map(glyphField => {
+			return new GlyphPicker(majorGlyphsBlock.bodyElement, player, majorGlyphsData, glyphField, true)
+		});
+		this.minorGlyphPickers = (['minor1', 'minor2', 'minor3'] as Array<keyof Glyphs>).map(glyphField => {
+			return new GlyphPicker(minorGlyphsBlock.bodyElement, player, minorGlyphsData, glyphField, false)
+		});
 	}
 
 	// In case we ever want to parse description from tooltip HTML.
@@ -99,19 +111,12 @@ class GlyphPicker extends Input<Player<any>, number> {
 		this.glyphOptions = glyphOptions;
 		this.selectedGlyph = emptyGlyphData;
 
-		this.rootElem.innerHTML = `<a class="glyph-picker-icon"></a>`;
+		this.rootElem.innerHTML = `<a class="glyph-picker-icon" data-whtticon='false'></a>`;
 
 		this.iconElem = this.rootElem.getElementsByClassName('glyph-picker-icon')[0] as HTMLAnchorElement;
 		this.iconElem.addEventListener('click', event => {
 			event.preventDefault();
 			const selectorModal = new GlyphSelectorModal(this.rootElem.closest('.individual-sim-ui')!, this, this.glyphOptions);
-		});
-		this.iconElem.addEventListener('touchstart', event => {
-			event.preventDefault();
-			const selectorModal = new GlyphSelectorModal(this.rootElem.closest('.individual-sim-ui')!, this, this.glyphOptions);
-		});
-		this.iconElem.addEventListener('touchend', event => {
-			event.preventDefault();
 		});
 
 		this.init();
@@ -135,7 +140,7 @@ class GlyphPicker extends Input<Player<any>, number> {
 
 class GlyphSelectorModal extends BaseModal {
 	constructor(parent: HTMLElement, glyphPicker: GlyphPicker, glyphOptions: Array<GlyphData>) {
-		super(parent, 'glyph-modal', {title: 'Glyphs'});
+		super(parent, 'glyph-modal', { title: 'Glyphs' });
 
 		this.body.innerHTML = `
 			<div class="input-root">
@@ -155,25 +160,24 @@ class GlyphSelectorModal extends BaseModal {
 			listItemElem.dataset.idx = String(glyphIdx);
 
 			listItemElem.innerHTML = `
-        <a class="selector-modal-list-item-icon"></a>
-        <a class="selector-modal-list-item-name">${glyphData.name}</a>
-				<span class="selector-modal-list-item-description">${glyphData.description}</span>
+				<a class="selector-modal-list-item-link">
+					<img class="selector-modal-list-item-icon" />
+					<label class="selector-modal-list-item-name">${glyphData.name}</label>
+					<span class="selector-modal-list-item-description">${glyphData.description}</span>
+				</a>
       `;
 
-			(listItemElem.children[0] as HTMLAnchorElement).href = glyphData.id == 0 ? '' : ActionId.makeItemUrl(glyphData.id);
-			(listItemElem.children[1] as HTMLAnchorElement).href = glyphData.id == 0 ? '' : ActionId.makeItemUrl(glyphData.id);
-			const iconElem = listItemElem.getElementsByClassName('selector-modal-list-item-icon')[0] as HTMLImageElement;
-			iconElem.style.backgroundImage = `url('${glyphData.iconUrl}')`;
+			const anchorElem = listItemElem.children[0] as HTMLAnchorElement
+			const iconElem = listItemElem.querySelector('.selector-modal-list-item-icon') as HTMLImageElement;
+			const nameElem = listItemElem.querySelector('.selector-modal-list-item-name') as HTMLElement;
 
-			const nameElem = listItemElem.getElementsByClassName('selector-modal-list-item-name')[0] as HTMLImageElement;
-			setItemQualityCssClass(nameElem, glyphData.quality);
-
-			const onclick = (event: Event) => {
+			anchorElem.href = glyphData.id == 0 ? '' : ActionId.makeItemUrl(glyphData.id);
+			anchorElem.addEventListener('click', (event: Event) => {
 				event.preventDefault();
 				glyphPicker.setValue(TypedEvent.nextEventID(), glyphData.id);
-			};
-			nameElem.addEventListener('click', onclick);
-			iconElem.addEventListener('click', onclick);
+			});
+			iconElem.src = glyphData.iconUrl;
+			setItemQualityCssClass(nameElem, glyphData.quality);
 
 			return listItemElem;
 		});
@@ -218,20 +222,8 @@ class GlyphSelectorModal extends BaseModal {
 				return true;
 			});
 
-			let numShown = 0;
-			listItemElems.forEach(elem => {
-				if (validItemElems.includes(elem)) {
-					elem.classList.remove('hidden');
-					numShown++;
-					if (numShown % 2 == 0) {
-						elem.classList.remove('odd');
-					} else {
-						elem.classList.add('odd');
-					}
-				} else {
-					elem.classList.add('hidden');
-				}
-			});
+			listElem.innerHTML = ``
+			listElem.append(...validItemElems);
 		};
 
 		const searchInput = this.rootElem.getElementsByClassName('selector-modal-search')[0] as HTMLInputElement;

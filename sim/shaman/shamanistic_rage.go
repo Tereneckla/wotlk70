@@ -37,15 +37,14 @@ func (shaman *Shaman) registerShamanisticRageCD() {
 			}
 		},
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			// proc mask: 20
-			if !result.Landed() || !spell.ProcMask.Matches(core.ProcMaskMelee) {
+			if !result.Landed() {
 				return
 			}
-			if !ppmm.Proc(sim, spell.ProcMask, "shamanistic rage") {
-				return
+
+			if ppmm.Proc(sim, spell.ProcMask, "shamanistic rage") {
+				mana := aura.Unit.GetStat(stats.AttackPower) * 0.15
+				aura.Unit.AddMana(sim, mana, manaMetrics)
 			}
-			mana := aura.Unit.GetStat(stats.AttackPower) * 0.15
-			aura.Unit.AddMana(sim, mana, manaMetrics)
 		},
 	})
 
@@ -67,12 +66,22 @@ func (shaman *Shaman) registerShamanisticRageCD() {
 		},
 	})
 
-	shaman.AddMajorCooldown(core.MajorCooldown{
-		Spell: spell,
-		Type:  core.CooldownTypeMana,
-		ShouldActivate: func(sim *core.Simulation, character *core.Character) bool {
-			manaReserve := shaman.ShamanisticRageManaThreshold / 100 * shaman.MaxMana()
-			return character.CurrentMana() <= manaReserve
-		},
-	})
+	if shaman.IsUsingAPL {
+		shaman.AddMajorCooldown(core.MajorCooldown{
+			Spell: spell,
+			Type:  core.CooldownTypeMana,
+			ShouldActivate: func(sim *core.Simulation, character *core.Character) bool {
+				return character.CurrentManaPercent() <= 0.2
+			},
+		})
+	} else {
+		shaman.AddMajorCooldown(core.MajorCooldown{
+			Spell: spell,
+			Type:  core.CooldownTypeMana,
+			ShouldActivate: func(sim *core.Simulation, character *core.Character) bool {
+				manaReserve := shaman.ShamanisticRageManaThreshold / 100 * shaman.MaxMana()
+				return character.CurrentMana() <= manaReserve
+			},
+		})
+	}
 }

@@ -11,12 +11,12 @@ import (
 func Test_PartialResistsVsPlayer(t *testing.T) {
 	attacker := &Unit{
 		Type:  EnemyUnit,
-		Level: 73,
+		Level: 83,
 		stats: stats.Stats{},
 	}
 	defender := &Unit{
 		Type:  PlayerUnit,
-		Level: 70,
+		Level: 80,
 		stats: stats.Stats{},
 	}
 
@@ -81,12 +81,12 @@ func Test_PartialResistsVsPlayer(t *testing.T) {
 func Test_PartialResistsVsBoss(t *testing.T) {
 	attacker := &Unit{
 		Type:  PlayerUnit,
-		Level: 70,
+		Level: 80,
 		stats: stats.Stats{},
 	}
 	defender := &Unit{
 		Type:  EnemyUnit,
-		Level: 73,
+		Level: 83,
 		stats: stats.Stats{},
 	}
 
@@ -119,7 +119,7 @@ func Test_PartialResistsVsBoss(t *testing.T) {
 			chance = th.cumulativeChance
 		}
 
-		expectedAr := 0.06 + resist/(350+resist)
+		expectedAr := 0.06 + resist/(400+resist)
 
 		if math.Abs(resultingAr-expectedAr) > 1e-9 {
 			t.Errorf("resist = %.2f, thresholds = %s, resultingAr = %.2f%%, expectedAr = %.2f%%", resist, thresholds, resultingAr, expectedAr)

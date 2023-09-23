@@ -10,9 +10,9 @@ import (
 func (druid *Druid) registerFakeGotw() {
 	baseCost := core.TernaryFloat64(druid.HasMinorGlyph(proto.DruidMinorGlyph_GlyphOfTheWild), 0.32, 0.64)
 
-	druid.GiftOfTheWild = druid.RegisterSpell(core.SpellConfig{
-		ActionID: core.ActionID{SpellID: 26991},
-		Flags:    SpellFlagOmenTrigger | core.SpellFlagHelpful,
+	druid.GiftOfTheWild = druid.RegisterSpell(Humanoid|Moonkin|Tree, core.SpellConfig{
+		ActionID: core.ActionID{SpellID: 48470},
+		Flags:    SpellFlagOmenTrigger | core.SpellFlagHelpful | core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   baseCost,

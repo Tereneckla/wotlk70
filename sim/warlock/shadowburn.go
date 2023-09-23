@@ -16,7 +16,7 @@ func (warlock *Warlock) registerShadowBurnSpell() {
 
 	if warlock.HasMajorGlyph(proto.WarlockMajorGlyph_GlyphOfShadowburn) {
 		warlock.RegisterResetEffect(func(sim *core.Simulation) {
-			sim.RegisterExecutePhaseCallback(func(sim *core.Simulation, isExecute int) {
+			sim.RegisterExecutePhaseCallback(func(sim *core.Simulation, isExecute int32) {
 				if isExecute == 35 {
 					warlock.Shadowburn.BonusCritRating += 20 * core.CritRatingPerCritChance
 				}
@@ -28,6 +28,7 @@ func (warlock *Warlock) registerShadowBurnSpell() {
 		ActionID:    core.ActionID{SpellID: 30546},
 		SpellSchool: core.SpellSchoolShadow,
 		ProcMask:    core.ProcMaskSpellDamage,
+		Flags:       core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.2,
@@ -44,7 +45,6 @@ func (warlock *Warlock) registerShadowBurnSpell() {
 		},
 
 		BonusCritRating: 0 +
-			warlock.masterDemonologistShadowCrit +
 			core.TernaryFloat64(warlock.Talents.Devastation, 5*core.CritRatingPerCritChance, 0),
 		DamageMultiplierAdditive: 1 +
 			warlock.GrandFirestoneBonus() +

@@ -1,6 +1,8 @@
 package restoration
 
 import (
+	"time"
+
 	"github.com/Tereneckla/wotlk/sim/core"
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/shaman"
@@ -32,20 +34,37 @@ func NewRestorationShaman(character core.Character, options *proto.Player) *Rest
 	}
 
 	totems := &proto.ShamanTotems{}
-	if restoShamOptions.Rotation.Totems != nil {
-		totems = restoShamOptions.Rotation.Totems
+	if restoShamOptions.Options.Totems != nil {
+		totems = restoShamOptions.Options.Totems
 	}
 
 	resto := &RestorationShaman{
-		Shaman: shaman.NewShaman(character, options.TalentsString, totems, selfBuffs, false),
+		Shaman:   shaman.NewShaman(character, options.TalentsString, totems, selfBuffs, false),
+		rotation: restoShamOptions.Rotation,
 	}
+
+	// can only use earth shield if specc'd
+	resto.rotation.UseEarthShield = resto.rotation.UseEarthShield && resto.Talents.EarthShield
+	resto.earthShieldPPM = restoShamOptions.Options.EarthShieldPPM
+
 	resto.EnableResumeAfterManaWait(resto.tryUseGCD)
+
+	if resto.HasMHWeapon() {
+		resto.ApplyEarthlivingImbueToItem(resto.GetMHWeapon())
+	}
+	if resto.HasOHWeapon() {
+		resto.ApplyEarthlivingImbueToItem(resto.GetOHWeapon())
+	}
 
 	return resto
 }
 
 type RestorationShaman struct {
 	*shaman.Shaman
+
+	rotation            *proto.RestorationShaman_Rotation
+	earthShieldPPM      int32
+	lastEarthShieldProc time.Duration
 }
 
 func (resto *RestorationShaman) GetShaman() *shaman.Shaman {
@@ -54,4 +73,31 @@ func (resto *RestorationShaman) GetShaman() *shaman.Shaman {
 
 func (resto *RestorationShaman) Reset(sim *core.Simulation) {
 	resto.Shaman.Reset(sim)
+	resto.lastEarthShieldProc = -core.NeverExpires
+}
+func (resto *RestorationShaman) GetMainTarget() *core.Unit {
+	// TODO: make this just grab first player that isn't self.
+	target := resto.Env.Raid.GetFirstTargetDummy()
+	if target == nil {
+		return &resto.Unit
+	} else {
+		return &target.Unit
+	}
+}
+
+func (resto *RestorationShaman) Initialize() {
+	resto.CurrentTarget = resto.GetMainTarget()
+
+	// Has to be here because earthliving can cast hots and needs Env to be set to create the hots.
+	procMask := core.ProcMaskUnknown
+	if resto.HasMHWeapon() {
+		procMask |= core.ProcMaskMeleeMH
+	}
+	if resto.HasOHWeapon() {
+		procMask |= core.ProcMaskMeleeOH
+	}
+	resto.RegisterEarthlivingImbue(procMask)
+
+	resto.Shaman.Initialize()
+	resto.Shaman.RegisterHealingSpells()
 }

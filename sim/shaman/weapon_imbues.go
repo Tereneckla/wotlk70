@@ -9,14 +9,20 @@ import (
 )
 
 var TotemOfTheAstralWinds int32 = 27815
+var TotemOfSplintering int32 = 40710
 
 func (shaman *Shaman) RegisterOnItemSwapWithImbue(effectID int32, procMask *core.ProcMask, aura *core.Aura) {
 	shaman.RegisterOnItemSwap(func(sim *core.Simulation) {
-		mh := shaman.Equip[proto.ItemSlot_ItemSlotMainHand].TempEnchant == effectID
-		oh := shaman.Equip[proto.ItemSlot_ItemSlotOffHand].TempEnchant == effectID
-		*procMask = core.GetMeleeProcMaskForHands(mh, oh)
+		mask := core.ProcMaskUnknown
+		if shaman.MainHand().TempEnchant == effectID {
+			mask |= core.ProcMaskMeleeMH
+		}
+		if shaman.OffHand().TempEnchant == effectID {
+			mask |= core.ProcMaskMeleeOH
+		}
+		*procMask = mask
 
-		if !mh && !oh {
+		if mask == core.ProcMaskUnknown {
 			aura.Deactivate(sim)
 		} else {
 			aura.Activate(sim)
@@ -26,14 +32,26 @@ func (shaman *Shaman) RegisterOnItemSwapWithImbue(effectID int32, procMask *core
 
 func (shaman *Shaman) newWindfuryImbueSpell(isMH bool) *core.Spell {
 	apBonus := 445.0
-	if shaman.Equip[proto.ItemSlot_ItemSlotRanged].ID == TotemOfTheAstralWinds {
+	if shaman.Ranged().ID == TotemOfTheAstralWinds {
 		apBonus += 80
+	} else if shaman.Ranged().ID == TotemOfSplintering {
+		apBonus += 212
+	}
+
+	tag := 1
+	procMask := core.ProcMaskMeleeMHSpecial
+	weaponDamageFunc := shaman.MHWeaponDamage
+	if !isMH {
+		tag = 2
+		procMask = core.ProcMaskMeleeOHSpecial
+		weaponDamageFunc = shaman.OHWeaponDamage
+		apBonus *= 2 // applied after 50% offhand penalty
 	}
 
 	spellConfig := core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: 25505}.WithTag(core.TernaryInt32(isMH, 1, 2)),
+		ActionID:    core.ActionID{SpellID: 25505, Tag: int32(tag)},
 		SpellSchool: core.SpellSchoolPhysical,
-		ProcMask:    core.ProcMaskMelee,
+		ProcMask:    procMask,
 		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagIncludeTargetBonusDamage,
 
 		DamageMultiplier: []float64{1, 1.13, 1.27, 1.4}[shaman.Talents.ElementalWeapons],
@@ -44,57 +62,46 @@ func (shaman *Shaman) newWindfuryImbueSpell(isMH bool) *core.Spell {
 			constBaseDamage := spell.BonusWeaponDamage()
 			mAP := spell.MeleeAttackPower() + apBonus
 
-			if isMH {
-				baseDamage1 := constBaseDamage + spell.Unit.MHWeaponDamage(sim, mAP)
-				baseDamage2 := constBaseDamage + spell.Unit.MHWeaponDamage(sim, mAP)
-				result1 := spell.CalcDamage(sim, target, baseDamage1, spell.OutcomeMeleeSpecialHitAndCrit)
-				result2 := spell.CalcDamage(sim, target, baseDamage2, spell.OutcomeMeleeSpecialHitAndCrit)
-				spell.DealDamage(sim, result1)
-				spell.DealDamage(sim, result2)
-			} else {
-				baseDamage1 := constBaseDamage + spell.Unit.OHWeaponDamage(sim, mAP)
-				baseDamage2 := constBaseDamage + spell.Unit.OHWeaponDamage(sim, mAP)
-				result1 := spell.CalcDamage(sim, target, baseDamage1, spell.OutcomeMeleeSpecialHitAndCrit)
-				result2 := spell.CalcDamage(sim, target, baseDamage2, spell.OutcomeMeleeSpecialHitAndCrit)
-				spell.DealDamage(sim, result1)
-				spell.DealDamage(sim, result2)
-			}
+			baseDamage1 := constBaseDamage + weaponDamageFunc(sim, mAP)
+			baseDamage2 := constBaseDamage + weaponDamageFunc(sim, mAP)
+			result1 := spell.CalcDamage(sim, target, baseDamage1, spell.OutcomeMeleeSpecialHitAndCrit)
+			result2 := spell.CalcDamage(sim, target, baseDamage2, spell.OutcomeMeleeSpecialHitAndCrit)
+			spell.DealDamage(sim, result1)
+			spell.DealDamage(sim, result2)
 		},
 	}
 
 	return shaman.RegisterSpell(spellConfig)
 }
 
-func (shaman *Shaman) RegisterWindfuryImbue(mh bool, oh bool) {
-	if !mh && !oh {
+func (shaman *Shaman) RegisterWindfuryImbue(procMask core.ProcMask) {
+	if procMask == core.ProcMaskUnknown {
 		return
 	}
 
+	if procMask.Matches(core.ProcMaskMeleeMH) {
+		shaman.MainHand().TempEnchant = 2636
+	}
+	if procMask.Matches(core.ProcMaskMeleeOH) {
+		shaman.OffHand().TempEnchant = 2636
+	}
+
 	var proc = 0.2
-	if mh && oh {
+	if procMask == core.ProcMaskMelee {
 		proc = 0.36
 	}
 	if shaman.HasMajorGlyph(proto.ShamanMajorGlyph_GlyphOfWindfuryWeapon) {
 		proc += 0.02 //TODO: confirm how this actually works
 	}
 
-	mhSpell := shaman.newWindfuryImbueSpell(true)
-	ohSpell := shaman.newWindfuryImbueSpell(false)
-
 	icd := core.Cooldown{
 		Timer:    shaman.NewTimer(),
 		Duration: time.Second * 3,
 	}
 
-	if mh {
-		shaman.Equip[proto.ItemSlot_ItemSlotMainHand].TempEnchant = 2636
-	}
+	mhSpell := shaman.newWindfuryImbueSpell(true)
+	ohSpell := shaman.newWindfuryImbueSpell(false)
 
-	if oh {
-		shaman.Equip[proto.ItemSlot_ItemSlotOffHand].TempEnchant = 2636
-	}
-
-	procMask := core.GetMeleeProcMaskForHands(mh, oh)
 	aura := shaman.RegisterAura(core.Aura{
 		Label:    "Windfury Imbue",
 		Duration: core.NeverExpires,
@@ -106,20 +113,18 @@ func (shaman *Shaman) RegisterWindfuryImbue(mh bool, oh bool) {
 				return
 			}
 
-			isMHHit := spell.IsMH()
 			if !icd.IsReady(sim) {
 				return
 			}
 
-			if sim.RandomFloat("Windfury Imbue") > proc {
-				return
-			}
-			icd.Use(sim)
+			if sim.RandomFloat("Windfury Imbue") < proc {
+				icd.Use(sim)
 
-			if isMHHit {
-				mhSpell.Cast(sim, result.Target)
-			} else {
-				ohSpell.Cast(sim, result.Target)
+				if spell.IsMH() {
+					mhSpell.Cast(sim, result.Target)
+				} else {
+					ohSpell.Cast(sim, result.Target)
+				}
 			}
 		},
 	})
@@ -127,11 +132,18 @@ func (shaman *Shaman) RegisterWindfuryImbue(mh bool, oh bool) {
 	shaman.RegisterOnItemSwapWithImbue(2636, &procMask, aura)
 }
 
-func (shaman *Shaman) newFlametongueImbueSpell(isMH bool) *core.Spell {
+func (shaman *Shaman) newFlametongueImbueSpell(weapon *core.Item, isDownranked bool) *core.Spell {
+	spellID := 25489
+	baseDamage := 68.5
+	if isDownranked {
+		spellID = 25489
+		baseDamage = 64
+	}
+
 	return shaman.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: 25489},
+		ActionID:    core.ActionID{SpellID: int32(spellID)},
 		SpellSchool: core.SpellSchoolFire,
-		ProcMask:    core.ProcMaskEmpty,
+		ProcMask:    core.ProcMaskWeaponProc,
 
 		BonusHitRating:   float64(shaman.Talents.ElementalPrecision) * core.SpellHitRatingPerHitChance,
 		DamageMultiplier: 1,
@@ -139,16 +151,10 @@ func (shaman *Shaman) newFlametongueImbueSpell(isMH bool) *core.Spell {
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			weapon := core.Ternary(isMH, shaman.GetMHWeapon(), shaman.GetOHWeapon())
-
-			var damage float64 = 0
-			if weapon != nil {
-				baseDamage := weapon.SwingSpeed * 31.07
-				spellCoeff := 0.1 * weapon.SwingSpeed / 2.6
-				damage = baseDamage + spellCoeff*spell.SpellPower()
+			if weapon.SwingSpeed != 0 {
+				damage := weapon.SwingSpeed * (baseDamage + 0.1/2.6*spell.SpellPower())
+				spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMagicHitAndCrit)
 			}
-
-			spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMagicHitAndCrit)
 		},
 	})
 }
@@ -158,13 +164,15 @@ func (shaman *Shaman) ApplyFlametongueImbueToItem(item *core.Item, isDownranked 
 		return
 	}
 
-	spBonus := 96.0 + core.TernaryFloat64(shaman.HasSetBonus(ItemSetCycloneRegalia, 2), 20, 0)
-	spMod := 1.0 + 0.1*float64(shaman.Talents.ElementalWeapons)
-	id := 2634
+	spBonus := 96.0
+	enchantID := 2634
 	if isDownranked {
-		spBonus = 45.0 + core.TernaryFloat64(shaman.HasSetBonus(ItemSetCycloneRegalia, 2), 20, 0)
-		id = 1666
+		spBonus = 45.0
+		enchantID = 1666
 	}
+	spBonus += core.TernaryFloat64(shaman.HasSetBonus(ItemSetCycloneRegalia, 2), 20, 0)
+
+	spMod := 1.0 + 0.1*float64(shaman.Talents.ElementalWeapons)
 
 	newStats := stats.Stats{stats.SpellPower: spBonus * spMod}
 	if shaman.HasMajorGlyph(proto.ShamanMajorGlyph_GlyphOfFlametongueWeapon) {
@@ -172,32 +180,38 @@ func (shaman *Shaman) ApplyFlametongueImbueToItem(item *core.Item, isDownranked 
 	}
 
 	item.Stats = item.Stats.Add(newStats)
-	item.TempEnchant = int32(id)
+	item.TempEnchant = int32(enchantID)
 }
 
-func (shaman *Shaman) RegisterFlametongueImbue(mh bool, oh bool) {
-	if !mh && !oh && !shaman.ItemSwap.IsEnabled() {
+func (shaman *Shaman) RegisterFlametongueImbue(procMask core.ProcMask, isDownranked bool) {
+	if procMask == core.ProcMaskUnknown && !shaman.ItemSwap.IsEnabled() {
 		return
 	}
 
-	if mh {
-		shaman.ApplyFlametongueImbueToItem(shaman.GetMHWeapon(), false)
+	if procMask.Matches(core.ProcMaskMeleeMH) {
+		shaman.ApplyFlametongueImbueToItem(shaman.MainHand(), isDownranked)
 	}
-	if oh {
-		shaman.ApplyFlametongueImbueToItem(shaman.GetOHWeapon(), false)
+	if procMask.Matches(core.ProcMaskMeleeOH) {
+		shaman.ApplyFlametongueImbueToItem(shaman.OffHand(), isDownranked)
 	}
 
-	ftIcd := core.Cooldown{
+	icd := core.Cooldown{
 		Timer:    shaman.NewTimer(),
 		Duration: time.Millisecond,
 	}
 
-	mhSpell := shaman.newFlametongueImbueSpell(true)
-	ohSpell := shaman.newFlametongueImbueSpell(false)
+	mhSpell := shaman.newFlametongueImbueSpell(shaman.MainHand(), isDownranked)
+	ohSpell := shaman.newFlametongueImbueSpell(shaman.OffHand(), isDownranked)
 
-	procMask := core.GetMeleeProcMaskForHands(mh, oh)
+	label := "Flametongue Imbue"
+	enchantID := 2634
+	if isDownranked {
+		label = "Flametongue Imbue (downranked)"
+		enchantID = 1666
+	}
+
 	aura := shaman.RegisterAura(core.Aura{
-		Label:    "Flametongue Imbue",
+		Label:    label,
 		Duration: core.NeverExpires,
 		OnReset: func(aura *core.Aura, sim *core.Simulation) {
 			aura.Activate(sim)
@@ -207,13 +221,13 @@ func (shaman *Shaman) RegisterFlametongueImbue(mh bool, oh bool) {
 				return
 			}
 
-			isMHHit := spell.IsMH()
-			if !ftIcd.IsReady(sim) {
+			if !icd.IsReady(sim) {
 				return
 			}
-			ftIcd.Use(sim)
 
-			if isMHHit {
+			icd.Use(sim)
+
+			if spell.IsMH() {
 				mhSpell.Cast(sim, result.Target)
 			} else {
 				ohSpell.Cast(sim, result.Target)
@@ -221,81 +235,7 @@ func (shaman *Shaman) RegisterFlametongueImbue(mh bool, oh bool) {
 		},
 	})
 
-	shaman.RegisterOnItemSwapWithImbue(2634, &procMask, aura)
-}
-
-func (shaman *Shaman) newFlametongueDownrankImbueSpell(isMH bool) *core.Spell {
-	return shaman.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: 16342},
-		SpellSchool: core.SpellSchoolFire,
-		ProcMask:    core.ProcMaskEmpty,
-
-		BonusHitRating:   float64(shaman.Talents.ElementalPrecision) * core.SpellHitRatingPerHitChance,
-		DamageMultiplier: 1,
-		CritMultiplier:   shaman.ElementalCritMultiplier(0),
-		ThreatMultiplier: 1,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			weapon := core.Ternary(isMH, shaman.GetMHWeapon(), shaman.GetOHWeapon())
-
-			var damage float64 = 0
-			if weapon != nil {
-				baseDamage := weapon.SwingSpeed * 24.98
-				spellCoeff := 0.1 * weapon.SwingSpeed / 2.6
-				damage = baseDamage + spellCoeff*spell.SpellPower()
-			}
-
-			spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMagicHitAndCrit)
-		},
-	})
-}
-
-func (shaman *Shaman) RegisterFlametongueDownrankImbue(mh bool, oh bool) {
-	if !mh && !oh && !shaman.ItemSwap.IsEnabled() {
-		return
-	}
-
-	if mh {
-		shaman.ApplyFlametongueImbueToItem(shaman.GetMHWeapon(), true)
-	}
-	if oh {
-		shaman.ApplyFlametongueImbueToItem(shaman.GetOHWeapon(), true)
-	}
-
-	ftDownrankIcd := core.Cooldown{
-		Timer:    shaman.NewTimer(),
-		Duration: time.Millisecond,
-	}
-
-	mhSpell := shaman.newFlametongueDownrankImbueSpell(true)
-	ohSpell := shaman.newFlametongueDownrankImbueSpell(false)
-	procMask := core.GetMeleeProcMaskForHands(mh, oh)
-	aura := shaman.RegisterAura(core.Aura{
-		Label:    "Flametongue Imbue (downranked)",
-		Duration: core.NeverExpires,
-		OnReset: func(aura *core.Aura, sim *core.Simulation) {
-			aura.Activate(sim)
-		},
-		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if !result.Landed() || !spell.ProcMask.Matches(procMask) {
-				return
-			}
-
-			isMHHit := spell.IsMH()
-			if !ftDownrankIcd.IsReady(sim) {
-				return
-			}
-			ftDownrankIcd.Use(sim)
-
-			if isMHHit {
-				mhSpell.Cast(sim, result.Target)
-			} else {
-				ohSpell.Cast(sim, result.Target)
-			}
-		},
-	})
-
-	shaman.RegisterOnItemSwapWithImbue(1666, &procMask, aura)
+	shaman.RegisterOnItemSwapWithImbue(int32(enchantID), &procMask, aura)
 }
 
 func (shaman *Shaman) FrostbrandDebuffAura(target *core.Unit) *core.Aura {
@@ -307,7 +247,9 @@ func (shaman *Shaman) FrostbrandDebuffAura(target *core.Unit) *core.Aura {
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			shaman.LightningBolt.DamageMultiplier *= multiplier
 			shaman.ChainLightning.DamageMultiplier *= multiplier
-			shaman.LavaLash.DamageMultiplier *= multiplier
+			if shaman.LavaLash != nil {
+				shaman.LavaLash.DamageMultiplier *= multiplier
+			}
 			shaman.EarthShock.DamageMultiplier *= multiplier
 			shaman.FlameShock.DamageMultiplier *= multiplier
 			shaman.FrostShock.DamageMultiplier *= multiplier
@@ -315,7 +257,9 @@ func (shaman *Shaman) FrostbrandDebuffAura(target *core.Unit) *core.Aura {
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 			shaman.LightningBolt.DamageMultiplier /= multiplier
 			shaman.ChainLightning.DamageMultiplier /= multiplier
-			shaman.LavaLash.DamageMultiplier /= multiplier
+			if shaman.LavaLash != nil {
+				shaman.LavaLash.DamageMultiplier /= multiplier
+			}
 			shaman.EarthShock.DamageMultiplier /= multiplier
 			shaman.FlameShock.DamageMultiplier /= multiplier
 			shaman.FrostShock.DamageMultiplier /= multiplier
@@ -323,7 +267,7 @@ func (shaman *Shaman) FrostbrandDebuffAura(target *core.Unit) *core.Aura {
 	})
 }
 
-func (shaman *Shaman) newFrostbrandImbueSpell(isMH bool) *core.Spell {
+func (shaman *Shaman) newFrostbrandImbueSpell() *core.Spell {
 	return shaman.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 25500},
 		SpellSchool: core.SpellSchoolFrost,
@@ -341,21 +285,22 @@ func (shaman *Shaman) newFrostbrandImbueSpell(isMH bool) *core.Spell {
 	})
 }
 
-func (shaman *Shaman) RegisterFrostbrandImbue(mh bool, oh bool) {
-	if !mh && !oh {
+func (shaman *Shaman) RegisterFrostbrandImbue(procMask core.ProcMask) {
+	if procMask == core.ProcMaskUnknown {
 		return
 	}
 
-	mhSpell := shaman.newFrostbrandImbueSpell(true)
-	ohSpell := shaman.newFrostbrandImbueSpell(false)
-	procMask := core.GetMeleeProcMaskForHands(mh, oh)
+	if procMask.Matches(core.ProcMaskMeleeMH) {
+		shaman.MainHand().TempEnchant = 2635
+	}
+	if procMask.Matches(core.ProcMaskMeleeOH) {
+		shaman.OffHand().TempEnchant = 2635
+	}
+
 	ppmm := shaman.AutoAttacks.NewPPMManager(9.0, procMask)
 
-	if mh {
-		shaman.Equip[proto.ItemSlot_ItemSlotMainHand].TempEnchant = 2635
-	} else {
-		shaman.Equip[proto.ItemSlot_ItemSlotOffHand].TempEnchant = 2635
-	}
+	mhSpell := shaman.newFrostbrandImbueSpell()
+	ohSpell := shaman.newFrostbrandImbueSpell()
 
 	fbDebuffAuras := shaman.NewEnemyAuraArray(shaman.FrostbrandDebuffAura)
 
@@ -366,24 +311,111 @@ func (shaman *Shaman) RegisterFrostbrandImbue(mh bool, oh bool) {
 			aura.Activate(sim)
 		},
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if !result.Landed() || !spell.ProcMask.Matches(procMask) {
+			if !result.Landed() {
 				return
 			}
 
-			if !ppmm.Proc(sim, spell.ProcMask, "Frostbrand Weapon") {
-				return
+			if ppmm.Proc(sim, spell.ProcMask, "Frostbrand Weapon") {
+				if spell.IsMH() {
+					mhSpell.Cast(sim, result.Target)
+				} else {
+					ohSpell.Cast(sim, result.Target)
+				}
+				fbDebuffAuras.Get(result.Target).Activate(sim)
 			}
-
-			if spell.IsMH() {
-				mhSpell.Cast(sim, result.Target)
-			} else {
-				ohSpell.Cast(sim, result.Target)
-			}
-			fbDebuffAuras.Get(result.Target).Activate(sim)
 		},
 	})
 
 	shaman.ItemSwap.RegisterOnSwapItemForEffectWithPPMManager(2635, 9.0, &ppmm, aura)
 }
 
-//earthliving? not important for dps sims though
+func (shaman *Shaman) newEarthlivingImbueSpell() *core.Spell {
+	return shaman.RegisterSpell(core.SpellConfig{
+		ActionID:    core.ActionID{SpellID: 51993},
+		SpellSchool: core.SpellSchoolNature,
+		ProcMask:    core.ProcMaskEmpty,
+
+		DamageMultiplier: 1,
+		CritMultiplier:   shaman.ElementalCritMultiplier(0),
+		ThreatMultiplier: 1,
+
+		Hot: core.DotConfig{
+			Aura: core.Aura{
+				Label:    "Earthliving",
+				ActionID: core.ActionID{SpellID: 51999},
+			},
+			NumberOfTicks: 4,
+			TickLength:    time.Second * 3,
+			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot, _ bool) {
+				dot.SnapshotBaseDamage = 114 + 0.171*dot.Spell.HealingPower(target)
+				dot.SnapshotAttackerMultiplier = dot.Spell.CasterHealingMultiplier()
+			},
+			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+				dot.CalcAndDealPeriodicSnapshotHealing(sim, target, dot.OutcomeTick)
+			},
+		},
+
+		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			spell.SpellMetrics[target.UnitIndex].Hits++
+			spell.Hot(target).Apply(sim)
+		},
+	})
+}
+
+func (shaman *Shaman) ApplyEarthlivingImbueToItem(item *core.Item) {
+	if item == nil || item.TempEnchant == 3349 || item.TempEnchant == 3348 {
+		// downranking not implemented yet but put the temp enchant ID there.
+		return
+	}
+
+	spBonus := 110.0
+	spMod := 1.0 + 0.1*float64(shaman.Talents.ElementalWeapons)
+	id := 3349
+
+	newStats := stats.Stats{stats.SpellPower: spBonus * spMod}
+	item.Stats = item.Stats.Add(newStats)
+	item.TempEnchant = int32(id)
+}
+
+func (shaman *Shaman) RegisterEarthlivingImbue(procMask core.ProcMask) {
+	if procMask == core.ProcMaskEmpty && !shaman.ItemSwap.IsEnabled() {
+		return
+	}
+
+	if procMask.Matches(core.ProcMaskMeleeMH) {
+		shaman.ApplyEarthlivingImbueToItem(shaman.MainHand())
+	}
+	if procMask.Matches(core.ProcMaskMeleeOH) {
+		shaman.ApplyEarthlivingImbueToItem(shaman.OffHand())
+	}
+
+	procChance := 0.2
+	if shaman.HasMajorGlyph(proto.ShamanMajorGlyph_GlyphOfEarthlivingWeapon) {
+		procChance += 0.05
+	}
+
+	imbueSpell := shaman.newEarthlivingImbueSpell()
+
+	aura := shaman.RegisterAura(core.Aura{
+		Label:    "Earthliving Imbue",
+		Duration: core.NeverExpires,
+		OnReset: func(aura *core.Aura, sim *core.Simulation) {
+			aura.Activate(sim)
+		},
+		OnHealDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if spell != shaman.ChainHeal && spell != shaman.LesserHealingWave && spell != shaman.HealingWave && spell != shaman.Riptide {
+				return
+			}
+
+			if procMask.Matches(core.ProcMaskMeleeMH) && sim.RandomFloat("earthliving") < procChance {
+				imbueSpell.Cast(sim, result.Target)
+			}
+
+			if procMask.Matches(core.ProcMaskMeleeOH) && sim.RandomFloat("earthliving") < procChance {
+				imbueSpell.Cast(sim, result.Target)
+			}
+		},
+	})
+
+	shaman.RegisterOnItemSwapWithImbue(3349, &procMask, aura)
+}

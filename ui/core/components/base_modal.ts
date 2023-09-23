@@ -40,7 +40,7 @@ export class BaseModal extends Component {
 
 	constructor(parent: HTMLElement, cssClass: string, config: BaseModalConfig = {}) {
 		super(parent, 'modal');
-		this.modalConfig = {...DEFAULT_CONFIG, ...config};
+		this.modalConfig = { ...DEFAULT_CONFIG, ...config };
 
 		const modalSizeKlass = this.modalConfig.size && this.modalConfig.size != 'md' ? `modal-${this.modalConfig.size}` : '';
 
@@ -83,15 +83,18 @@ export class BaseModal extends Component {
 
 		this.modal = new Modal(this.rootElem);
 		this.open();
-		
+
 		this.rootElem.addEventListener('hidden.bs.modal', (event) => {
 			this.rootElem.remove();
+			this.dispose();
 		})
 	}
 
 	private addCloseButton() {
 		new CloseButton(this.header ? this.header : this.body, () => this.close(), this.modalConfig.closeButton);
 	}
+
+	protected onShow(e: Event) {}
 
 	open() {
 		// Hacks for better looking multi modals
@@ -110,6 +113,7 @@ export class BaseModal extends Component {
 			}) as HTMLElement;
 			// Then move it from <body> to the parent element
 			this.rootElem.insertAdjacentElement('afterend', backdrop);
+			this.onShow(event);
 		});
 
 		this.rootElem.addEventListener('hide.bs.modal', (event) => {
