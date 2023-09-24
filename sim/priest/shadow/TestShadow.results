@@ -536,8 +536,8 @@ dps_results: {
 dps_results: {
  key: "TestShadow-AllItems-IncarnateRaiment"
  value: {
-  dps: 6272.39918
-  tps: 6202.58603
+  dps: 6386.78116
+  tps: 6314.43757
  }
 }
 dps_results: {

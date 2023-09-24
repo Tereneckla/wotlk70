@@ -361,8 +361,8 @@ dps_results: {
 dps_results: {
  key: "TestArms-AllItems-DestroyerBattlegear"
  value: {
-  dps: 8176.05048
-  tps: 6719.63779
+  dps: 8203.60305
+  tps: 6746.10086
  }
 }
 dps_results: {

@@ -221,8 +221,8 @@ dps_results: {
 dps_results: {
  key: "TestEnhancement-AllItems-CataclysmHarness"
  value: {
-  dps: 5977.62104
-  tps: 3265.79015
+  dps: 6098.86156
+  tps: 3340.30696
  }
 }
 dps_results: {
@@ -270,8 +270,8 @@ dps_results: {
 dps_results: {
  key: "TestEnhancement-AllItems-CycloneHarness"
  value: {
-  dps: 5845.11478
-  tps: 3187.80355
+  dps: 5853.69834
+  tps: 3193.81205
  }
 }
 dps_results: {

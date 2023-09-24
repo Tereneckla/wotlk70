@@ -831,8 +831,8 @@ dps_results: {
 dps_results: {
  key: "TestFeralTank-AllItems-NordrassilHarness"
  value: {
-  dps: 2117.05515
-  tps: 4572.65463
+  dps: 2165.36096
+  tps: 4623.42646
   dtps: 6.81153
  }
 }

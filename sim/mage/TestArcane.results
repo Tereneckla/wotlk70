@@ -60,8 +60,8 @@ dps_results: {
 dps_results: {
  key: "TestArcane-AllItems-AldorRegalia"
  value: {
-  dps: 6118.25167
-  tps: 3726.2287
+  dps: 6129.89136
+  tps: 3734.11324
  }
 }
 dps_results: {
@@ -928,8 +928,8 @@ dps_results: {
 dps_results: {
  key: "TestArcane-AllItems-TirisfalRegalia"
  value: {
-  dps: 6423.36907
-  tps: 3909.42569
+  dps: 6472.79207
+  tps: 3938.99496
  }
 }
 dps_results: {

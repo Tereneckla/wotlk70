@@ -214,8 +214,8 @@ dps_results: {
 dps_results: {
  key: "TestDestruction-AllItems-CorruptorRaiment"
  value: {
-  dps: 8779.7553
-  tps: 7231.02153
+  dps: 8811.18725
+  tps: 7259.31029
  }
 }
 dps_results: {
@@ -886,8 +886,8 @@ dps_results: {
 dps_results: {
  key: "TestDestruction-AllItems-VoidheartRaiment"
  value: {
-  dps: 8708.93207
-  tps: 7166.93437
+  dps: 8738.02161
+  tps: 7194.93256
  }
 }
 dps_results: {

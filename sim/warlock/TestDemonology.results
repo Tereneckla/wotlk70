@@ -214,8 +214,8 @@ dps_results: {
 dps_results: {
  key: "TestDemonology-AllItems-CorruptorRaiment"
  value: {
-  dps: 8340.26926
-  tps: 6953.35332
+  dps: 8376.36428
+  tps: 6989.44835
  }
 }
 dps_results: {
@@ -893,8 +893,8 @@ dps_results: {
 dps_results: {
  key: "TestDemonology-AllItems-VoidheartRaiment"
  value: {
-  dps: 8316.8843
-  tps: 6938.51944
+  dps: 8318.00087
+  tps: 6938.05741
  }
 }
 dps_results: {

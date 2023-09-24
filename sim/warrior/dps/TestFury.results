@@ -1097,8 +1097,8 @@ dps_results: {
 dps_results: {
  key: "TestFury-AllItems-WarbringerBattlegear"
  value: {
-  dps: 6625.57533
-  tps: 4910.30437
+  dps: 6687.3341
+  tps: 4956.39615
  }
 }
 dps_results: {

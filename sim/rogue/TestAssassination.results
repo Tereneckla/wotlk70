@@ -81,8 +81,8 @@ dps_results: {
 dps_results: {
  key: "TestAssassination-AllItems-AssassinationArmor"
  value: {
-  dps: 6029.14751
-  tps: 4280.69473
+  dps: 6391.48146
+  tps: 4537.95184
  }
 }
 dps_results: {
@@ -305,8 +305,8 @@ dps_results: {
 dps_results: {
  key: "TestAssassination-AllItems-Deathmantle"
  value: {
-  dps: 6380.48787
-  tps: 4530.14639
+  dps: 6451.34553
+  tps: 4580.45532
  }
 }
 dps_results: {
@@ -579,8 +579,8 @@ dps_results: {
 dps_results: {
  key: "TestAssassination-AllItems-Netherblade"
  value: {
-  dps: 6262.96623
-  tps: 4446.70602
+  dps: 6261.54102
+  tps: 4445.69412
  }
 }
 dps_results: {
