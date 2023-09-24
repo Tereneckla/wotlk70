@@ -99,11 +99,11 @@ func (prot *ProtectionPaladin) Initialize() {
 		})
 	}
 
-	if !prot.IsUsingAPL {
-		prot.RegisterPrepullAction(-1500*time.Millisecond, func(sim *core.Simulation) {
-			prot.DivinePlea.Cast(sim, nil)
-		})
-	}
+	// if !prot.IsUsingAPL {
+	// 	prot.RegisterPrepullAction(-1500*time.Millisecond, func(sim *core.Simulation) {
+	// 		prot.DivinePlea.Cast(sim, nil)
+	// 	})
+	// }
 }
 
 func (prot *ProtectionPaladin) Reset(sim *core.Simulation) {

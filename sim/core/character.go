@@ -37,11 +37,11 @@ const CharacterBuildPhaseAll = CharacterBuildPhaseBase | CharacterBuildPhaseGear
 type Character struct {
 	Unit
 
-	Name  string // Different from Label, needed for returned results.
-	Race  proto.Race
-	Class proto.Class
-	Spec  proto.Spec
-
+	Name         string // Different from Label, needed for returned results.
+	Race         proto.Race
+	Class        proto.Class
+	Spec         proto.Spec
+	ShattFaction proto.ShattrathFaction
 	// Current gear.
 	Equipment
 	//Item Swap Handler
@@ -109,12 +109,12 @@ func NewCharacter(party *Party, partyIndex int, player *proto.Player) Character 
 			IsUsingAPL:         player.Rotation != nil && player.Rotation.Type == proto.APLRotation_TypeAPL,
 		},
 
-		Name:  player.Name,
-		Race:  player.Race,
-		Class: player.Class,
-		Spec:  PlayerProtoToSpec(player),
-
-		Equipment: ProtoToEquipment(player.Equipment),
+		Name:         player.Name,
+		Race:         player.Race,
+		Class:        player.Class,
+		Spec:         PlayerProtoToSpec(player),
+		ShattFaction: player.ShattFaction,
+		Equipment:    ProtoToEquipment(player.Equipment),
 
 		professions: [2]proto.Profession{
 			player.Profession1,

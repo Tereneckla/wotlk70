@@ -180,7 +180,7 @@ export class EquippedItem {
 			enchant: this._enchant?.effectId,
 			gems: this._gems.map(gem => gem?.id || 0),
 			suffix: this._item.suffix,
-			ivl: this._item.ilvl,
+			ilvl: this._item.ilvl,
 			quality: this._item.quality
 		});
 	}

@@ -154,7 +154,7 @@ var FerocityTalents = &proto.HunterPetTalents{
 var PlayerOptionsBasic = &proto.Player_Hunter{
 	Hunter: &proto.Hunter{
 		Options: &proto.Hunter_Options{
-			Ammo:       proto.Hunter_Options_SaroniteRazorheads,
+			Ammo:       proto.Hunter_Options_TimelessArrow,
 			PetType:    proto.Hunter_Options_Wolf,
 			PetTalents: FerocityTalents,
 			PetUptime:  0.9,

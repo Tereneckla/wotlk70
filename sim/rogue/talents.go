@@ -71,6 +71,8 @@ func getRelentlessStrikesSpellID(talentPoints int32) int32 {
 func (rogue *Rogue) makeFinishingMoveEffectApplier() func(sim *core.Simulation, numPoints int32) {
 	ruthlessnessMetrics := rogue.NewComboPointMetrics(core.ActionID{SpellID: 14161})
 	relentlessStrikesMetrics := rogue.NewEnergyMetrics(core.ActionID{SpellID: getRelentlessStrikesSpellID(rogue.Talents.RelentlessStrikes)})
+	netherblade4pc := rogue.HasSetBonus(Tier4, 4)
+	netherblade4pcMetrics := rogue.NewComboPointMetrics(core.ActionID{SpellID: 37168})
 	var mayhemMetrics *core.ResourceMetrics
 	if rogue.HasSetBonus(Tier10, 4) {
 		mayhemMetrics = rogue.NewComboPointMetrics(core.ActionID{SpellID: 70802})
@@ -86,6 +88,9 @@ func (rogue *Rogue) makeFinishingMoveEffectApplier() func(sim *core.Simulation, 
 			if sim.RandomFloat("RelentlessStrikes") < 0.04*float64(t*numPoints) {
 				rogue.AddEnergy(sim, 25, relentlessStrikesMetrics)
 			}
+		}
+		if netherblade4pc && sim.RandomFloat("Netherblade 4pc") < 0.15 {
+			rogue.AddComboPoints(sim, 1, netherblade4pcMetrics)
 		}
 		if mayhemMetrics != nil {
 			if sim.RandomFloat("Mayhem") < 0.13 {
@@ -412,9 +417,9 @@ func (rogue *Rogue) applyFocusedAttacks() {
 				return
 			}
 			// Fan of Knives OH hits do not trigger focused attacks
-			if spell.ProcMask.Matches(core.ProcMaskMeleeOH) && spell.IsSpellAction(FanOfKnivesSpellID) {
-				return
-			}
+			// if spell.ProcMask.Matches(core.ProcMaskMeleeOH) && spell.IsSpellAction(FanOfKnivesSpellID) {
+			// 	return
+			// }
 			if sim.Proc(procChance, "Focused Attacks") {
 				rogue.AddEnergy(sim, 2, energyMetrics)
 			}
@@ -468,9 +473,9 @@ func (rogue *Rogue) registerBladeFlurryCD() {
 				return
 			}
 			// Fan of Knives off-hand hits are not cloned
-			if spell.IsSpellAction(FanOfKnivesSpellID) && spell.ProcMask.Matches(core.ProcMaskMeleeOH) {
-				return
-			}
+			// if spell.IsSpellAction(FanOfKnivesSpellID) && spell.ProcMask.Matches(core.ProcMaskMeleeOH) {
+			// 	return
+			// }
 
 			// Undo armor reduction to get the raw damage value.
 			curDmg = result.Damage / result.ResistanceMultiplier

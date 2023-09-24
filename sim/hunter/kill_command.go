@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Tereneckla/wotlk/sim/core"
+	"github.com/Tereneckla/wotlk/sim/core/stats"
 )
 
 func (hunter *Hunter) registerKillCommandCD() {
@@ -64,6 +65,9 @@ func (hunter *Hunter) registerKillCommandCD() {
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
 			hunter.pet.KillCommandAura.Activate(sim)
 			hunter.pet.KillCommandAura.SetStacks(sim, 3)
+			if beastLordProcAura != nil {
+				beastLordProcAura.Activate(sim)
+			}
 		},
 	})
 

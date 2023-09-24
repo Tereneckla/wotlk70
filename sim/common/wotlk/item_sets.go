@@ -9,7 +9,7 @@ import (
 )
 
 // Keep these in alphabetical order.
-core.AddEffectsToTest = false
+
 var ItemSetPurifiedShardOfTheGods = core.NewItemSet(core.ItemSet{
 	Name: "Purified Shard of the Gods",
 	Bonuses: map[int32]core.ApplyEffect{
@@ -148,4 +148,3 @@ var ItemSetBlessedBattlegearOfUndeadSlaying = makeUndeadSet("Blessed Battlegear 
 var ItemSetBlessedRegaliaOfUndeadCleansing = makeUndeadSet("Blessed Regalia of Undead Cleansing")
 var ItemSetBlessedGarbOfTheUndeadSlayer = makeUndeadSet("Blessed Garb of the Undead Slayer")
 var ItemSetUndeadSlayersBlessedArmor = makeUndeadSet("Undead Slayer's Blessed Armor")
-core.AddEffectsToTest = false

@@ -145,8 +145,8 @@ func (ret *RetributionPaladin) Reset(sim *core.Simulation) {
 				ret.RotationInput = append(ret.RotationInput, ret.CrusaderStrike)
 			case int32(proto.RetributionPaladin_Rotation_Exorcism):
 				ret.RotationInput = append(ret.RotationInput, ret.Exorcism)
-			case int32(proto.RetributionPaladin_Rotation_DivinePlea):
-				ret.RotationInput = append(ret.RotationInput, ret.DivinePlea)
+				// case int32(proto.RetributionPaladin_Rotation_DivinePlea):
+				// 	ret.RotationInput = append(ret.RotationInput, ret.DivinePlea)
 			}
 		}
 	}
@@ -171,8 +171,8 @@ func (ret *RetributionPaladin) Reset(sim *core.Simulation) {
 		ret.SealOfRighteousnessAura.Activate(sim)
 	}
 
-	if !ret.IsUsingAPL {
-		ret.DivinePleaAura.Activate(sim)
-		ret.DivinePlea.CD.Use(sim)
-	}
+	// if !ret.IsUsingAPL {
+	// 	ret.DivinePleaAura.Activate(sim)
+	// 	ret.DivinePlea.CD.Use(sim)
+	// }
 }

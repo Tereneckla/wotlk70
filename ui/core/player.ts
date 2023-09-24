@@ -1,5 +1,5 @@
 import {
-	ArmorType
+	ArmorType,
 	Class,
 	Consumes,
 	Cooldowns,
@@ -1118,9 +1118,9 @@ export class Player<SpecType extends Spec> {
 		if (!filters.raids.includes(RaidFilterOption.RaidVanilla)) {
 			itemData = filterItems(itemData, item => item.expansion != Expansion.ExpansionVanilla);
 		}
-		if (!filters.raids.includes(RaidFilterOption.RaidTbc)) {
-			itemData = filterItems(itemData, item => item.expansion != Expansion.ExpansionTbc);
-		}
+		// if (!filters.raids.includes(RaidFilterOption.RaidTbc)) {
+		// 	itemData = filterItems(itemData, item => item.expansion != Expansion.ExpansionTbc);
+		// }
 		for (const [raidOptionStr, zoneId] of Object.entries(Player.RAID_IDS)) {
 			const raidOption = parseInt(raidOptionStr) as RaidFilterOption;
 			if (!filters.raids.includes(raidOption)) {

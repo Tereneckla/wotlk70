@@ -87,7 +87,7 @@ func (shaman *Shaman) applyElementalFocus() {
 			affectedSpells = core.FilterSlice([]*core.Spell{
 				shaman.LightningBolt,
 				shaman.ChainLightning,
-				shaman.LavaBurst,
+				// shaman.LavaBurst,
 				shaman.FireNova,
 				shaman.EarthShock,
 				shaman.FlameShock,
@@ -204,16 +204,16 @@ func (shaman *Shaman) registerElementalMasteryCD() {
 		Duration: core.NeverExpires,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			shaman.ChainLightning.CastTimeMultiplier -= 1
-			shaman.LavaBurst.CastTimeMultiplier -= 1
+			//shaman.LavaBurst.CastTimeMultiplier -= 1
 			shaman.LightningBolt.CastTimeMultiplier -= 1
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 			shaman.ChainLightning.CastTimeMultiplier += 1
-			shaman.LavaBurst.CastTimeMultiplier += 1
+			//shaman.LavaBurst.CastTimeMultiplier += 1
 			shaman.LightningBolt.CastTimeMultiplier += 1
 		},
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if spell != shaman.LightningBolt && spell != shaman.ChainLightning && spell != shaman.LavaBurst {
+			if spell != shaman.LightningBolt && spell != shaman.ChainLightning /*&& spell != shaman.LavaBurst */ {
 				return
 			}
 			// Remove the buff and put skill on CD
@@ -274,16 +274,16 @@ func (shaman *Shaman) registerNaturesSwiftnessCD() {
 		Duration: core.NeverExpires,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			shaman.ChainLightning.CastTimeMultiplier -= 1
-			shaman.LavaBurst.CastTimeMultiplier -= 1
+			// shaman.LavaBurst.CastTimeMultiplier -= 1
 			shaman.LightningBolt.CastTimeMultiplier -= 1
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 			shaman.ChainLightning.CastTimeMultiplier += 1
-			shaman.LavaBurst.CastTimeMultiplier += 1
+			// shaman.LavaBurst.CastTimeMultiplier += 1
 			shaman.LightningBolt.CastTimeMultiplier += 1
 		},
 		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
-			if spell != shaman.LightningBolt && spell != shaman.ChainLightning && spell != shaman.LavaBurst {
+			if spell != shaman.LightningBolt && spell != shaman.ChainLightning /*&& spell != shaman.LavaBurst */ {
 				return
 			}
 
@@ -327,6 +327,9 @@ func (shaman *Shaman) applyFlurry() {
 	bonus := 1.0 + 0.06*float64(shaman.Talents.Flurry)
 
 	if shaman.HasSetBonus(ItemSetEarthshatterBattlegear, 4) {
+		bonus += 0.05
+	}
+	if shaman.HasSetBonus(ItemSetCataclysmHarness, 4) {
 		bonus += 0.05
 	}
 

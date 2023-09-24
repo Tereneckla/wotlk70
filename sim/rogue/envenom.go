@@ -19,9 +19,12 @@ func (rogue *Rogue) registerEnvenom() {
 			rogue.UpdateInstantPoisonPPM(0.0)
 		},
 	})
-
+	cost := 35.0
+	if rogue.HasSetBonus(ItemSetAssassination, 4) {
+		cost -= 10
+	}
 	chanceToRetainStacks := []float64{0, 0.33, 0.66, 1}[rogue.Talents.MasterPoisoner]
-
+	deathMantleDamage := core.TernaryFloat64(rogue.HasSetBonus(Tier5, 2), 40, 0)
 	rogue.Envenom = rogue.RegisterSpell(core.SpellConfig{
 		ActionID:     core.ActionID{SpellID: 32684},
 		SpellSchool:  core.SpellSchoolNature,
@@ -30,7 +33,7 @@ func (rogue *Rogue) registerEnvenom() {
 		MetricSplits: 6,
 
 		EnergyCost: core.EnergyCostOptions{
-			Cost:          35,
+			Cost:          cost,
 			Refund:        0.4 * float64(rogue.Talents.QuickRecovery),
 			RefundMetrics: rogue.QuickRecoveryMetrics,
 		},
@@ -66,7 +69,7 @@ func (rogue *Rogue) registerEnvenom() {
 			// - 215 base is scaled by consumed doses (<= comboPoints)
 			// - apRatio is independent of consumed doses (== comboPoints)
 			consumed := core.MinInt32(dp.GetStacks(), comboPoints)
-			baseDamage := 147*float64(consumed) + 0.09*float64(comboPoints)*spell.MeleeAttackPower()
+			baseDamage := 147*float64(consumed) + 0.09*float64(comboPoints)*spell.MeleeAttackPower() + deathMantleDamage*float64(comboPoints)
 
 			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 

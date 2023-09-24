@@ -1,5 +1,6 @@
 package mage
 
+/*
 import (
 	"time"
 
@@ -43,12 +44,12 @@ func (mage *Mage) registerMirrorImageCD() {
 			},
 		},
 
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-			mage.mirrorImage.EnableWithTimeout(sim, mage.mirrorImage, time.Second*30)
-			if t10Aura != nil {
-				t10Aura.Activate(sim)
-			}
-		},
+		// ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+		// 	mage.mirrorImage.EnableWithTimeout(sim, mage.mirrorImage, time.Second*30)
+		// 	if t10Aura != nil {
+		// 		t10Aura.Activate(sim)
+		// 	}
+		// },
 	})
 
 	mage.AddMajorCooldown(core.MajorCooldown{
@@ -180,3 +181,4 @@ func (mi *MirrorImage) registerFireblastSpell() {
 		},
 	})
 }
+*/

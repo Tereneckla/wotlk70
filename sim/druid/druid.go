@@ -60,10 +60,10 @@ type Druid struct {
 	StarfallSplash       *DruidSpell
 	SurvivalInstincts    *DruidSpell
 	SwipeBear            *DruidSpell
-	SwipeCat             *DruidSpell
-	TigersFury           *DruidSpell
-	Typhoon              *DruidSpell
-	Wrath                *DruidSpell
+	// SwipeCat             *DruidSpell
+	TigersFury *DruidSpell
+	Typhoon    *DruidSpell
+	Wrath      *DruidSpell
 
 	CatForm  *DruidSpell
 	BearForm *DruidSpell
@@ -236,10 +236,10 @@ func (druid *Druid) RegisterFeralCatSpells() {
 	druid.registerLacerateSpell()
 	druid.registerRakeSpell()
 	druid.registerRipSpell()
-	druid.registerSavageRoarSpell()
+	// druid.registerSavageRoarSpell()
 	druid.registerShredSpell()
 	druid.registerSwipeBearSpell()
-	druid.registerSwipeCatSpell()
+	// druid.registerSwipeCatSpell()
 	druid.registerTigersFurySpell()
 }
 
@@ -288,8 +288,7 @@ func New(char core.Character, form DruidForm, selfBuffs SelfBuffs, talents strin
 
 	// Druids get extra melee haste
 	druid.PseudoStats.MeleeHasteRatingPerHastePercent /= 1.3
-	var a = core.ExtraClassBaseStats[proto.Class_ClassDruid]
-	
+
 	// Base dodge is unaffected by Diminishing Returns
 	druid.PseudoStats.BaseDodge += 0.056097
 

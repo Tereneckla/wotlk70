@@ -6,7 +6,8 @@
         "strict": true,
         "lib": [
             "DOM",
-            "ES2021"
+            "ES2021",
+            "DOM.Iterable"
         ],
         "types": [],
         "outDir": "dist/wotlk",
@@ -14,6 +15,9 @@
         "allowJs": true,
         "resolveJsonModule": true,
         "esModuleInterop": true,
-        "baseUrl": "."
+        "baseUrl": ".",
+        "jsx": "react",
+        "jsxFactory": "element",
+        "jsxFragmentFactory": "fragment"
     }
 }

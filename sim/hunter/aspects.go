@@ -49,7 +49,7 @@ func (hunter *Hunter) registerAspectOfTheHawkSpell() {
 				}
 			}
 		})
-	hunter.applySharedAspectConfig(true, hunter.AspectOfTheDragonhawkAura)
+	hunter.applySharedAspectConfig(true, hunter.AspectOfTheHawkAura)
 
 	hunter.AspectOfTheHawk = hunter.RegisterSpell(core.SpellConfig{
 		ActionID: actionID,

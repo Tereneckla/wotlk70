@@ -331,6 +331,8 @@ export const sourceNames: Record<SourceFilterOption, string> = {
 	[SourceFilterOption.SourceRaid25H]: 'Raid (25H)',
 };
 export const raidNames: Record<RaidFilterOption, string> = {
+	[RaidFilterOption.RaidUnknown]: 'Unknown',
+	[RaidFilterOption.RaidVanilla]: 'Vanilla',
 	[RaidFilterOption.RaidKarazhan]: 'Karazhan',
 	[RaidFilterOption.RaidGruul]: 'Gruul',
 	[RaidFilterOption.RaidMagtheridon]: 'Magtheridon',

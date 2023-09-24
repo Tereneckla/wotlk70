@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+
 	"golang.org/x/exp/slices"
 )
 
@@ -52,10 +53,10 @@ func NewItemSet(set ItemSet) *ItemSet {
 
 	if WITH_DB {
 		if !foundName {
-			panic("No items found for set " + set.Name)
+			fmt.Println("No items found for set " + set.Name)
 		}
 		if len(set.AlternativeName) > 0 && !foundAlternativeName {
-			panic("No items found for set alternative " + set.AlternativeName)
+			fmt.Println("No items found for set alternative " + set.AlternativeName)
 		}
 	}
 

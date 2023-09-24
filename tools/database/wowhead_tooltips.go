@@ -314,33 +314,61 @@ func (item WowheadItemResponse) GetItemLevel() int {
 	return item.GetIntValue(itemLevelRegex)
 }
 
-var phaseRegex = regexp.MustCompile(`Phase ([0-9])`)
+//var phaseRegex = regexp.MustCompile(`Phase ([0-9])`)
 
 func (item WowheadItemResponse) GetPhase() int {
-	phase := item.GetIntValue(phaseRegex)
-	if phase != 0 {
-		return phase
-	}
-
 	ilvl := item.GetItemLevel()
-	if ilvl <= 164 { // TBC items
-		return 0
+	phase := 1
+
+	if item.ID > 39000 {
+		return 7
 	}
 
-	if ilvl < 200 || ilvl == 200 || ilvl == 213 || ilvl == 226 {
-		return 1
-	} else if ilvl == 219 || ilvl == 226 || ilvl == 239 {
-		return 2
-	} else if ilvl == 232 || ilvl == 245 || ilvl == 258 {
-		return 3
-	} else if ilvl == 251 || ilvl == 258 || ilvl == 259 || ilvl == 264 || ilvl == 268 || ilvl == 270 || ilvl == 271 || ilvl == 272 {
-		return 4
-	} else if ilvl == 277 || ilvl == 284 {
-		return 5
+	if ilvl > 164 {
+		return 7
 	}
 
-	// default to 1
-	return 1
+	if proto.ItemQuality(item.Quality) > proto.ItemQuality_ItemQualityLegendary {
+		return 7
+	}
+
+	if proto.ItemQuality(item.Quality) < proto.ItemQuality_ItemQualityEpic && ilvl > 115 {
+		return 7
+	}
+
+	if proto.ItemQuality(item.Quality) < proto.ItemQuality_ItemQualityUncommon {
+		return 7
+	}
+
+	if proto.ItemQuality(item.Quality) < proto.ItemQuality_ItemQualityUncommon {
+		return 7
+	} else if strings.Contains(item.Name, "Scarlet Ruby") || strings.Contains(item.Name, "Bloodstone") || strings.Contains(item.Name, "Sky Sapphire") || strings.Contains(item.Name, "Chalcedony") || strings.Contains(item.Name, "Autumn's Glow") || strings.Contains(item.Name, "Sun Crystal") || strings.Contains(item.Name, "Forest Emerald") || strings.Contains(item.Name, "Dark Jade") || strings.Contains(item.Name, "Monarch Topaz") || strings.Contains(item.Name, "Huge Citrine") || strings.Contains(item.Name, "Twilight Opal") || strings.Contains(item.Name, "Shadow Crystal") || strings.Contains(item.Name, "Earthsiege") || strings.Contains(item.Name, "Skyflare") || strings.Contains(item.Name, "Earthshatter") || strings.Contains(item.Name, "Starflare") || strings.Contains(item.Name, "Enchanted Tear") || strings.Contains(item.Name, "Enchanted Pearl") || strings.Contains(item.Name, "Dragon's Eye") {
+		return 7
+	} else if strings.Contains(item.Name, "Cardinal") || strings.Contains(item.Name, "Majestic Zircon") || strings.Contains(item.Name, "King's Amber") || strings.Contains(item.Name, "Eye of Zul") || strings.Contains(item.Name, "Ametrine") || strings.Contains(item.Name, "Dreadstone") || strings.Contains(item.Name, "Nightmare Tear") {
+		return 7
+	} else if strings.Contains(item.Name, "Stormjewel") {
+		return 7
+	} else if item.ID == 33132 {
+		return 7
+	}
+
+	if item.Quality > int(proto.ItemQuality_ItemQualityRare) {
+		if ilvl <= 110 {
+			phase = 1
+		} else if ilvl == 115 || ilvl == 120 || ilvl == 125 || ilvl == 123 {
+			phase = 2
+		} else if ilvl == 133 || ilvl == 128 || ilvl == 134 || ilvl == 138 || ilvl == 136 || ilvl == 127 {
+			phase = 3
+		} else if ilvl == 141 || ilvl == 151 || ilvl == 156 || ilvl == 146 {
+			phase = 4
+		} else if ilvl == 154 || ilvl == 159 || ilvl == 164 {
+			phase = 6
+		} else if strings.Contains(item.Name, "Crimson Spinel") || strings.Contains(item.Name, "Empyrean Sapphire") || strings.Contains(item.Name, "Lionseye") || strings.Contains(item.Name, "Seaspray Emerald") || strings.Contains(item.Name, "Pyrestone") || strings.Contains(item.Name, "Shadowsong Amethyst") {
+			phase = 4
+		}
+	}
+
+	return phase
 }
 
 var uniqueRegex = regexp.MustCompile(`Unique`)
@@ -641,7 +669,7 @@ func (item WowheadItemResponse) ToItemProto() *proto.UIItem {
 		WeaponDamageMax: weaponDamageMax,
 		WeaponSpeed:     item.GetWeaponSpeed(),
 
-		ilvl:    int32(item.GetItemLevel()),
+		Ilvl:    int32(item.GetItemLevel()),
 		Phase:   int32(item.GetPhase()),
 		Quality: proto.ItemQuality(item.GetQuality()),
 		Unique:  item.GetUnique(),

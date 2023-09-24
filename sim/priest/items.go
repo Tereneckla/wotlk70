@@ -60,7 +60,7 @@ var ItemSetAvatarRegalia = core.NewItemSet(core.ItemSet{
 				OnReset: func(aura *core.Aura, sim *core.Simulation) {
 					aura.Activate(sim)
 				},
-					OnPeriodicDamageDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+				OnPeriodicDamageDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 					if spell != priest.ShadowWordPain {
 						return
 					}
@@ -68,7 +68,6 @@ var ItemSetAvatarRegalia = core.NewItemSet(core.ItemSet{
 					if sim.RandomFloat("avatar 4p") > 0.4 { // 60% chance of not activating.
 						return
 					}
-
 
 					procAura.Activate(sim)
 				},
@@ -89,8 +88,6 @@ var ItemSetAbsolution = core.NewItemSet(core.ItemSet{
 		},
 	},
 })
-
-
 
 // T6 Heal
 var ItemSetVestmentsOfAbsolution = core.NewItemSet(core.ItemSet{
@@ -327,5 +324,4 @@ func init() {
 			},
 		})
 	})
-}
 }

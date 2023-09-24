@@ -6,6 +6,7 @@ import (
 	"github.com/Tereneckla/wotlk/sim/core"
 	"github.com/Tereneckla/wotlk/sim/core/stats"
 )
+
 // T4 Ret
 var ItemSetJusticarBattlegear = core.NewItemSet(core.ItemSet{
 	Name: "Justicar Battlegear",
@@ -612,24 +613,6 @@ func init() {
 		})
 	})
 
-	core.NewItemEffect(32368, func(agent core.Agent) {
-		paladin := agent.(PaladinAgent).GetPaladin()
-		procAura := paladin.NewTemporaryStatsAura("Tome of the Lightbringer Proc", core.ActionID{SpellID: 41042}, stats.Stats{stats.BlockValue: 186}, time.Second*10)
-
-		paladin.RegisterAura(core.Aura{
-			Label:    "Tome of the Lightbringer",
-			Duration: core.NeverExpires,
-			OnReset: func(aura *core.Aura, sim *core.Simulation) {
-				aura.Activate(sim)
-			},
-			OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-				if spell.Flags.Matches(SpellFlagPrimaryJudgement) {
-					procAura.Activate(sim)
-				}
-			},
-		})
-	})
-
 	core.NewItemEffect(40707, func(agent core.Agent) {
 		paladin := agent.(PaladinAgent).GetPaladin()
 		procAura := paladin.NewTemporaryStatsAura("Libram of Obstruction Proc", core.ActionID{SpellID: 60794}, stats.Stats{stats.BlockValue: 352}, time.Second*10)
@@ -661,47 +644,6 @@ func init() {
 			OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 				if spell.SpellID == paladin.HolyShield.SpellID {
 					procAura.Activate(sim)
-				}
-			},
-		})
-	})
-
-	core.NewItemEffect(32489, func(agent core.Agent) {
-		paladin := agent.(PaladinAgent).GetPaladin()
-
-		// The spell effect is https://www.wowhead.com/wotlk/spell=40472/enduring-judgement, most likely
-		dotSpell := paladin.RegisterSpell(core.SpellConfig{
-			ActionID:         core.ActionID{ItemID: 32489},
-			SpellSchool:      core.SpellSchoolHoly,
-			ProcMask:         core.ProcMaskEmpty,
-			DamageMultiplier: 1,
-			ThreatMultiplier: 1,
-
-			Dot: core.DotConfig{
-				Aura: core.Aura{
-					Label: "AshtongueTalismanOfZeal",
-				},
-				NumberOfTicks: 4,
-				TickLength:    time.Second * 2,
-				OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot, isRollover bool) {
-					dot.SnapshotBaseDamage = 480 / 4
-					dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(dot.Spell.Unit.AttackTables[target.UnitIndex])
-				},
-				OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-					dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
-				},
-			},
-		})
-
-		paladin.RegisterAura(core.Aura{
-			Label:    "Ashtongue Talisman of Zeal",
-			Duration: core.NeverExpires,
-			OnReset: func(aura *core.Aura, sim *core.Simulation) {
-				aura.Activate(sim)
-			},
-			OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-				if spell.Flags.Matches(SpellFlagPrimaryJudgement) && sim.RandomFloat("AshtongueTalismanOfZeal") < 0.5 {
-					dotSpell.Dot(result.Target).Apply(sim)
 				}
 			},
 		})

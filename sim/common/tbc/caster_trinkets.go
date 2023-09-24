@@ -87,7 +87,7 @@ func init() {
 
 	core.NewItemEffect(30447, func(agent core.Agent) {
 		paladin := agent.GetCharacter()
-		procAura := paladin.NewTemporaryStatsAura("Tome of Fiery Redemption", core.ActionID{ItemID: 30447}, stats.Stats{stats.SpellPower: 290}, time.Second*15)
+		procAura := paladin.NewTemporaryStatsAura("Tome of Fiery Redemption Proc", core.ActionID{ItemID: 30447}, stats.Stats{stats.SpellPower: 290}, time.Second*15)
 
 		icd := core.Cooldown{
 			Timer:    paladin.NewTimer(),

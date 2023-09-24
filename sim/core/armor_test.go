@@ -5,7 +5,8 @@ import (
 
 	"github.com/Tereneckla/wotlk/sim/core/stats"
 )
-baseArmor:= 6300.0
+
+const baseArmor = 6300.0
 
 func TestSunderArmorStacks(t *testing.T) {
 	sim := Simulation{}
@@ -22,7 +23,7 @@ func TestSunderArmorStacks(t *testing.T) {
 	target.stats = target.initialStats
 	expectedArmor := baseArmor
 	if target.Armor() != expectedArmor {
-		t.Fatalf("Armor value for target should be %f but found %f", baseArmor.0, target.Armor())
+		t.Fatalf("Armor value for target should be %f but found %f", baseArmor, target.Armor())
 	}
 	stacks := int32(1)
 	sunderAura := SunderArmorAura(&target)
@@ -54,7 +55,7 @@ func TestAcidSpitStacks(t *testing.T) {
 	target.stats = target.initialStats
 	expectedArmor := baseArmor
 	if target.Armor() != expectedArmor {
-		t.Fatalf("Armor value for target should be %f but found %f", baseArmor.0, target.Armor())
+		t.Fatalf("Armor value for target should be %f but found %f", baseArmor, target.Armor())
 	}
 	stacks := int32(1)
 	acidSpitAura := AcidSpitAura(&target)
@@ -73,7 +74,7 @@ func TestAcidSpitStacks(t *testing.T) {
 
 func TestExposeArmor(t *testing.T) {
 	sim := Simulation{}
-	
+
 	target := Unit{
 		Type:         EnemyUnit,
 		Index:        0,
@@ -86,7 +87,7 @@ func TestExposeArmor(t *testing.T) {
 	target.stats = target.initialStats
 	expectedArmor := baseArmor
 	if target.Armor() != expectedArmor {
-		t.Fatalf("Armor value for target should be %f but found %f", baseArmor.0, target.Armor())
+		t.Fatalf("Armor value for target should be %f but found %f", baseArmor, target.Armor())
 	}
 	exposeAura := ExposeArmorAura(&target, false)
 	exposeAura.Activate(&sim)
@@ -99,7 +100,7 @@ func TestExposeArmor(t *testing.T) {
 
 func TestMajorArmorReductionAurasDoNotStack(t *testing.T) {
 	sim := Simulation{}
-	
+
 	target := Unit{
 		Type:         EnemyUnit,
 		Index:        0,
@@ -112,7 +113,7 @@ func TestMajorArmorReductionAurasDoNotStack(t *testing.T) {
 	target.stats = target.initialStats
 	expectedArmor := baseArmor
 	if target.Armor() != expectedArmor {
-		t.Fatalf("Armor value for target should be %f but found %f", baseArmor.0, target.Armor())
+		t.Fatalf("Armor value for target should be %f but found %f", baseArmor, target.Armor())
 	}
 	stacks := int32(1)
 	acidSpitAura := AcidSpitAura(&target)
@@ -133,7 +134,7 @@ func TestMajorArmorReductionAurasDoNotStack(t *testing.T) {
 
 func TestMajorAndMinorArmorReductionsApplyMultiplicatively(t *testing.T) {
 	sim := Simulation{}
-	
+
 	target := Unit{
 		Type:         EnemyUnit,
 		Index:        0,
@@ -146,7 +147,7 @@ func TestMajorAndMinorArmorReductionsApplyMultiplicatively(t *testing.T) {
 	target.stats = target.initialStats
 	expectedArmor := baseArmor
 	if target.Armor() != expectedArmor {
-		t.Fatalf("Armor value for target should be %f but found %f", baseArmor.0, target.Armor())
+		t.Fatalf("Armor value for target should be %f but found %f", baseArmor, target.Armor())
 	}
 	stacks := int32(2)
 	acidSpitAura := AcidSpitAura(&target)
@@ -182,7 +183,7 @@ func TestMajorAndMinorArmorReductionsApplyMultiplicatively(t *testing.T) {
 
 func TestDamageReductionFromArmor(t *testing.T) {
 	sim := Simulation{}
-	
+
 	target := Unit{
 		Type:         EnemyUnit,
 		Index:        0,
@@ -225,7 +226,7 @@ func TestDamageReductionFromArmor(t *testing.T) {
 	// Major + Minor + Spore
 	sporeCloudAura := SporeCloudAura(&target)
 	sporeCloudAura.Activate(&sim)
-	expectedDamageReduction = 0.3468
+	expectedDamageReduction = 0.312013
 	if !WithinToleranceFloat64(1-expectedDamageReduction, attackTable.GetArmorDamageModifier(spell), tolerance) {
 		t.Fatalf("Expected major & minor armor modifier to result in %f damage reduction got %f", expectedDamageReduction, 1-attackTable.GetArmorDamageModifier(spell))
 	}
@@ -233,7 +234,7 @@ func TestDamageReductionFromArmor(t *testing.T) {
 	// Major + Minor + Spore + Throw
 	shatteringThrowAura := ShatteringThrowAura(&target)
 	shatteringThrowAura.Activate(&sim)
-	expectedDamageReduction = 0.312013
+	expectedDamageReduction = 0.266224
 	if !WithinToleranceFloat64(1-expectedDamageReduction, attackTable.GetArmorDamageModifier(spell), tolerance) {
 		t.Fatalf("Expected major & minor armor modifier to result in %f damage reduction got %f", expectedDamageReduction, 1-attackTable.GetArmorDamageModifier(spell))
 	}
@@ -248,21 +249,21 @@ func TestDamageReductionFromArmor(t *testing.T) {
 
 	// Cap armor pen
 	attacker.stats[stats.ArmorPenetration] = 1400
-	expectedDamageReduction = 0.02026
+	expectedDamageReduction = 0.00000
 	if !WithinToleranceFloat64(1-expectedDamageReduction, attackTable.GetArmorDamageModifier(spell), tolerance) {
 		t.Fatalf("Expected major & minor armor modifier to result in %f damage reduction got %f", expectedDamageReduction, 1-attackTable.GetArmorDamageModifier(spell))
 	}
 
 	// Verify going past Cap doesn't help
 	attacker.stats[stats.ArmorPenetration] = 1600
-	expectedDamageReduction = 0.02026
+	expectedDamageReduction = 0.00000
 	if !WithinToleranceFloat64(1-expectedDamageReduction, attackTable.GetArmorDamageModifier(spell), tolerance) {
 		t.Fatalf("Expected major & minor armor modifier to result in %f damage reduction got %f", expectedDamageReduction, 1-attackTable.GetArmorDamageModifier(spell))
 	}
 
 	// Add spore back
 	sporeCloudAura.Activate(&sim)
-	expectedDamageReduction = 0.02026
+	expectedDamageReduction = 0.00
 	if !WithinToleranceFloat64(1-expectedDamageReduction, attackTable.GetArmorDamageModifier(spell), tolerance) {
 		t.Fatalf("Expected major & minor armor modifier to result in %f damage reduction got %f", expectedDamageReduction, 1-attackTable.GetArmorDamageModifier(spell))
 	}

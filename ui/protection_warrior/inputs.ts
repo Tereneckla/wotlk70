@@ -34,9 +34,15 @@ export const ShoutPicker = InputHelpers.makeSpecOptionsEnumIconInput<Spec.SpecPr
 	],
 });
 
-export const ShatteringThrow = InputHelpers.makeSpecOptionsBooleanIconInput<Spec.SpecProtectionWarrior>({
-	fieldName: 'useShatteringThrow',
-	id: ActionId.fromSpellId(64382),
+// export const ShatteringThrow = InputHelpers.makeSpecOptionsBooleanIconInput<Spec.SpecProtectionWarrior>({
+// 	fieldName: 'useShatteringThrow',
+// 	id: ActionId.fromSpellId(64382),
+// });
+
+export const Munch = InputHelpers.makeSpecOptionsBooleanInput<Spec.SpecProtectionWarrior>({
+	fieldName: 'munch',
+	label: 'Munching',
+	labelTooltip: 'Apply "munching" to Deep Wounds',
 });
 
 export const ProtectionWarriorRotationConfig = {

@@ -10,12 +10,12 @@ import (
 func (paladin *Paladin) registerHolyWrathSpell() {
 	results := make([]*core.SpellResult, len(paladin.Env.Encounter.TargetUnits))
 	bonusSpellPower := 0 +
-		core.TernaryFloat64(paladin.Equip[proto.ItemSlot_ItemSlotRanged].ID == 28065, 120, 0)
+		core.TernaryFloat64(paladin.Ranged().ID == 28065, 120, 0)
 	paladin.HolyWrath = paladin.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: 27139},
-		SpellSchool: core.SpellSchoolHoly,
-		ProcMask:    core.ProcMaskSpellDamage,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
+		ActionID:        core.ActionID{SpellID: 27139},
+		SpellSchool:     core.SpellSchoolHoly,
+		ProcMask:        core.ProcMaskSpellDamage,
+		Flags:           core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		BonusSpellPower: bonusSpellPower,
 		ManaCost: core.ManaCostOptions{
 			BaseCost:   0.20,

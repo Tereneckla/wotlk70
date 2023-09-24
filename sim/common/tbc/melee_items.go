@@ -138,47 +138,13 @@ func init() {
 		})
 	})
 
-	core.NewItemEffect(29301, func(agent core.Agent) {
-		character := agent.GetCharacter()
-
-		procAura := character.NewTemporaryStatsAura("Band of the Eternal Champion Proc", core.ActionID{ItemID: 29301}, stats.Stats{stats.AttackPower: 160, stats.RangedAttackPower: 160}, time.Second*10)
-		ppmm := character.AutoAttacks.NewPPMManager(1.0, core.ProcMaskMeleeOrRanged)
-
-		icd := core.Cooldown{
-			Timer:    character.NewTimer(),
-			Duration: time.Second * 60,
-		}
-
-		character.GetOrRegisterAura(core.Aura{
-			Label:    "Band of the Eternal Champion",
-			Duration: core.NeverExpires,
-			OnReset: func(aura *core.Aura, sim *core.Simulation) {
-				aura.Activate(sim)
-			},
-			OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-				if !result.Landed() {
-					return
-				}
-
-				if !icd.IsReady(sim) {
-					return
-				}
-
-				if ppmm.Proc(sim, spell.ProcMask, "Band of the Eternal Champion") {
-					icd.Use(sim)
-					procAura.Activate(sim)
-				}
-			},
-		})
-	})
-
 	core.NewItemEffect(29962, func(agent core.Agent) {
 		character := agent.GetCharacter()
-		mh, oh := character.GetWeaponHands(29962)
-		procMask := core.GetMeleeProcMaskForHands(mh, oh)
-
-		procAura := character.NewTemporaryStatsAura("Heartrazor Proc", core.ActionID{ItemID: 29962}, stats.Stats{stats.AttackPower: 270, stats.RangedAttackPower: 270}, time.Second*10)
+		procMask := character.GetProcMaskForItem(29962)
 		ppmm := character.AutoAttacks.NewPPMManager(1.0, procMask)
+
+		procAuraMH := character.NewTemporaryStatsAura("Heartrazor Proc", core.ActionID{ItemID: 29962, Tag: 1}, stats.Stats{stats.AttackPower: 270, stats.RangedAttackPower: 270}, time.Second*10)
+		procAuraOH := character.NewTemporaryStatsAura("Heartrazor Proc", core.ActionID{ItemID: 29962, Tag: 2}, stats.Stats{stats.AttackPower: 270, stats.RangedAttackPower: 270}, time.Second*10)
 
 		character.GetOrRegisterAura(core.Aura{
 			Label:    "Heartrazor",
@@ -193,7 +159,12 @@ func init() {
 				if !ppmm.Proc(sim, spell.ProcMask, "Heartrazor") {
 					return
 				}
-				procAura.Activate(sim)
+				if spell.IsMH() {
+					procAuraMH.Activate(sim)
+				} else {
+					procAuraOH.Activate(sim)
+				}
+
 			},
 		})
 	})
@@ -267,8 +238,7 @@ func init() {
 
 	core.NewItemEffect(31332, func(agent core.Agent) {
 		character := agent.GetCharacter()
-		mh, oh := character.GetWeaponHands(31332)
-		procMask := core.GetMeleeProcMaskForHands(mh, oh)
+		procMask := character.GetProcMaskForItem(31332)
 
 		ppmm := character.AutoAttacks.NewPPMManager(1.0, procMask)
 		icd := core.Cooldown{

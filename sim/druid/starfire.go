@@ -16,7 +16,10 @@ func (druid *Druid) registerStarfireSpell() {
 		core.TernaryFloat64(druid.Ranged().ID == 40321, 165, 0) // Shooting Star
 
 	hasGlyph := druid.HasMajorGlyph(proto.DruidMajorGlyph_GlyphOfStarfire)
-
+	nordrassilMult := 1.0
+	if druid.HasSetBonus(ItemSetNordrassilRegalia, 4) {
+		nordrassilMult = 1.1
+	}
 	druid.Starfire = druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 26986},
 		SpellSchool: core.SpellSchoolArcane,
@@ -54,6 +57,9 @@ func (druid *Druid) registerStarfireSpell() {
 
 					// can proc canProcFromProc on-cast trinkets
 					druid.GetDummyProcSpell().Cast(sim, target)
+				}
+				if moonfireDot.IsActive() || druid.InsectSwarm.Dot(target).IsActive() {
+					baseDamage *= nordrassilMult
 				}
 			}
 			spell.DealDamage(sim, result)

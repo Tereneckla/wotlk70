@@ -1,6 +1,7 @@
 package mage
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Tereneckla/wotlk/sim/core"
@@ -8,6 +9,7 @@ import (
 
 // If two spells proc Ignite at almost exactly the same time, the latter
 // overwrites the former.
+const IgniteMunchWindow = time.Millisecond * 10
 const IgniteTicks = 2
 
 func (mage *Mage) applyIgnite() {

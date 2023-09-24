@@ -66,7 +66,7 @@ type WowheadItem struct {
 	Icon string `json:"icon"`
 
 	Quality int32 `json:"quality"`
-	ilvl    int32 `json:"itemLevel"`
+	Ilvl    int32 `json:"itemLevel"`
 	Phase   int32 `json:"contentPhase"`
 
 	Stats WowheadItemStats `json:"stats"`
@@ -127,8 +127,7 @@ func (wi WowheadItem) ToProto() *proto.UIItem {
 		Id:      wi.ID,
 		Name:    wi.Name,
 		Icon:    wi.Icon,
-		ilvl:    wi.ilvl,
-		Phase:   wi.Phase,
+		Ilvl:    wi.Ilvl,
 		Sources: sources,
 	}
 }

@@ -312,7 +312,7 @@ func (dk *Deathknight) Initialize() {
 	dk.registerArmyOfTheDeadCD()
 	dk.registerDancingRuneWeaponCD()
 	dk.registerDeathPactSpell()
-	dk.registerUnholyFrenzyCD()
+	// dk.registerUnholyFrenzyCD()
 
 	dk.RegisterAura(core.Aura{
 		Label:    "Last Cast Assigner",

@@ -54,30 +54,30 @@ type Rogue struct {
 
 	maxEnergy float64
 
-	Backstab         *core.Spell
-	BladeFlurry      *core.Spell
-	DeadlyPoison     *core.Spell
+	Backstab     *core.Spell
+	BladeFlurry  *core.Spell
+	DeadlyPoison *core.Spell
 	//FanOfKnives      *core.Spell
-	Feint            *core.Spell
-	Garrote          *core.Spell
-	Ambush           *core.Spell
-	Hemorrhage       *core.Spell
-	GhostlyStrike    *core.Spell
-	HungerForBlood   *core.Spell
-	InstantPoison    [3]*core.Spell
-	WoundPoison      [3]*core.Spell
-	Mutilate         *core.Spell
-	MutilateMH       *core.Spell
-	MutilateOH       *core.Spell
-	Shiv             *core.Spell
-	SinisterStrike   *core.Spell
-	TricksOfTheTrade *core.Spell
-	Shadowstep       *core.Spell
-	Preparation      *core.Spell
-	Premeditation    *core.Spell
-	ShadowDance      *core.Spell
-	ColdBlood        *core.Spell
-	Vanish           *core.Spell
+	Feint          *core.Spell
+	Garrote        *core.Spell
+	Ambush         *core.Spell
+	Hemorrhage     *core.Spell
+	GhostlyStrike  *core.Spell
+	HungerForBlood *core.Spell
+	InstantPoison  [3]*core.Spell
+	WoundPoison    [3]*core.Spell
+	Mutilate       *core.Spell
+	MutilateMH     *core.Spell
+	MutilateOH     *core.Spell
+	Shiv           *core.Spell
+	SinisterStrike *core.Spell
+	// TricksOfTheTrade *core.Spell
+	Shadowstep    *core.Spell
+	Preparation   *core.Spell
+	Premeditation *core.Spell
+	ShadowDance   *core.Spell
+	ColdBlood     *core.Spell
+	Vanish        *core.Spell
 
 	Envenom      *core.Spell
 	Eviscerate   *core.Spell
@@ -105,6 +105,7 @@ type Rogue struct {
 	DirtyDeedsAura       *core.Aura
 	HonorAmongThieves    *core.Aura
 	StealthAura          *core.Aura
+	DeathmantleProcAura  *core.Aura
 
 	masterPoisonerDebuffAuras core.AuraArray
 	savageCombatDebuffAuras   core.AuraArray
@@ -167,7 +168,7 @@ func (rogue *Rogue) Initialize() {
 	rogue.registerPoisonAuras()
 	rogue.registerEviscerate()
 	rogue.registerExposeArmorSpell()
-	rogue.registerFanOfKnives()
+	// rogue.registerFanOfKnives()
 	rogue.registerFeintSpell()
 	rogue.registerGarrote()
 	rogue.registerHemorrhageSpell()
@@ -179,18 +180,18 @@ func (rogue *Rogue) Initialize() {
 	rogue.registerSinisterStrikeSpell()
 	rogue.registerSliceAndDice()
 	rogue.registerThistleTeaCD()
-	rogue.registerTricksOfTheTradeSpell()
+	// rogue.registerTricksOfTheTradeSpell()
 	rogue.registerAmbushSpell()
 	rogue.registerEnvenom()
 	rogue.registerVanishSpell()
 
 	rogue.finishingMoveEffectApplier = rogue.makeFinishingMoveEffectApplier()
 
-	if !rogue.IsUsingAPL && rogue.Rotation.TricksOfTheTradeFrequency != proto.Rogue_Rotation_Never && !rogue.HasSetBonus(Tier10, 2) {
-		rogue.RegisterPrepullAction(-10*time.Second, func(sim *core.Simulation) {
-			rogue.TricksOfTheTrade.Cast(sim, nil)
-		})
-	}
+	// if !rogue.IsUsingAPL && rogue.Rotation.TricksOfTheTradeFrequency != proto.Rogue_Rotation_Never && !rogue.HasSetBonus(Tier10, 2) {
+	// 	rogue.RegisterPrepullAction(-10*time.Second, func(sim *core.Simulation) {
+	// 		rogue.TricksOfTheTrade.Cast(sim, nil)
+	// 	})
+	// }
 }
 
 func (rogue *Rogue) ApplyEnergyTickMultiplier(multiplier float64) {

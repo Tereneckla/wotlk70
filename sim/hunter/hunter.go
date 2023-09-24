@@ -52,8 +52,8 @@ type Hunter struct {
 	// The most recent time at which moving could have started, for trap weaving.
 	mayMoveAt time.Duration
 
-	AspectOfTheHawk *core.Spell
-	AspectOfTheViper      *core.Spell
+	AspectOfTheHawk  *core.Spell
+	AspectOfTheViper *core.Spell
 
 	AimedShot       *core.Spell
 	ArcaneShot      *core.Spell
@@ -63,26 +63,26 @@ type Hunter struct {
 	ExplosiveShotR3 *core.Spell
 	ExplosiveTrap   *core.Spell
 	KillCommand     *core.Spell
-	KillShot        *core.Spell
-	MultiShot       *core.Spell
-	RapidFire       *core.Spell
-	RaptorStrike    *core.Spell
-	ScorpidSting    *core.Spell
-	SerpentSting    *core.Spell
-	SilencingShot   *core.Spell
-	SteadyShot      *core.Spell
-	Volley          *core.Spell
+	// KillShot        *core.Spell
+	MultiShot     *core.Spell
+	RapidFire     *core.Spell
+	RaptorStrike  *core.Spell
+	ScorpidSting  *core.Spell
+	SerpentSting  *core.Spell
+	SilencingShot *core.Spell
+	SteadyShot    *core.Spell
+	Volley        *core.Spell
 
 	// Fake spells to encapsulate weaving logic.
 	TrapWeaveSpell *core.Spell
 
-	AspectOfTheHawkAura *core.Aura
-	AspectOfTheViperAura      *core.Aura
-	ImprovedSteadyShotAura    *core.Aura
-	LockAndLoadAura           *core.Aura
-	RapidFireAura             *core.Aura
-	ScorpidStingAuras         core.AuraArray
-	TalonOfAlarAura           *core.Aura
+	AspectOfTheHawkAura    *core.Aura
+	AspectOfTheViperAura   *core.Aura
+	ImprovedSteadyShotAura *core.Aura
+	LockAndLoadAura        *core.Aura
+	RapidFireAura          *core.Aura
+	ScorpidStingAuras      core.AuraArray
+	TalonOfAlarAura        *core.Aura
 
 	CustomRotation     *common.CustomRotation
 	rotationConditions map[*core.Spell]RotationCondition
@@ -121,7 +121,7 @@ func (hunter *Hunter) Initialize() {
 	hunter.AutoAttacks.OHConfig.CritMultiplier = hunter.critMultiplier(false, false, false)
 	hunter.AutoAttacks.RangedConfig.CritMultiplier = hunter.critMultiplier(false, false, false)
 
-	hunter.registerAspectOfTheDragonhawkSpell()
+	hunter.registerAspectOfTheHawkSpell()
 	hunter.registerAspectOfTheViperSpell()
 
 	multiShotTimer := hunter.NewTimer()
@@ -134,7 +134,7 @@ func (hunter *Hunter) Initialize() {
 	hunter.registerChimeraShotSpell()
 	hunter.registerExplosiveShotSpell(arcaneShotTimer)
 	hunter.registerExplosiveTrapSpell(fireTrapTimer)
-	hunter.registerKillShotSpell()
+	// hunter.registerKillShotSpell()
 	hunter.registerMultiShotSpell(multiShotTimer)
 	hunter.registerRaptorStrikeSpell()
 	hunter.registerScorpidStingSpell()
@@ -194,12 +194,12 @@ func NewHunter(character core.Character, options *proto.Player) *Hunter {
 
 	if hunter.HasRangedWeapon() && hunter.GetRangedWeapon().ID != ThoridalTheStarsFuryItemID {
 		switch hunter.Options.Ammo {
-		case proto.Hunter_Options_IcebladeArrow:
-			hunter.AmmoDPS = 91.5
-		case proto.Hunter_Options_SaroniteRazorheads:
-			hunter.AmmoDPS = 67.5
-		case proto.Hunter_Options_TerrorshaftArrow:
-			hunter.AmmoDPS = 46.5
+		// case proto.Hunter_Options_IcebladeArrow:
+		// 	hunter.AmmoDPS = 91.5
+		// case proto.Hunter_Options_SaroniteRazorheads:
+		// 	hunter.AmmoDPS = 67.5
+		// case proto.Hunter_Options_TerrorshaftArrow:
+		// 	hunter.AmmoDPS = 46.5
 		case proto.Hunter_Options_TimelessArrow:
 			hunter.AmmoDPS = 53
 		case proto.Hunter_Options_MysteriousArrow:

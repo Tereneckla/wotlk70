@@ -87,7 +87,7 @@ export class WarlockSimUI extends IndividualSimUI<Spec.SpecWarlock> {
 			playerIconInputs: [
 				WarlockInputs.PetInput,
 				WarlockInputs.ArmorInput,
-				WarlockInputs.WeaponImbueInput,
+				// WarlockInputs.WeaponImbueInput,
 			],
 			// Inputs to include in the 'Rotation' section on the settings tab.
 			rotationIconInputs: [

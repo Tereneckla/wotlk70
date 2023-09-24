@@ -1,7 +1,10 @@
 package tbc
 
 import (
+	"time"
+
 	"github.com/Tereneckla/wotlk/sim/core"
+	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/core/stats"
 )
 
@@ -16,7 +19,6 @@ func init() {
 		}
 	})
 
-	
 	core.NewItemEffect(19406, func(agent core.Agent) {
 		character := agent.GetCharacter()
 
@@ -144,6 +146,5 @@ func init() {
 			},
 		})
 	})
-
 
 }

@@ -6,13 +6,13 @@ import (
 	"github.com/Tereneckla/wotlk/sim/core"
 )
 
+const munchingWindow = time.Millisecond * 10
+
 func (warrior *Warrior) applyDeepWounds() {
 	if warrior.Talents.DeepWounds == 0 {
 		return
 	}
 
-	const munchingWindow = time.Millisecond * 10
-	
 	warrior.DeepWounds = warrior.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: 12867},
 		SpellSchool: core.SpellSchoolPhysical,

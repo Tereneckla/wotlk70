@@ -18,6 +18,7 @@ type WarriorInputs struct {
 	RendCdThreshold             time.Duration
 	BloodsurgeDurationThreshold time.Duration
 	StanceSnapshot              bool
+	Munch                       bool
 }
 
 const (

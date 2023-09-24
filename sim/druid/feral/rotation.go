@@ -417,7 +417,7 @@ func (cat *FeralDruid) doRotation(sim *core.Simulation) (bool, time.Duration) {
 		berserkNow = simTimeRemain < cat.BerserkAura.Duration+(3*time.Second)
 	}
 
-	roarNow := curCp >= 1 && (!cat.SavageRoarAura.IsActive() || cat.clipRoar(sim))
+	//roarNow := curCp >= 1 && (!cat.SavageRoarAura.IsActive() || cat.clipRoar(sim))
 
 	// Faerie Fire on cooldown for Omen procs. Each second of FF delay is
 	// worth ~7 Energy, so it is okay to waste up to 7 Energy to cap when
@@ -636,12 +636,12 @@ func (cat *FeralDruid) doRotation(sim *core.Simulation) (bool, time.Duration) {
 		cat.Berserk.Cast(sim, nil)
 		cat.UpdateMajorCooldowns()
 		return false, 0
-	} else if roarNow {
-		if cat.SavageRoar.CanCast(sim, cat.CurrentTarget) {
-			cat.SavageRoar.Cast(sim, nil)
-			return false, 0
-		}
-		timeToNextAction = time.Duration((cat.CurrentSavageRoarCost() - curEnergy) * float64(core.EnergyTickDuration))
+		// } else if roarNow {
+		// 	if cat.SavageRoar.CanCast(sim, cat.CurrentTarget) {
+		// 		cat.SavageRoar.Cast(sim, nil)
+		// 		return false, 0
+		// 	}
+		// 	timeToNextAction = time.Duration((cat.CurrentSavageRoarCost() - curEnergy) * float64(core.EnergyTickDuration))
 	} else if ripNow {
 		if cat.Rip.CanCast(sim, cat.CurrentTarget) {
 			cat.Rip.Cast(sim, cat.CurrentTarget)

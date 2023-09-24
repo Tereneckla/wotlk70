@@ -274,9 +274,9 @@ func applyBuffEffects(agent Agent, raidBuffs *proto.RaidBuffs, partyBuffs *proto
 	registerRevitalizeHotCD(agent, "Rejuvination", ActionID{SpellID: 26982}, 5, 3*time.Second, individualBuffs.RevitalizeRejuvination)
 	registerRevitalizeHotCD(agent, "Wild Growth", ActionID{SpellID: 53251}, 7, time.Second, individualBuffs.RevitalizeWildGrowth)
 
-	registerUnholyFrenzyCD(agent, individualBuffs.UnholyFrenzy)
-	registerTricksOfTheTradeCD(agent, individualBuffs.TricksOfTheTrades)
-	registerShatteringThrowCD(agent, individualBuffs.ShatteringThrows)
+	// registerUnholyFrenzyCD(agent, individualBuffs.UnholyFrenzy)
+	// registerTricksOfTheTradeCD(agent, individualBuffs.TricksOfTheTrades)
+	// registerShatteringThrowCD(agent, individualBuffs.ShatteringThrows)
 	registerPowerInfusionCD(agent, individualBuffs.PowerInfusions)
 	registerManaTideTotemCD(agent, partyBuffs.ManaTideTotems)
 	registerInnervateCD(agent, individualBuffs.Innervates)
@@ -684,105 +684,105 @@ func multiplyCastSpeedEffect(aura *Aura, multiplier float64) *ExclusiveEffect {
 	})
 }
 
-var TricksOfTheTradeAuraTag = "TricksOfTheTrade"
+// var TricksOfTheTradeAuraTag = "TricksOfTheTrade"
 
-const TricksOfTheTradeCD = time.Second * 3600 // CD is 30s from the time buff ends (so 40s with glyph) but that's in order to be able to set the number of TotT you'll have during the fight
+// const TricksOfTheTradeCD = time.Second * 3600 // CD is 30s from the time buff ends (so 40s with glyph) but that's in order to be able to set the number of TotT you'll have during the fight
 
-func registerTricksOfTheTradeCD(agent Agent, numTricksOfTheTrades int32) {
-	if numTricksOfTheTrades == 0 {
-		return
-	}
+// func registerTricksOfTheTradeCD(agent Agent, numTricksOfTheTrades int32) {
+// 	if numTricksOfTheTrades == 0 {
+// 		return
+// 	}
 
-	// Assuming rogues have Glyph of TotT by default (which might not be the case).
-	TotTAura := TricksOfTheTradeAura(&agent.GetCharacter().Unit, -1, true)
+// 	// Assuming rogues have Glyph of TotT by default (which might not be the case).
+// 	TotTAura := TricksOfTheTradeAura(&agent.GetCharacter().Unit, -1, true)
 
-	registerExternalConsecutiveCDApproximation(
-		agent,
-		externalConsecutiveCDApproximation{
-			ActionID:         ActionID{SpellID: 57933, Tag: -1},
-			AuraTag:          TricksOfTheTradeAuraTag,
-			CooldownPriority: CooldownPriorityDefault,
-			AuraDuration:     TotTAura.Duration,
-			AuraCD:           TricksOfTheTradeCD,
-			Type:             CooldownTypeDPS,
+// 	registerExternalConsecutiveCDApproximation(
+// 		agent,
+// 		externalConsecutiveCDApproximation{
+// 			ActionID:         ActionID{SpellID: 57933, Tag: -1},
+// 			AuraTag:          TricksOfTheTradeAuraTag,
+// 			CooldownPriority: CooldownPriorityDefault,
+// 			AuraDuration:     TotTAura.Duration,
+// 			AuraCD:           TricksOfTheTradeCD,
+// 			Type:             CooldownTypeDPS,
 
-			ShouldActivate: func(sim *Simulation, character *Character) bool {
-				return !agent.GetCharacter().GetExclusiveEffectCategory("PercentDamageModifier").AnyActive()
-			},
-			AddAura: func(sim *Simulation, character *Character) { TotTAura.Activate(sim) },
-		},
-		numTricksOfTheTrades)
-}
+// 			ShouldActivate: func(sim *Simulation, character *Character) bool {
+// 				return !agent.GetCharacter().GetExclusiveEffectCategory("PercentDamageModifier").AnyActive()
+// 			},
+// 			AddAura: func(sim *Simulation, character *Character) { TotTAura.Activate(sim) },
+// 		},
+// 		numTricksOfTheTrades)
+// }
 
-func TricksOfTheTradeAura(character *Unit, actionTag int32, glyphed bool) *Aura {
-	actionID := ActionID{SpellID: 57933, Tag: actionTag}
+// func TricksOfTheTradeAura(character *Unit, actionTag int32, glyphed bool) *Aura {
+// 	actionID := ActionID{SpellID: 57933, Tag: actionTag}
 
-	aura := character.GetOrRegisterAura(Aura{
-		Label:    "TricksOfTheTrade-" + actionID.String(),
-		Tag:      TricksOfTheTradeAuraTag,
-		ActionID: actionID,
-		Duration: TernaryDuration(glyphed, time.Second*10, time.Second*6),
-		OnGain: func(aura *Aura, sim *Simulation) {
-			character.PseudoStats.DamageDealtMultiplier *= 1.15
-		},
-		OnExpire: func(aura *Aura, sim *Simulation) {
-			character.PseudoStats.DamageDealtMultiplier /= 1.15
-		},
-	})
+// 	aura := character.GetOrRegisterAura(Aura{
+// 		Label:    "TricksOfTheTrade-" + actionID.String(),
+// 		Tag:      TricksOfTheTradeAuraTag,
+// 		ActionID: actionID,
+// 		Duration: TernaryDuration(glyphed, time.Second*10, time.Second*6),
+// 		OnGain: func(aura *Aura, sim *Simulation) {
+// 			character.PseudoStats.DamageDealtMultiplier *= 1.15
+// 		},
+// 		OnExpire: func(aura *Aura, sim *Simulation) {
+// 			character.PseudoStats.DamageDealtMultiplier /= 1.15
+// 		},
+// 	})
 
-	RegisterPercentDamageModifierEffect(aura, 1.15)
-	return aura
-}
+// 	RegisterPercentDamageModifierEffect(aura, 1.15)
+// 	return aura
+// }
 
-var UnholyFrenzyAuraTag = "UnholyFrenzy"
+// var UnholyFrenzyAuraTag = "UnholyFrenzy"
 
-const UnholyFrenzyDuration = time.Second * 30
-const UnholyFrenzyCD = time.Minute * 3
+// const UnholyFrenzyDuration = time.Second * 30
+// const UnholyFrenzyCD = time.Minute * 3
 
-func registerUnholyFrenzyCD(agent Agent, numUnholyFrenzy int32) {
-	if numUnholyFrenzy == 0 {
-		return
-	}
+// func registerUnholyFrenzyCD(agent Agent, numUnholyFrenzy int32) {
+// 	if numUnholyFrenzy == 0 {
+// 		return
+// 	}
 
-	ufAura := UnholyFrenzyAura(&agent.GetCharacter().Unit, -1)
+// 	ufAura := UnholyFrenzyAura(&agent.GetCharacter().Unit, -1)
 
-	registerExternalConsecutiveCDApproximation(
-		agent,
-		externalConsecutiveCDApproximation{
-			ActionID:         ActionID{SpellID: 49016, Tag: -1},
-			AuraTag:          UnholyFrenzyAuraTag,
-			CooldownPriority: CooldownPriorityDefault,
-			AuraDuration:     UnholyFrenzyDuration,
-			AuraCD:           UnholyFrenzyCD,
-			Type:             CooldownTypeDPS,
+// 	registerExternalConsecutiveCDApproximation(
+// 		agent,
+// 		externalConsecutiveCDApproximation{
+// 			ActionID:         ActionID{SpellID: 49016, Tag: -1},
+// 			AuraTag:          UnholyFrenzyAuraTag,
+// 			CooldownPriority: CooldownPriorityDefault,
+// 			AuraDuration:     UnholyFrenzyDuration,
+// 			AuraCD:           UnholyFrenzyCD,
+// 			Type:             CooldownTypeDPS,
 
-			ShouldActivate: func(sim *Simulation, character *Character) bool {
-				return !agent.GetCharacter().GetExclusiveEffectCategory("PercentDamageModifier").AnyActive()
-			},
-			AddAura: func(sim *Simulation, character *Character) { ufAura.Activate(sim) },
-		},
-		numUnholyFrenzy)
-}
+// 			ShouldActivate: func(sim *Simulation, character *Character) bool {
+// 				return !agent.GetCharacter().GetExclusiveEffectCategory("PercentDamageModifier").AnyActive()
+// 			},
+// 			AddAura: func(sim *Simulation, character *Character) { ufAura.Activate(sim) },
+// 		},
+// 		numUnholyFrenzy)
+// }
 
-func UnholyFrenzyAura(character *Unit, actionTag int32) *Aura {
-	actionID := ActionID{SpellID: 49016, Tag: actionTag}
+// func UnholyFrenzyAura(character *Unit, actionTag int32) *Aura {
+// 	actionID := ActionID{SpellID: 49016, Tag: actionTag}
 
-	aura := character.GetOrRegisterAura(Aura{
-		Label:    "UnholyFrenzy-" + actionID.String(),
-		Tag:      UnholyFrenzyAuraTag,
-		ActionID: actionID,
-		Duration: UnholyFrenzyDuration,
-		OnGain: func(aura *Aura, sim *Simulation) {
-			character.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] *= 1.2
-		},
-		OnExpire: func(aura *Aura, sim *Simulation) {
-			character.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] /= 1.2
-		},
-	})
+// 	aura := character.GetOrRegisterAura(Aura{
+// 		Label:    "UnholyFrenzy-" + actionID.String(),
+// 		Tag:      UnholyFrenzyAuraTag,
+// 		ActionID: actionID,
+// 		Duration: UnholyFrenzyDuration,
+// 		OnGain: func(aura *Aura, sim *Simulation) {
+// 			character.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] *= 1.2
+// 		},
+// 		OnExpire: func(aura *Aura, sim *Simulation) {
+// 			character.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] /= 1.2
+// 		},
+// 	})
 
-	RegisterPercentDamageModifierEffect(aura, 1.2)
-	return aura
-}
+// 	RegisterPercentDamageModifierEffect(aura, 1.2)
+// 	return aura
+// }
 
 func RegisterPercentDamageModifierEffect(aura *Aura, percentDamageModifier float64) *ExclusiveEffect {
 	return aura.NewExclusiveEffect("PercentDamageModifier", true, ExclusiveEffect{

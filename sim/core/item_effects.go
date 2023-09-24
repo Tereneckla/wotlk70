@@ -2,9 +2,10 @@ package core
 
 import (
 	"fmt"
-	"golang.org/x/exp/slices"
 	"strconv"
 	"time"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/core/stats"
@@ -53,7 +54,7 @@ func NewItemEffect(id int32, itemEffect ApplyEffect) {
 	if WITH_DB {
 		if _, hasItem := ItemsByID[id]; !hasItem {
 			if _, hasGem := GemsByID[id]; !hasGem {
-				panic(fmt.Sprintf("No item with ID: %d", id))
+				//fmt.Printf("No item with ID: %d\n", id)
 			}
 		}
 	}
@@ -71,7 +72,7 @@ func NewItemEffect(id int32, itemEffect ApplyEffect) {
 func NewEnchantEffect(id int32, enchantEffect ApplyEffect) {
 	if WITH_DB {
 		if _, ok := EnchantsByEffectID[id]; !ok {
-			panic(fmt.Sprintf("No enchant with ID: %d", id))
+			//fmt.Printf("No enchant with ID: %d \n", id)
 		}
 	}
 
@@ -85,7 +86,7 @@ func NewEnchantEffect(id int32, enchantEffect ApplyEffect) {
 func AddWeaponEffect(id int32, weaponEffect ApplyWeaponEffect) {
 	if WITH_DB {
 		if _, ok := EnchantsByEffectID[id]; !ok {
-			panic(fmt.Sprintf("No enchant with ID: %d", id))
+			fmt.Printf("No enchant with ID: %d \n", id)
 		}
 	}
 	if HasWeaponEffect(id) {

@@ -104,9 +104,8 @@ var defaultDestroRotation = &proto.Warlock_Rotation{
 }
 
 var defaultDestroOptions = &proto.Warlock_Options{
-	Armor:       proto.Warlock_Options_FelArmor,
-	Summon:      proto.Warlock_Options_Imp,
-	WeaponImbue: proto.Warlock_Options_GrandFirestone,
+	Armor:  proto.Warlock_Options_FelArmor,
+	Summon: proto.Warlock_Options_Imp,
 }
 
 var DefaultDestroWarlock = &proto.Player_Warlock{
@@ -132,9 +131,8 @@ var afflictionItemSwap = &proto.Player_Warlock{
 }
 
 var defaultAfflictionOptions = &proto.Warlock_Options{
-	Armor:       proto.Warlock_Options_FelArmor,
-	Summon:      proto.Warlock_Options_Felhunter,
-	WeaponImbue: proto.Warlock_Options_GrandSpellstone,
+	Armor:  proto.Warlock_Options_FelArmor,
+	Summon: proto.Warlock_Options_Felhunter,
 }
 
 var defaultAfflictionRotation = &proto.Warlock_Rotation{
@@ -174,9 +172,8 @@ var DefaultDemonologyWarlock = &proto.Player_Warlock{
 }
 
 var defaultDemonologyOptions = &proto.Warlock_Options{
-	Armor:       proto.Warlock_Options_FelArmor,
-	Summon:      proto.Warlock_Options_Felguard,
-	WeaponImbue: proto.Warlock_Options_GrandSpellstone,
+	Armor:  proto.Warlock_Options_FelArmor,
+	Summon: proto.Warlock_Options_Felguard,
 }
 
 var defaultDemonologyRotation = &proto.Warlock_Rotation{

@@ -8,6 +8,11 @@ import (
 )
 
 func (rogue *Rogue) registerEviscerate() {
+	cost := 35.0
+	if rogue.HasSetBonus(ItemSetAssassination, 4) {
+		cost -= 10
+	}
+	deathMantleDamage := core.TernaryFloat64(rogue.HasSetBonus(Tier5, 2), 40, 0)
 	rogue.Eviscerate = rogue.RegisterSpell(core.SpellConfig{
 		ActionID:     core.ActionID{SpellID: 26865},
 		SpellSchool:  core.SpellSchoolPhysical,
@@ -16,7 +21,7 @@ func (rogue *Rogue) registerEviscerate() {
 		MetricSplits: 6,
 
 		EnergyCost: core.EnergyCostOptions{
-			Cost:          35,
+			Cost:          cost,
 			Refund:        0.4 * float64(rogue.Talents.QuickRecovery),
 			RefundMetrics: rogue.QuickRecoveryMetrics,
 		},
@@ -45,7 +50,7 @@ func (rogue *Rogue) registerEviscerate() {
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			rogue.BreakStealth(sim)
 			comboPoints := rogue.ComboPoints()
-			flatBaseDamage := 60 + 370*float64(comboPoints)
+			flatBaseDamage := 60 + (185+deathMantleDamage)*float64(comboPoints)
 			// tooltip implies 3..7% AP scaling, but testing shows it's fixed at 7% (3.4.0.46158)
 			apRatio := 0.07 * float64(comboPoints)
 

@@ -113,9 +113,9 @@ func (war *DpsWarrior) Initialize() {
 		war.RegisterRecklessnessCD()
 	}
 
-	if war.Options.UseShatteringThrow {
-		war.RegisterShatteringThrowCD()
-	}
+	// if war.Options.UseShatteringThrow {
+	// 	war.RegisterShatteringThrowCD()
+	// }
 
 	// This makes the behavior of these options more intuitive in the individual sim.
 	if war.Env.Raid.Size() == 1 {

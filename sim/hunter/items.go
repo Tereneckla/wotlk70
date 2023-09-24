@@ -7,6 +7,17 @@ import (
 	"github.com/Tereneckla/wotlk/sim/core/stats"
 )
 
+var ItemSetBeastLord = core.NewItemSet(core.ItemSet{
+	Name: "Beast Lord Armor",
+	Bonuses: map[int32]core.ApplyEffect{
+		2: func(agent core.Agent) {
+		},
+		4: func(agent core.Agent) {
+			// Handled in kill_command.go
+		},
+	},
+})
+
 var ItemSetDemonStalker = core.NewItemSet(core.ItemSet{
 	Name: "Demon Stalker Armor",
 	Bonuses: map[int32]core.ApplyEffect{

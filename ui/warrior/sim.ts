@@ -137,7 +137,7 @@ export class WarriorSimUI extends IndividualSimUI<Spec.SpecWarrior> {
 			playerIconInputs: [
 				WarriorInputs.ShoutPicker,
 				WarriorInputs.Recklessness,
-				WarriorInputs.ShatteringThrow,
+				// WarriorInputs.ShatteringThrow,
 			],
 			// Inputs to include in the 'Rotation' section on the settings tab.
 			rotationInputs: WarriorInputs.WarriorRotationConfig,
@@ -151,6 +151,7 @@ export class WarriorSimUI extends IndividualSimUI<Spec.SpecWarrior> {
 				inputs: [
 					WarriorInputs.StartingRage,
 					WarriorInputs.StanceSnapshot,
+					WarriorInputs.Munch,
 					OtherInputs.TankAssignment,
 					OtherInputs.InFrontOfTarget,
 				],

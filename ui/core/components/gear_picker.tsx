@@ -1051,7 +1051,6 @@ export class ItemList<T> {
 
 		itemIdxs = itemIdxs.filter(i => {
 			const listItemData = this.itemData[i];
-
 			if (listItemData.phase > this.player.sim.getPhase()) {
 				return false;
 			}

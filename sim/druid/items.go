@@ -564,29 +564,6 @@ func init() {
 		}))
 	})
 
-	core.NewItemEffect(32387, func(agent core.Agent) {
-		druid := agent.(DruidAgent).GetDruid()
-		core.MakePermanent(druid.RegisterAura(core.Aura{
-			Label:      "Idol of the Raven Goddess",
-			BuildPhase: core.CharacterBuildPhaseGear,
-			OnGain: func(aura *core.Aura, sim *core.Simulation) {
-				// For now this assume we'll never leave main form
-				if druid.StartingForm.Matches(Bear | Cat) {
-					druid.AddStatDynamic(sim, stats.MeleeCrit, 40.0)
-				} else if druid.StartingForm.Matches(Moonkin) {
-					druid.AddStatDynamic(sim, stats.SpellCrit, 40.0)
-				}
-			},
-			OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-				if druid.StartingForm.Matches(Bear | Cat) {
-					druid.AddStatDynamic(sim, stats.MeleeCrit, -40.0)
-				} else if druid.StartingForm.Matches(Moonkin) {
-					druid.AddStatDynamic(sim, stats.SpellCrit, -40.0)
-				}
-			},
-		}))
-	})
-
 	core.NewItemEffect(45509, func(agent core.Agent) {
 		druid := agent.(DruidAgent).GetDruid()
 		procAura := druid.NewTemporaryStatsAura("Idol of the Corruptor Proc", core.ActionID{SpellID: 64951}, stats.Stats{stats.Agility: 162}, time.Second*12)
@@ -678,36 +655,6 @@ func init() {
 				}
 				procAura.Activate(sim)
 				procAura.AddStack(sim)
-			},
-		}))
-	})
-
-	core.NewItemEffect(33947, func(agent core.Agent) {
-		druid := agent.(DruidAgent).GetDruid()
-		procAura := druid.NewTemporaryStatsAura("Vengeful Gladiator's Idol of Resolve Proc", core.ActionID{ItemID: 33947}, stats.Stats{stats.Resilience: 34}, time.Second*6)
-
-		core.MakePermanent(druid.RegisterAura(core.Aura{
-			Label: "Vengeful Gladiator's Idol of Resolve",
-			OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-				if !result.Landed() || !druid.IsMangle(spell) {
-					return
-				}
-				procAura.Activate(sim)
-			},
-		}))
-	})
-
-	core.NewItemEffect(35019, func(agent core.Agent) {
-		druid := agent.(DruidAgent).GetDruid()
-		procAura := druid.NewTemporaryStatsAura("Brutal Gladiator's Idol of Resolve Proc", core.ActionID{ItemID: 35019}, stats.Stats{stats.Resilience: 39}, time.Second*6)
-
-		core.MakePermanent(druid.RegisterAura(core.Aura{
-			Label: "Brutal Gladiator's Idol of Resolve",
-			OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-				if !result.Landed() || !druid.IsMangle(spell) {
-					return
-				}
-				procAura.Activate(sim)
 			},
 		}))
 	})

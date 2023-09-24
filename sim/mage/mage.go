@@ -47,10 +47,12 @@ type Mage struct {
 
 	arcaneBlastStreak int32
 	arcanePowerMCD    *core.MajorCooldown
+	igniteMunchDmg    float64
+	igniteMunchTime   time.Duration
 	delayedPyroAt     time.Duration
 
 	waterElemental *WaterElemental
-	mirrorImage    *MirrorImage
+	// mirrorImage    *MirrorImage
 
 	// Cached values for a few mechanics.
 	bonusCritDamage float64
@@ -67,11 +69,11 @@ type Mage struct {
 	FireBlast       *core.Spell
 	Flamestrike     *core.Spell
 	Frostbolt       *core.Spell
-	FrostfireBolt   *core.Spell
-	IceLance        *core.Spell
-	Pyroblast       *core.Spell
-	Scorch          *core.Spell
-	MirrorImage     *core.Spell
+	// FrostfireBolt   *core.Spell
+	IceLance  *core.Spell
+	Pyroblast *core.Spell
+	Scorch    *core.Spell
+	// MirrorImage     *core.Spell
 
 	IcyVeins             *core.Spell
 	SummonWaterElemental *core.Spell
@@ -140,18 +142,20 @@ func (mage *Mage) Initialize() {
 		mage.registerEvocationCD()
 	}
 
-	if mirrorImageMCD := mage.GetMajorCooldownIgnoreTag(mage.MirrorImage.ActionID); mirrorImageMCD != nil {
-		if len(mirrorImageMCD.GetTimings()) == 0 {
-			mage.RegisterPrepullAction(-1500*time.Millisecond, func(sim *core.Simulation) {
-				mage.MirrorImage.Cast(sim, nil)
-			})
-		}
-	}
+	// if mirrorImageMCD := mage.GetMajorCooldownIgnoreTag(mage.MirrorImage.ActionID); mirrorImageMCD != nil {
+	// 	if len(mirrorImageMCD.GetTimings()) == 0 {
+	// 		mage.RegisterPrepullAction(-1500*time.Millisecond, func(sim *core.Simulation) {
+	// 			mage.MirrorImage.Cast(sim, nil)
+	// 		})
+	// 	}
+	// }
 }
 
 func (mage *Mage) Reset(sim *core.Simulation) {
 	mage.arcaneBlastStreak = 0
 	mage.arcanePowerMCD = mage.GetMajorCooldown(core.ActionID{SpellID: 12042})
+	mage.igniteMunchDmg = 0
+	mage.igniteMunchTime = 0
 	mage.delayedPyroAt = 0
 }
 
@@ -203,7 +207,7 @@ func NewMage(character core.Character, options *proto.Player) *Mage {
 		mage.Character.AddStatDependency(stats.Spirit, stats.SpellCrit, multi)
 	}
 
-	mage.mirrorImage = mage.NewMirrorImage()
+	// mage.mirrorImage = mage.NewMirrorImage()
 
 	if mage.Talents.SummonWaterElemental {
 		mage.waterElemental = mage.NewWaterElemental(mage.Rotation.WaterElementalDisobeyChance)

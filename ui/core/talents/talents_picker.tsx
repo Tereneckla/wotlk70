@@ -11,9 +11,9 @@ import { Player } from '../player.js';
 
 import { element, fragment } from 'tsx-vanilla';
 
-const MAX_POINTS_PLAYER = 71;
-const MAX_POINTS_HUNTER_PET = 16;
-const MAX_POINTS_HUNTER_PET_BM = 20;
+const MAX_POINTS_PLAYER = 61;
+const MAX_POINTS_HUNTER_PET = 13;
+const MAX_POINTS_HUNTER_PET_BM = 17;
 
 export interface TalentsPickerConfig<ModObject, TalentsProto> extends InputConfig<ModObject, string> {
 	klass: Class,

@@ -103,6 +103,14 @@ export const DamageReductionPercentBuff = InputHelpers.makeMultiIconInput([
 	makeBooleanIndividualBuffInput(ActionId.fromSpellId(50720), 'vigilance'),
 ], 'Mit %');
 
+export const ResistanceBuff = InputHelpers.makeMultiIconInput([
+	makeBooleanRaidBuffInput(ActionId.fromSpellId(39374), 'shadowProtection'),
+	makeBooleanRaidBuffInput(ActionId.fromSpellId(25574), 'natureResistanceTotem'),
+	makeBooleanRaidBuffInput(ActionId.fromSpellId(27045), 'aspectOfTheWild'),
+	makeBooleanRaidBuffInput(ActionId.fromSpellId(27152), 'frostResistanceAura'),
+	makeBooleanRaidBuffInput(ActionId.fromSpellId(25560), 'frostResistanceTotem'),
+], 'Resistances');
+
 export const HastePercentBuff = InputHelpers.makeMultiIconInput([
 	makeBooleanRaidBuffInput(ActionId.fromSpellId(53648), 'swiftRetribution'),
 	makeBooleanRaidBuffInput(ActionId.fromSpellId(48396), 'moonkinAura', TristateEffect.TristateEffectImproved),
@@ -437,6 +445,7 @@ export const makeFlasksInput = makeConsumeInputFactory({
 		{ actionId: ActionId.fromItemId(13512), value: Flask.FlaskOfSupremePower },
 		{ actionId: ActionId.fromItemId(22851), value: Flask.FlaskOfFortification },
 		{ actionId: ActionId.fromItemId(33208), value: Flask.FlaskOfChromaticWonder },
+		{ actionId: ActionId.fromItemId(13511), value: Flask.FlaskOfDistilledWisdom },
 	] as Array<IconEnumValueConfig<Player<any>, Flask>>,
 	onSet: (eventID: EventID, player: Player<any>, newValue: Flask) => {
 		if (newValue) {

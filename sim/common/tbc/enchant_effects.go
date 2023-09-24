@@ -12,12 +12,8 @@ func init() {
 	// Keep these in order by item ID.
 	core.NewEnchantEffect(803, func(agent core.Agent) {
 		character := agent.GetCharacter()
-		mh := character.Equip[proto.ItemSlot_ItemSlotMainHand].Enchant.EffectID == 803
-		oh := character.Equip[proto.ItemSlot_ItemSlotOffHand].Enchant.EffectID == 803
-		if !mh && !oh {
-			return
-		}
-		procMask := core.GetMeleeProcMaskForHands(mh, oh)
+
+		procMask := character.GetProcMaskForEnchant(803)
 		ppmm := character.AutoAttacks.NewPPMManager(6.0, procMask)
 
 		var fierySpell *core.Spell
@@ -51,7 +47,7 @@ func init() {
 
 		character.ItemSwap.RegisterOnSwapItemForEffectWithPPMManager(803, 6.0, &ppmm, aura)
 	})
-	
+
 	// TODO: Crusader, Mongoose, and Executioner could also be modelled as AddWeaponEffect instead
 	core.AddWeaponEffect(1897, func(agent core.Agent, slot proto.ItemSlot) {
 		w := &agent.GetCharacter().AutoAttacks.MH

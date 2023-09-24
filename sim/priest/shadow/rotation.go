@@ -75,9 +75,9 @@ func (spriest *ShadowPriest) tryUseGCD(sim *core.Simulation) {
 }
 
 func (spriest *ShadowPriest) chooseSpellAOE(sim *core.Simulation) (*core.Spell, *core.Unit) {
-	if len(sim.Encounter.Targets) >= 4 {
-		return spriest.MindSear[5], spriest.CurrentTarget
-	}
+	// if len(sim.Encounter.Targets) >= 4 {
+	// 	return spriest.MindSear[5], spriest.CurrentTarget
+	// }
 
 	for _, t := range sim.Encounter.TargetUnits {
 		if spriest.ShadowWordPain.Dot(t).IsActive() && spriest.ShadowWordPain.Dot(t).RemainingDuration(sim).Seconds() < 3 {
@@ -656,11 +656,11 @@ func (spriest *ShadowPriest) chooseSpellIdeal(sim *core.Simulation) (*core.Spell
 			return spriest.MindBlast, 0
 		} else {
 			//numTicks = 3
-			if spriest.rotation.RotationType == 4 && len(sim.Encounter.Targets) >= 3 {
-				return spriest.MindSear[numTicks], 0
-			} else {
-				return spriest.MindFlay[numTicks], 0
-			}
+			// if spriest.rotation.RotationType == 4 && len(sim.Encounter.Targets) >= 3 {
+			// 	return spriest.MindSear[numTicks], 0
+			// } else {
+			return spriest.MindFlay[numTicks], 0
+			// }
 		}
 	} else {
 		mbcd := spriest.MindBlast.TimeToReady(sim)

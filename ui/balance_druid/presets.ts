@@ -42,14 +42,13 @@ export const Phase1Talents = {
 		talentsString: '5032003125331303213305311231--2',
 		glyphs: Glyphs.create({
 			major1: DruidMajorGlyph.GlyphOfStarfire,
-			major2: DruidMajorGlyph.GlyphOfStarFall,
+			major2: DruidMajorGlyph.GlyphOfStarfall,
 			major3: DruidMajorGlyph.DruidMajorGlyphNone,
 			minor1: DruidMinorGlyph.GlyphOfTyphoon,
 			minor2: DruidMinorGlyph.GlyphOfUnburdenedRebirth,
 			minor3: DruidMinorGlyph.GlyphOfTheWild,
 		}),
 	}),
-};
 };
 
 export const DefaultRotation = BalanceDruidRotation.create({
@@ -121,101 +120,24 @@ export const PRE_RAID_PRESET = {
 	name: 'Pre-raid Preset',
 	tooltip: Tooltips.BASIC_BIS_DISCLAIMER,
 	gear: EquipmentSpec.fromJsonString(`{ "items": [
-		"id": 24266,
-		"enchant": 3002,
-		"gems": [
-		  31867,
-		  31867,
-		  31867
-		]
-	  },
-	  {
-		"id": 28134
-	  },
-	  {
-		"id": 27796,
-		"enchant": 2982,
-		"gems": [
-		  31867,
-		  31867
-		]
-	  },
-	  {
-		"id": 29369,
-		"enchant": 2621
-	  },
-	  {
-		"id": 21848,
-		"enchant": 2661,
-		"gems": [
-		  31867,
-		  31867
-		]
-	  },
-	  {
-		"id": 32655,
-		"enchant": 2650,
-		"gems": [
-		  24030,
-		  0
-		]
-	  },
-	  {
-		"id": 21847,
-		"enchant": 2937,
-		"gems": [
-		  31867,
-		  31867,
-		  0
-		]
-	  },
-	  {
-		"id": 21846,
-		"gems": [
-		  24030,
-		  24030,
-		  0
-		]
-	  },
-	  {
-		"id": 24262,
-		"enchant": 2748,
-		"gems": [
-		  24030,
-		  31867,
-		  24030
-		]
-	  },
-	  {
-		"id": 28406,
-		"gems": [
-		  24030,
-		  31867
-		]
-	  },
-	  {
-		"id": 32779
-	  },
-	  {
-		"id": 28227
-	  },
-	  {
-		"id": 31856
-	  },
-	  {
-		"id": 29370
-	  },
-	  {
-		"id": 23554,
-		"enchant": 2669
-	  },
-	  {
-		"id": 28412
-	  },
-	  {
-		"id": 32387
-	  }
-]}`),
+		{"id":42554,"enchant":3820,"gems":[41285,40049]},
+		{"id":40680},
+		{"id":37673,"enchant":3810,"gems":[42144]},
+		{"id":41610,"enchant":3859},
+		{"id":39547,"enchant":3832,"gems":[42144,40026]},
+		{"id":37884,"enchant":2332,"gems":[0]},
+		{"id":39544,"enchant":3604,"gems":[42144,0]},
+		{"id":40696,"enchant":3601,"gems":[40014,39998]},
+		{"id":37854,"enchant":3719},
+		{"id":44202,"enchant":3606,"gems":[39998]},
+		{"id":40585},
+		{"id":43253,"gems":[40026]},
+		{"id":37873},
+		{"id":40682},
+		{"id":45085,"enchant":3834},
+		{"id":40698},
+		{"id":40712}
+	]}`),
 };
 
 export const ROTATION_PRESET_P3_APL = {

@@ -273,7 +273,7 @@ func (mage *Mage) registerPresenceOfMindCD() {
 		return
 	}
 
-	cooldown := 120.0
+	cooldown := 120.0 - core.TernaryFloat64(mage.HasSetBonus(ItemSetAldorRegalia, 2), 24, 0)
 	if mage.Talents.ArcaneFlows > 0 {
 		cooldown *= 1 - (.15 * float64(mage.Talents.ArcaneFlows))
 	}
@@ -452,14 +452,14 @@ func (mage *Mage) registerCombustionCD() {
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			numCrits = 0
 			for _, spell := range fireSpells {
-				spell.CritMultiplier *= core.TernaryFloat64(spell != mage.FrostfireBolt, fireCombCritMult, frostfireCombCritMult)
+				spell.CritMultiplier *= core.TernaryFloat64(true /*spell != mage.FrostfireBolt*/, fireCombCritMult, frostfireCombCritMult)
 			}
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 			cd.Use(sim)
 			mage.UpdateMajorCooldowns()
 			for _, spell := range fireSpells {
-				spell.CritMultiplier /= core.TernaryFloat64(spell != mage.FrostfireBolt, fireCombCritMult, frostfireCombCritMult)
+				spell.CritMultiplier /= core.TernaryFloat64(true /*spell != mage.FrostfireBolt*/, fireCombCritMult, frostfireCombCritMult)
 			}
 		},
 		OnStacksChange: func(aura *core.Aura, sim *core.Simulation, oldStacks int32, newStacks int32) {
@@ -634,7 +634,7 @@ func (mage *Mage) applyMoltenFury() {
 }
 
 func (mage *Mage) hasChillEffect(spell *core.Spell) bool {
-	return spell == mage.Frostbolt || spell == mage.FrostfireBolt || (spell == mage.Blizzard && mage.Talents.ImprovedBlizzard > 0)
+	return spell == mage.Frostbolt /*|| spell == mage.FrostfireBolt*/ || (spell == mage.Blizzard && mage.Talents.ImprovedBlizzard > 0)
 }
 
 func (mage *Mage) applyFingersOfFrost() {
@@ -699,20 +699,20 @@ func (mage *Mage) applyBrainFreeze() {
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			mage.Fireball.CostMultiplier -= 100
 			mage.Fireball.CastTimeMultiplier -= 1
-			mage.FrostfireBolt.CostMultiplier -= 100
-			mage.FrostfireBolt.CastTimeMultiplier -= 1
+			// mage.FrostfireBolt.CostMultiplier -= 100
+			// mage.FrostfireBolt.CastTimeMultiplier -= 1
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 			mage.Fireball.CostMultiplier += 100
 			mage.Fireball.CastTimeMultiplier += 1
-			mage.FrostfireBolt.CostMultiplier += 100
-			mage.FrostfireBolt.CastTimeMultiplier += 1
+			// mage.FrostfireBolt.CostMultiplier += 100
+			// mage.FrostfireBolt.CastTimeMultiplier += 1
 			if t10ProcAura != nil {
 				t10ProcAura.Activate(sim)
 			}
 		},
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if spell == mage.FrostfireBolt || spell == mage.Fireball {
+			if /*spell == mage.FrostfireBolt ||*/ spell == mage.Fireball {
 				if !hasT8_4pc || sim.RandomFloat("MageT84PC") > T84PcProcChance {
 					aura.Deactivate(sim)
 				}

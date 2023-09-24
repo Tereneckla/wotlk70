@@ -23,7 +23,7 @@ import {
 	Warlock_Rotation_SecondaryDot as SecondaryDot,
 	Warlock_Rotation_SpecSpell as SpecSpell,
 	Warlock_Rotation_Curse as Curse,
-	Warlock_Options_WeaponImbue as WeaponImbue,
+	// Warlock_Options_WeaponImbue as WeaponImbue,
 	Warlock_Options_Armor as Armor,
 	Warlock_Options_Summon as Summon,
 	WarlockMajorGlyph as MajorGlyph,
@@ -114,19 +114,19 @@ export const DestructionRotation = WarlockRotation.create({
 export const AfflictionOptions = WarlockOptions.create({
 	armor: Armor.FelArmor,
 	summon: Summon.Felhunter,
-	weaponImbue: WeaponImbue.GrandSpellstone,
+	// weaponImbue: WeaponImbue.GrandSpellstone,
 });
 
 export const DemonologyOptions = WarlockOptions.create({
 	armor: Armor.FelArmor,
 	summon: Summon.Felguard,
-	weaponImbue: WeaponImbue.GrandSpellstone,
+	// weaponImbue: WeaponImbue.GrandSpellstone,
 });
 
 export const DestructionOptions = WarlockOptions.create({
 	armor: Armor.FelArmor,
 	summon: Summon.Imp,
-	weaponImbue: WeaponImbue.GrandFirestone,
+	// weaponImbue: WeaponImbue.GrandFirestone,
 });
 
 export const DefaultConsumes = Consumes.create({

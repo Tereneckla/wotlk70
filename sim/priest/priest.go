@@ -138,14 +138,14 @@ func (priest *Priest) Initialize() {
 		priest.newMindFlaySpell(2),
 		priest.newMindFlaySpell(3),
 	}
-	priest.MindSear = []*core.Spell{
-		nil, // So we can use # of ticks as the index
-		priest.newMindSearSpell(1),
-		priest.newMindSearSpell(2),
-		priest.newMindSearSpell(3),
-		priest.newMindSearSpell(4),
-		priest.newMindSearSpell(5),
-	}
+	// priest.MindSear = []*core.Spell{
+	// 	nil, // So we can use # of ticks as the index
+	// 	priest.newMindSearSpell(1),
+	// 	priest.newMindSearSpell(2),
+	// 	priest.newMindSearSpell(3),
+	// 	priest.newMindSearSpell(4),
+	// 	priest.newMindSearSpell(5),
+	// }
 }
 
 func (priest *Priest) RegisterHealingSpells() {

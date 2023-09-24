@@ -8,6 +8,9 @@ import (
 
 func (druid *Druid) registerLacerateSpell() {
 	tickDamage := 155.0 / 5
+	if druid.HasSetBonus(ItemSetNordrassilHarness, 4) {
+		tickDamage += 15
+	}
 	initialDamage := 31.0
 	if druid.Ranged().ID == 27744 { // Idol of Ursoc
 		tickDamage += 8

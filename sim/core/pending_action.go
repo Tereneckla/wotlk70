@@ -36,7 +36,7 @@ type PendingAction struct {
 }
 
 func (pa *PendingAction) Cancel(sim *Simulation) {
-	if pa.cancelled {
+	if pa == nil || pa.cancelled {
 		return
 	}
 

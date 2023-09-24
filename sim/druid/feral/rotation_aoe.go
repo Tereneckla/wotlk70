@@ -32,14 +32,14 @@ func (cat *FeralDruid) doAoeRotation(sim *core.Simulation) (bool, time.Duration)
 	ffNow := cat.FaerieFire.CanCast(sim, cat.CurrentTarget) && !isClearcast && curEnergy < ffThresh
 
 	if ffNow {
-		simTimeSecs := sim.GetRemainingDuration().Seconds()
-		maxSwipesWithoutFF := (int)((curEnergy + simTimeSecs*10) / cat.SwipeCat.DefaultCast.Cost)
-		numSwipesWithoutFF := core.MinInt(maxSwipesWithoutFF, int(simTimeSecs)+1)
-		numSwipesWithFF := core.MinInt(maxSwipesWithoutFF+1, int(simTimeSecs))
-		ffNow = numSwipesWithFF > numSwipesWithoutFF
+		// simTimeSecs := sim.GetRemainingDuration().Seconds()
+		// maxSwipesWithoutFF := (int)((curEnergy + simTimeSecs*10) / cat.SwipeCat.DefaultCast.Cost)
+		// numSwipesWithoutFF := core.MinInt(maxSwipesWithoutFF, int(simTimeSecs)+1)
+		// numSwipesWithFF := core.MinInt(maxSwipesWithoutFF+1, int(simTimeSecs))
+		// ffNow = numSwipesWithFF > numSwipesWithoutFF
 	}
 
-	roarNow := curCp >= 1 && (!cat.SavageRoarAura.IsActive() || cat.clipRoar(sim))
+	//roarNow := curCp >= 1 && (!cat.SavageRoarAura.IsActive() || cat.clipRoar(sim))
 
 	nextFfEnergy := curEnergy + float64((cat.FaerieFire.TimeToReady(sim)+cat.latency)/core.EnergyTickDuration)
 	waitForFf := (cat.FaerieFire.TimeToReady(sim) < time.Second-rotation.MaxFfDelay) && (nextFfEnergy < ffThresh) && !isClearcast
@@ -82,8 +82,8 @@ func (cat *FeralDruid) doAoeRotation(sim *core.Simulation) (bool, time.Duration)
 
 	pendingPool.sort()
 
-	floatingEnergy := pendingPool.calcFloatingEnergy(cat, sim)
-	excessE := curEnergy - floatingEnergy
+	// floatingEnergy := pendingPool.calcFloatingEnergy(cat, sim)
+	// excessE := curEnergy - floatingEnergy
 
 	timeToNextAction := time.Duration(0)
 
@@ -104,12 +104,12 @@ func (cat *FeralDruid) doAoeRotation(sim *core.Simulation) (bool, time.Duration)
 			cat.Berserk.Cast(sim, nil)
 			cat.UpdateMajorCooldowns()
 			return false, 0
-		} else if roarNow {
-			if cat.SavageRoar.CanCast(sim, cat.CurrentTarget) {
-				cat.SavageRoar.Cast(sim, nil)
-				return false, 0
-			}
-			timeToNextAction = time.Duration((cat.CurrentSavageRoarCost() - curEnergy) * float64(core.EnergyTickDuration))
+			// } else if roarNow {
+			// 	if cat.SavageRoar.CanCast(sim, cat.CurrentTarget) {
+			// 		cat.SavageRoar.Cast(sim, nil)
+			// 		return false, 0
+			// 	}
+			// 	timeToNextAction = time.Duration((cat.CurrentSavageRoarCost() - curEnergy) * float64(core.EnergyTickDuration))
 		} else if mangleNow && !waitForFf {
 			if cat.MangleCat.CanCast(sim, cat.CurrentTarget) {
 				cat.MangleCat.Cast(sim, cat.CurrentTarget)
@@ -124,12 +124,12 @@ func (cat *FeralDruid) doAoeRotation(sim *core.Simulation) (bool, time.Duration)
 			timeToNextAction = time.Duration((cat.CurrentRakeCost() - curEnergy) * float64(core.EnergyTickDuration))
 		} else if flowershiftNow && curEnergy < 42 {
 			cat.readyToGift = true
-		} else {
-			if excessE > cat.CurrentSwipeCatCost() || isClearcast {
-				cat.SwipeCat.Cast(sim, cat.CurrentTarget)
-				return false, 0
-			}
-			timeToNextAction = time.Duration((cat.CurrentSwipeCatCost() - excessE) * float64(core.EnergyTickDuration))
+			// } else {
+			// 	if excessE > cat.CurrentSwipeCatCost() || isClearcast {
+			// 		cat.SwipeCat.Cast(sim, cat.CurrentTarget)
+			// 		return false, 0
+			// 	}
+			// 	timeToNextAction = time.Duration((cat.CurrentSwipeCatCost() - excessE) * float64(core.EnergyTickDuration))
 		}
 	}
 

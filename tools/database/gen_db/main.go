@@ -269,41 +269,42 @@ func simmableItemFilter(_ int32, item *proto.UIItem) bool {
 		return false
 	} else if item.Quality > proto.ItemQuality_ItemQualityHeirloom {
 		return false
-	} else if item.Quality < proto.ItemQuality_ItemQualityEpic {
-		if item.ilvl < 145 {
+	} /*else if item.Quality < proto.ItemQuality_ItemQualityEpic {
+		if item.Ilvl < 145 {
 			return false
 		}
-		if item.ilvl < 149 && item.SetName == "" {
+		if item.Ilvl < 149 && item.SetName == "" {
 			return false
 		}
 	} else {
 		// Epic and legendary items might come from classic, so use a lower ilvl threshold.
-		if item.Quality != proto.ItemQuality_ItemQualityHeirloom && item.ilvl < 140 {
+		if item.Quality != proto.ItemQuality_ItemQualityHeirloom && item.Ilvl < 140 {
 			return false
 		}
 	}
-	if item.ilvl == 0 {
+	if item.Ilvl == 0 {
 		fmt.Printf("Missing ilvl: %s\n", item.Name)
-	}
+	}*/
 
 	return true
 }
 func simmableGemFilter(_ int32, gem *proto.UIGem) bool {
-	if _, ok := database.GemAllowList[gem.Id]; ok {
-		return true
-	}
+	return true
+	// if _, ok := database.GemAllowList[gem.Id]; ok {
+	// 	return true
+	// }
 
-	// Allow all meta gems
-	if gem.Color == proto.GemColor_GemColorMeta {
-		return true
-	}
+	// // Allow all meta gems
+	// if gem.Color == proto.GemColor_GemColorMeta {
+	// 	return true
+	// }
 
-	// Arbitrary to filter out old gems
-	if gem.Id < 39900 {
-		return false
-	}
+	// // Arbitrary to filter out old gems
+	// if gem.Id < 39900 {
+	// 	return false
+	// }
 
-	return gem.Quality >= proto.ItemQuality_ItemQualityUncommon
+	// return gem.Quality >= proto.ItemQuality_ItemQualityUncommon
 }
 
 type TalentConfig struct {

@@ -8,7 +8,7 @@ import (
 
 func (warlock *Warlock) registerSeedSpell() {
 	actionID := core.ActionID{SpellID: 27243}
-
+	additionalExplosionDamage := core.TernaryFloat64(warlock.HasSetBonus(ItemSetOblivionRaiment, 4), 180, 0)
 	seedExplosion := warlock.RegisterSpell(core.SpellConfig{
 		ActionID:    actionID.WithTag(1), // actually 47834
 		SpellSchool: core.SpellSchoolShadow,
@@ -25,7 +25,7 @@ func (warlock *Warlock) registerSeedSpell() {
 		ThreatMultiplier: 1 - 0.1*float64(warlock.Talents.ImprovedDrainSoul),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			baseDmg := (sim.Roll(1110, 1290) + 0.286*(spell.SpellPower() + core.TernaryFloat64(warlock.HasActiveAura("Shadowflame"), 135, 0))) * sim.Encounter.AOECapMultiplier()
+			baseDmg := (sim.Roll(1110, 1290) + additionalExplosionDamage + 0.286*(spell.SpellPower()+core.TernaryFloat64(warlock.HasActiveAura("Shadowflame"), 135, 0))) * sim.Encounter.AOECapMultiplier()
 			for _, aoeTarget := range sim.Encounter.TargetUnits {
 				spell.CalcAndDealDamage(sim, aoeTarget, baseDmg, spell.OutcomeMagicHitAndCrit)
 			}

@@ -11,7 +11,7 @@ import (
 const (
 	LightningBolt = iota
 	StormstrikeApplyDebuff
-	WeaveLavaBurst
+	// WeaveLavaBurst
 	WeaveLightningBolt
 	MagmaTotem
 	Stormstrike
@@ -117,22 +117,22 @@ func (rotation *PriorityRotation) buildPriorityRotation(enh *EnhancementShaman) 
 		},
 	}
 
-	weaveLavaBurst := Spell{
-		condition: func(sim *core.Simulation, target *core.Unit) bool {
-			if enh.CurrentMana() < enh.LavaBurst.CurCast.Cost {
-				return false
-			}
+	// weaveLavaBurst := Spell{
+	// 	condition: func(sim *core.Simulation, target *core.Unit) bool {
+	// 		if enh.CurrentMana() < enh.LavaBurst.CurCast.Cost {
+	// 			return false
+	// 		}
 
-			return rotation.options.LavaburstWeave && enh.MaelstromWeaponAura.GetStacks() >= rotation.options.MaelstromweaponMinStack
-		},
-		cast: func(sim *core.Simulation, target *core.Unit) bool {
-			reactionTime := time.Millisecond * time.Duration(rotation.options.AutoWeaveDelay)
-			return rotation.options.LavaburstWeave && enh.LavaBurst.IsReady(sim) && enh.CastLavaBurstWeave(sim, reactionTime)
-		},
-		readyAt: func() time.Duration {
-			return 0
-		},
-	}
+	// 		return rotation.options.LavaburstWeave && enh.MaelstromWeaponAura.GetStacks() >= rotation.options.MaelstromweaponMinStack
+	// 	},
+	// 	cast: func(sim *core.Simulation, target *core.Unit) bool {
+	// 		reactionTime := time.Millisecond * time.Duration(rotation.options.AutoWeaveDelay)
+	// 		return rotation.options.LavaburstWeave && enh.LavaBurst.IsReady(sim) && enh.CastLavaBurstWeave(sim, reactionTime)
+	// 	},
+	// 	readyAt: func() time.Duration {
+	// 		return 0
+	// 	},
+	// }
 
 	flameShock := Spell{
 		condition: func(sim *core.Simulation, target *core.Unit) bool {
@@ -285,7 +285,7 @@ func (rotation *PriorityRotation) buildPriorityRotation(enh *EnhancementShaman) 
 		spellPriority[LavaLash] = lavaLash
 		spellPriority[WeaveLightningBolt] = weaveLightningBolt
 		spellPriority[FrostShock] = frostShock
-		spellPriority[WeaveLavaBurst] = weaveLavaBurst
+		// spellPriority[WeaveLavaBurst] = weaveLavaBurst
 		spellPriority[MagmaTotem] = magmaTotem
 		spellPriority[DropAllTotems] = dropAllTotems
 		spellPriority[DelayedWeave] = delayedWeave
@@ -335,9 +335,9 @@ func (rotation *PriorityRotation) buildPriorityRotation(enh *EnhancementShaman) 
 					rotation.options.PrimaryShock = proto.EnhancementShaman_Rotation_Frost
 					spellPriority = append(spellPriority, frostShock)
 				}
-			case int32(proto.EnhancementShaman_Rotation_LavaBurst):
-				rotation.options.LavaburstWeave = true
-				spellPriority = append(spellPriority, weaveLavaBurst)
+			// case int32(proto.EnhancementShaman_Rotation_LavaBurst):
+			// 	rotation.options.LavaburstWeave = true
+			// 	spellPriority = append(spellPriority, weaveLavaBurst)
 			case int32(proto.EnhancementShaman_Rotation_MagmaTotem):
 				spellPriority = append(spellPriority, magmaTotem)
 			}

@@ -27,7 +27,7 @@ func (druid *Druid) registerBerserkCD() {
 				druid.Rake,
 				druid.Rip,
 				druid.SavageRoar,
-				druid.SwipeCat,
+				// druid.SwipeCat,
 				druid.Shred,
 			}, func(spell *DruidSpell) bool { return spell != nil })
 		},

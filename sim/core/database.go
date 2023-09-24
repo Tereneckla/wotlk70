@@ -1,8 +1,6 @@
 package core
 
 import (
-	"fmt"
-
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/core/stats"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -82,7 +80,7 @@ func ItemFromProto(pData *proto.SimItem) Item {
 		SocketBonus:      stats.FromFloatArray(pData.SocketBonus),
 		SetName:          pData.SetName,
 		Suffix:           pData.Suffix,
-		ilvl:             pData.ilvl,
+		ilvl:             pData.Ilvl,
 		Quality:          pData.Quality,
 	}
 }
@@ -229,7 +227,7 @@ func ProtoToEquipmentSpec(es *proto.EquipmentSpec) EquipmentSpec {
 			Enchant: item.Enchant,
 			Gems:    item.Gems,
 			Suffix:  item.Suffix,
-			ilvl:    item.ilvl,
+			ilvl:    item.Ilvl,
 			Quality: item.Quality,
 		}
 	}
@@ -241,7 +239,7 @@ func NewItem(itemSpec ItemSpec) Item {
 	if foundItem, ok := ItemsByID[itemSpec.ID]; ok {
 		item = foundItem
 	} else {
-		panic(fmt.Sprintf("No item with id: %d", itemSpec.ID))
+		//fmt.Printf("No item with id: %d\n", itemSpec.ID)
 	}
 
 	if itemSpec.Enchant != 0 {
@@ -266,7 +264,7 @@ func NewItem(itemSpec ItemSpec) Item {
 				item.Gems[gemIdx] = gem
 			} else {
 				if gemID != 0 {
-					panic(fmt.Sprintf("When parsing item %d, socket %d had gem with id: %d\nThis gem is not in the database.", itemSpec.ID, gemIdx, gemID))
+					//fmt.Printf("When parsing item %d, socket %d had gem with id: %d\nThis gem is not in the database.\n", itemSpec.ID, gemIdx, gemID)
 				}
 			}
 		}

@@ -22,7 +22,7 @@ func (hunter *Hunter) makeExplosiveShotSpell(timer *core.Timer, downrank bool) *
 	minFlatDamage := 221.0
 	maxFlatDamage := 265.0
 	if downrank {
-		actionID = core.ActionID{SpellID: 60050}
+		actionID = core.ActionID{SpellID: 53301}
 		minFlatDamage = 144.0
 		maxFlatDamage = 172.0
 	}

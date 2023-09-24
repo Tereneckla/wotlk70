@@ -144,11 +144,19 @@ func (x *rotation_multi) setup(sim *core.Simulation, rogue *Rogue) {
 		},
 	})
 
+	// x.priorityItems = append(x.priorityItems, roguePriorityItem{
+	// 	MaximumComboPoints: 0,
+	// 	EnergyCost:         rogue.FanOfKnives.DefaultCast.Cost,
+	// 	GetSpell: func(rogue *Rogue, i int32) *core.Spell {
+	// 		return rogue.FanOfKnives
+	// 	},
+	// })
+
 	x.priorityItems = append(x.priorityItems, roguePriorityItem{
 		MaximumComboPoints: 0,
-		EnergyCost:         rogue.FanOfKnives.DefaultCast.Cost,
+		EnergyCost:         rogue.SinisterStrike.DefaultCast.Cost,
 		GetSpell: func(rogue *Rogue, i int32) *core.Spell {
-			return rogue.FanOfKnives
+			return rogue.SinisterStrike
 		},
 	})
 	x.rotationItems = x.planRotation(sim, rogue)

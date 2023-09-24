@@ -1,10 +1,11 @@
 package druid
 
 import (
+	"math"
+
 	"github.com/Tereneckla/wotlk/sim/core"
 	"github.com/Tereneckla/wotlk/sim/core/proto"
 	"github.com/Tereneckla/wotlk/sim/core/stats"
-	"math"
 )
 
 type DruidForm uint8
@@ -104,7 +105,7 @@ func (druid *Druid) GetDynamicPredStrikeStats() stats.Stats {
 func (druid *Druid) registerCatFormSpell() {
 	actionID := core.ActionID{SpellID: 768}
 
-	srm := druid.getSavageRoarMultiplier()
+	//srm := druid.getSavageRoarMultiplier()
 
 	statBonus := druid.GetFormShiftStats().Add(stats.Stats{
 		stats.AttackPower: float64(druid.Level) * 2,
@@ -156,9 +157,9 @@ func (druid *Druid) registerCatFormSpell() {
 				druid.UpdateManaRegenRates()
 
 				// These buffs stay up, but corresponding changes don't
-				if druid.SavageRoarAura.IsActive() {
-					druid.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] *= srm
-				}
+				// if druid.SavageRoarAura.IsActive() {
+				// 	druid.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] *= srm
+				// }
 
 				if druid.PredatoryInstinctsAura != nil {
 					druid.PredatoryInstinctsAura.Activate(sim)
@@ -191,9 +192,9 @@ func (druid *Druid) registerCatFormSpell() {
 				druid.TigersFuryAura.Deactivate(sim)
 
 				// These buffs stay up, but corresponding changes don't
-				if druid.SavageRoarAura.IsActive() {
-					druid.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] /= srm
-				}
+				// if druid.SavageRoarAura.IsActive() {
+				// 	druid.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexPhysical] /= srm
+				// }
 
 				if druid.PredatoryInstinctsAura != nil {
 					druid.PredatoryInstinctsAura.Deactivate(sim)
