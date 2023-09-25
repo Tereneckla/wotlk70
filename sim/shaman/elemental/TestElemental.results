@@ -537,6 +537,13 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestElemental-AllItems-FlurryAxe-871"
+ value: {
+  dps: 7136.136
+  tps: 4361.30545
+ }
+}
+dps_results: {
  key: "TestElemental-AllItems-ForlornSkyflareDiamond"
  value: {
   dps: 6918.18166
@@ -1062,6 +1069,13 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestElemental-AllItems-TheJackhammer-9423"
+ value: {
+  dps: 7136.136
+  tps: 4361.30545
+ }
+}
+dps_results: {
  key: "TestElemental-AllItems-TheLightningCapacitor-28785"
  value: {
   dps: 6988.57673
@@ -1274,8 +1288,8 @@ dps_results: {
 dps_results: {
  key: "TestElemental-Settings-Orc-P1-Adaptive-FullBuffs-LongMultiTarget"
  value: {
-  dps: 15939.31495
-  tps: 11303.4541
+  dps: 15774.99801
+  tps: 11191.17084
  }
 }
 dps_results: {
@@ -1316,8 +1330,8 @@ dps_results: {
 dps_results: {
  key: "TestElemental-Settings-Orc-P1-EleFireElemental-FullBuffs-LongMultiTarget"
  value: {
-  dps: 18413.50529
-  tps: 11147.9097
+  dps: 18212.54331
+  tps: 11037.16387
  }
 }
 dps_results: {
@@ -1358,8 +1372,8 @@ dps_results: {
 dps_results: {
  key: "TestElemental-Settings-Troll-P1-Adaptive-FullBuffs-LongMultiTarget"
  value: {
-  dps: 15774.94988
-  tps: 11185.07247
+  dps: 15612.64565
+  tps: 11074.23398
  }
 }
 dps_results: {
@@ -1400,8 +1414,8 @@ dps_results: {
 dps_results: {
  key: "TestElemental-Settings-Troll-P1-EleFireElemental-FullBuffs-LongMultiTarget"
  value: {
-  dps: 18269.06532
-  tps: 11182.66714
+  dps: 18070.55887
+  tps: 11071.78128
  }
 }
 dps_results: {

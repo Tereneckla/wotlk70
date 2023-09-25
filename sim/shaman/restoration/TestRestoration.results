@@ -492,6 +492,13 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestRestoration-AllItems-FlurryAxe-871"
+ value: {
+  tps: 72.59776
+  hps: 5616.34059
+ }
+}
+dps_results: {
  key: "TestRestoration-AllItems-ForlornSkyflareDiamond"
  value: {
   tps: 63.90965
@@ -1014,6 +1021,13 @@ dps_results: {
  value: {
   tps: 67.09265
   hps: 4445.90228
+ }
+}
+dps_results: {
+ key: "TestRestoration-AllItems-TheJackhammer-9423"
+ value: {
+  tps: 72.59776
+  hps: 5616.34059
  }
 }
 dps_results: {

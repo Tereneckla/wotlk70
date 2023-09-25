@@ -632,6 +632,10 @@ dps_results: {
  value: {}
 }
 dps_results: {
+ key: "TestHoly-AllItems-TheJackhammer-9423"
+ value: {}
+}
+dps_results: {
  key: "TestHoly-AllItems-TheLightningCapacitor-28785"
  value: {}
 }

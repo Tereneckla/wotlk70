@@ -600,6 +600,10 @@ dps_results: {
  value: {}
 }
 dps_results: {
+ key: "TestRestoration-AllItems-TheJackhammer-9423"
+ value: {}
+}
+dps_results: {
  key: "TestRestoration-AllItems-TheLightningCapacitor-28785"
  value: {}
 }

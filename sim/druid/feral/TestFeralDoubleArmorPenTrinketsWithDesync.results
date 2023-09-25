@@ -466,8 +466,8 @@ dps_results: {
 dps_results: {
  key: "TestFeralDoubleArmorPenTrinketsWithDesync-AllItems-GlaiveofthePit-28774"
  value: {
-  dps: 9636.80513
-  tps: 6910.71101
+  dps: 9609.17918
+  tps: 6891.09659
  }
 }
 dps_results: {
@@ -1015,6 +1015,13 @@ dps_results: {
  value: {
   dps: 9626.59703
   tps: 6903.46326
+ }
+}
+dps_results: {
+ key: "TestFeralDoubleArmorPenTrinketsWithDesync-AllItems-TheJackhammer-9423"
+ value: {
+  dps: 9585.96672
+  tps: 6874.61574
  }
 }
 dps_results: {

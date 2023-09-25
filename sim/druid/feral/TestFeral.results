@@ -466,8 +466,8 @@ dps_results: {
 dps_results: {
  key: "TestFeral-AllItems-GlaiveofthePit-28774"
  value: {
-  dps: 6884.22391
-  tps: 4956.52792
+  dps: 6856.74224
+  tps: 4937.01594
  }
 }
 dps_results: {
@@ -1015,6 +1015,13 @@ dps_results: {
  value: {
   dps: 6866.0844
   tps: 4943.64887
+ }
+}
+dps_results: {
+ key: "TestFeral-AllItems-TheJackhammer-9423"
+ value: {
+  dps: 6834.21623
+  tps: 4921.02247
  }
 }
 dps_results: {

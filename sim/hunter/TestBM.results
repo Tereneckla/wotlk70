@@ -471,6 +471,13 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestBM-AllItems-FlurryAxe-871"
+ value: {
+  dps: 4057.73073
+  tps: 2493.65541
+ }
+}
+dps_results: {
  key: "TestBM-AllItems-ForlornSkyflareDiamond"
  value: {
   dps: 3972.38965
@@ -955,6 +962,13 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestBM-AllItems-TheJackhammer-9423"
+ value: {
+  dps: 4057.73073
+  tps: 2493.65541
+ }
+}
+dps_results: {
  key: "TestBM-AllItems-TheLightningCapacitor-28785"
  value: {
   dps: 3900.85563
@@ -1132,8 +1146,8 @@ dps_results: {
 dps_results: {
  key: "TestBM-Settings-Dwarf-P1-Basic-FullBuffs-LongMultiTarget"
  value: {
-  dps: 7149.2273
-  tps: 6251.04778
+  dps: 7149.21179
+  tps: 6251.03227
  }
 }
 dps_results: {
@@ -1174,8 +1188,8 @@ dps_results: {
 dps_results: {
  key: "TestBM-Settings-Orc-P1-Basic-FullBuffs-LongMultiTarget"
  value: {
-  dps: 7235.11625
-  tps: 6250.32174
+  dps: 7235.10074
+  tps: 6250.30623
  }
 }
 dps_results: {

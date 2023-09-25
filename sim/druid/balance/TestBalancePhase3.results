@@ -1010,6 +1010,13 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestBalancePhase3-AllItems-TheJackhammer-9423"
+ value: {
+  dps: 13590.61677
+  tps: 13316.88884
+ }
+}
+dps_results: {
  key: "TestBalancePhase3-AllItems-TheLightningCapacitor-28785"
  value: {
   dps: 12874.0982
@@ -1180,8 +1187,8 @@ dps_results: {
 dps_results: {
  key: "TestBalancePhase3-Settings-Tauren-P3-Default-FullBuffs-LongMultiTarget"
  value: {
-  dps: 18805.05635
-  tps: 20969.09569
+  dps: 18725.22435
+  tps: 20889.26369
  }
 }
 dps_results: {

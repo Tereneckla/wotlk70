@@ -921,8 +921,8 @@ dps_results: {
 dps_results: {
  key: "TestDestruction-Settings-Orc-P2-Destruction Warlock-FullBuffs-LongMultiTarget"
  value: {
-  dps: 25979.10936
-  tps: 29381.31715
+  dps: 25568.37602
+  tps: 28970.58381
  }
 }
 dps_results: {

@@ -23,9 +23,9 @@ func applyDebuffEffects(target *Unit, targetIdx int, debuffs *proto.Debuffs, rai
 	if debuffs.CurseOfElements {
 		MakePermanent(CurseOfElementsAura(target))
 	}
-	if debuffs.EbonPlaguebringer {
+	/*if debuffs.EbonPlaguebringer {
 		MakePermanent(EbonPlaguebringerOrCryptFeverAura(nil, target, 2, 3, 3))
-	}
+	}*/
 	if debuffs.EarthAndMoon && targetIdx == 0 {
 		MakePermanent(EarthAndMoonAura(target, 3))
 	}
@@ -147,9 +147,9 @@ func applyDebuffEffects(target *Unit, targetIdx int, debuffs *proto.Debuffs, rai
 	if debuffs.ThunderClap != proto.TristateEffect_TristateEffectMissing {
 		MakePermanent(ThunderClapAura(target, GetTristateValueInt32(debuffs.ThunderClap, 0, 3)))
 	}
-	if debuffs.FrostFever != proto.TristateEffect_TristateEffectMissing {
+	/*if debuffs.FrostFever != proto.TristateEffect_TristateEffectMissing {
 		MakePermanent(FrostFeverAura(target, GetTristateValueInt32(debuffs.FrostFever, 0, 3), 0))
-	}
+	}*/
 	if debuffs.InfectedWounds && targetIdx == 0 {
 		MakePermanent(InfectedWoundsAura(target, 3))
 	}
@@ -682,6 +682,7 @@ func minorArmorReductionEffect(aura *Aura, reduction float64) *ExclusiveEffect {
 	})
 }
 
+/*
 var ShatteringThrowAuraTag = "ShatteringThrow"
 
 var ShatteringThrowDuration = time.Second * 10
@@ -701,7 +702,7 @@ func ShatteringThrowAura(target *Unit) *Aura {
 			aura.Unit.PseudoStats.ArmorMultiplier *= (1.0 / (1.0 - armorReduction))
 		},
 	})
-}
+}*/
 
 const HuntersMarkAuraTag = "HuntersMark"
 

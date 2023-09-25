@@ -1141,6 +1141,14 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestFeralTank-AllItems-TheJackhammer-9423"
+ value: {
+  dps: 2804.86084
+  tps: 6026.26648
+  dtps: 7.42693
+ }
+}
+dps_results: {
  key: "TestFeralTank-AllItems-TheLightningCapacitor-28785"
  value: {
   dps: 2809.18069
@@ -1335,8 +1343,8 @@ dps_results: {
 dps_results: {
  key: "TestFeralTank-Settings-Tauren-P1-Default-FullBuffs-LongMultiTarget"
  value: {
-  dps: 6195.34927
-  tps: 14535.25911
+  dps: 6188.77222
+  tps: 14521.43348
   dtps: 7.02829
  }
 }

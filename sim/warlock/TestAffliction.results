@@ -928,8 +928,8 @@ dps_results: {
 dps_results: {
  key: "TestAffliction-Settings-Orc-P3-AffItemSwap-FullBuffs-LongMultiTarget"
  value: {
-  dps: 35082.79599
-  tps: 38842.24912
+  dps: 34510.58619
+  tps: 38270.03932
  }
 }
 dps_results: {
@@ -970,8 +970,8 @@ dps_results: {
 dps_results: {
  key: "TestAffliction-Settings-Orc-P3-Affliction Warlock-FullBuffs-LongMultiTarget"
  value: {
-  dps: 35287.47162
-  tps: 39112.82964
+  dps: 34712.26442
+  tps: 38537.62244
  }
 }
 dps_results: {

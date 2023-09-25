@@ -1017,6 +1017,13 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestBalance-AllItems-TheJackhammer-9423"
+ value: {
+  dps: 8934.32813
+  tps: 8744.8044
+ }
+}
+dps_results: {
  key: "TestBalance-AllItems-TheLightningCapacitor-28785"
  value: {
   dps: 8567.11432
@@ -1187,8 +1194,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P1-Default-FullBuffs-LongMultiTarget"
  value: {
-  dps: 12287.87603
-  tps: 14034.67547
+  dps: 12236.96662
+  tps: 13983.76606
  }
 }
 dps_results: {
@@ -1229,8 +1236,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P1-MultidotBoth-FullBuffs-LongMultiTarget"
  value: {
-  dps: 13613.83132
-  tps: 14050.17588
+  dps: 13408.45062
+  tps: 13844.79518
  }
 }
 dps_results: {
@@ -1271,8 +1278,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P1-MultidotIs-FullBuffs-LongMultiTarget"
  value: {
-  dps: 13613.83132
-  tps: 14050.17588
+  dps: 13408.45062
+  tps: 13844.79518
  }
 }
 dps_results: {
@@ -1313,8 +1320,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P1-MultidotMf-FullBuffs-LongMultiTarget"
  value: {
-  dps: 9035.64315
-  tps: 10932.82133
+  dps: 8917.75224
+  tps: 10814.93042
  }
 }
 dps_results: {
@@ -1355,8 +1362,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P2-4P-Default-FullBuffs-LongMultiTarget"
  value: {
-  dps: 15196.39518
-  tps: 17018.49972
+  dps: 15132.50646
+  tps: 16954.611
  }
 }
 dps_results: {
@@ -1397,8 +1404,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P2-4P-MultidotBoth-FullBuffs-LongMultiTarget"
  value: {
-  dps: 15091.72807
-  tps: 15597.84932
+  dps: 14865.90425
+  tps: 15372.0255
  }
 }
 dps_results: {
@@ -1439,8 +1446,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P2-4P-MultidotIs-FullBuffs-LongMultiTarget"
  value: {
-  dps: 15091.72807
-  tps: 15597.84932
+  dps: 14865.90425
+  tps: 15372.0255
  }
 }
 dps_results: {
@@ -1481,8 +1488,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P2-4P-MultidotMf-FullBuffs-LongMultiTarget"
  value: {
-  dps: 12357.37084
-  tps: 15537.57293
+  dps: 12192.79552
+  tps: 15372.99761
  }
 }
 dps_results: {
@@ -1523,8 +1530,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P2-Default-FullBuffs-LongMultiTarget"
  value: {
-  dps: 15496.05121
-  tps: 17325.32364
+  dps: 15429.31879
+  tps: 17258.59123
  }
 }
 dps_results: {
@@ -1565,8 +1572,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P2-MultidotBoth-FullBuffs-LongMultiTarget"
  value: {
-  dps: 15355.26369
-  tps: 15846.88665
+  dps: 15125.53694
+  tps: 15617.1599
  }
 }
 dps_results: {
@@ -1607,8 +1614,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P2-MultidotIs-FullBuffs-LongMultiTarget"
  value: {
-  dps: 15355.26369
-  tps: 15846.88665
+  dps: 15125.53694
+  tps: 15617.1599
  }
 }
 dps_results: {
@@ -1649,8 +1656,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P2-MultidotMf-FullBuffs-LongMultiTarget"
  value: {
-  dps: 12581.39964
-  tps: 15862.12531
+  dps: 12409.56534
+  tps: 15690.29102
  }
 }
 dps_results: {
@@ -1691,8 +1698,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P3-Default-FullBuffs-LongMultiTarget"
  value: {
-  dps: 18277.11981
-  tps: 20169.30241
+  dps: 18198.65006
+  tps: 20090.83266
  }
 }
 dps_results: {
@@ -1733,8 +1740,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P3-MultidotBoth-FullBuffs-LongMultiTarget"
  value: {
-  dps: 17584.29479
-  tps: 18320.03449
+  dps: 17336.95704
+  tps: 18072.69674
  }
 }
 dps_results: {
@@ -1775,8 +1782,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P3-MultidotIs-FullBuffs-LongMultiTarget"
  value: {
-  dps: 17112.41516
-  tps: 17596.52357
+  dps: 16856.13547
+  tps: 17340.24389
  }
 }
 dps_results: {
@@ -1817,8 +1824,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-Settings-Tauren-P3-MultidotMf-FullBuffs-LongMultiTarget"
  value: {
-  dps: 18972.64976
-  tps: 22748.41119
+  dps: 18700.46537
+  tps: 22476.2268
  }
 }
 dps_results: {

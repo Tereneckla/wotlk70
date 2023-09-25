@@ -499,6 +499,13 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestFury-AllItems-FlurryAxe-871"
+ value: {
+  dps: 9487.57024
+  tps: 7008.76148
+ }
+}
+dps_results: {
  key: "TestFury-AllItems-ForlornSkyflareDiamond"
  value: {
   dps: 9202.01317
@@ -973,6 +980,13 @@ dps_results: {
  value: {
   dps: 6702.09196
   tps: 4966.50564
+ }
+}
+dps_results: {
+ key: "TestFury-AllItems-TheJackhammer-9423"
+ value: {
+  dps: 9487.57024
+  tps: 7008.76148
  }
 }
 dps_results: {

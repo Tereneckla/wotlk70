@@ -1033,6 +1033,14 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestDisc-AllItems-TheJackhammer-9423"
+ value: {
+  dps: 102.43849
+  tps: 68.31098
+  hps: 7737.20319
+ }
+}
+dps_results: {
  key: "TestDisc-AllItems-TheLightningCapacitor-28785"
  value: {
   dps: 99.24364

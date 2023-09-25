@@ -84,7 +84,7 @@ func applyBuffEffects(agent Agent, raidBuffs *proto.RaidBuffs, partyBuffs *proto
 		}
 	}
 
-	if raidBuffs.TrueshotAura || raidBuffs.AbominationsMight || raidBuffs.UnleashedRage {
+	if raidBuffs.TrueshotAura || /*raidBuffs.AbominationsMight ||*/ raidBuffs.UnleashedRage {
 		// Increases AP by 10%
 		character.MultiplyStat(stats.AttackPower, 1.1)
 		character.MultiplyStat(stats.RangedAttackPower, 1.1)
@@ -235,7 +235,7 @@ func applyBuffEffects(agent Agent, raidBuffs *proto.RaidBuffs, partyBuffs *proto
 	if raidBuffs.WrathOfAirTotem {
 		character.PseudoStats.CastSpeedMultiplier *= 1.05
 	}
-	if raidBuffs.StrengthOfEarthTotem > 0 || raidBuffs.HornOfWinter {
+	if raidBuffs.StrengthOfEarthTotem > 0 /*|| raidBuffs.HornOfWinter*/ {
 		val := MaxTristate(proto.TristateEffect_TristateEffectRegular, raidBuffs.StrengthOfEarthTotem)
 		bonus := GetTristateValueFloat(val, 86, 86*1.15)
 		character.AddStats(stats.Stats{
@@ -261,9 +261,9 @@ func applyBuffEffects(agent Agent, raidBuffs *proto.RaidBuffs, partyBuffs *proto
 		})
 	}
 
-	if raidBuffs.IcyTalons {
+	/*if raidBuffs.IcyTalons {
 		character.PseudoStats.MeleeSpeedMultiplier *= 1.2
-	} else if raidBuffs.WindfuryTotem > 0 {
+	} else*/if raidBuffs.WindfuryTotem > 0 {
 		character.PseudoStats.MeleeSpeedMultiplier *= GetTristateValueFloat(raidBuffs.WindfuryTotem, 1.16, 1.20)
 	}
 
@@ -1039,6 +1039,7 @@ func registerRevitalizeHotCD(agent Agent, label string, hotID ActionID, ticks in
 	ApplyFixedUptimeAura(aura, uptimePercent, totalDuration, 1)
 }
 
+/*
 const ShatteringThrowCD = time.Minute * 5
 
 func registerShatteringThrowCD(agent Agent, numShatteringThrows int32) {
@@ -1065,7 +1066,7 @@ func registerShatteringThrowCD(agent Agent, numShatteringThrows int32) {
 		},
 		numShatteringThrows)
 }
-
+*/
 var InnervateAuraTag = "Innervate"
 
 const InnervateDuration = time.Second * 10

@@ -988,6 +988,14 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestHoly-AllItems-TheJackhammer-9423"
+ value: {
+  dps: 107.54637
+  tps: 43.54237
+  hps: 6274.18409
+ }
+}
+dps_results: {
  key: "TestHoly-AllItems-TheLightningCapacitor-28785"
  value: {
   dps: 104.35153

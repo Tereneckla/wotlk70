@@ -1074,6 +1074,13 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestProtection-AllItems-TheJackhammer-9423"
+ value: {
+  dps: 2453.7512
+  tps: 5656.63705
+ }
+}
+dps_results: {
  key: "TestProtection-AllItems-TheLightningCapacitor-28785"
  value: {
   dps: 2505.93553
@@ -1258,8 +1265,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-Settings-BloodElf-P1-Protection Paladin SOC-FullBuffs-LongMultiTarget"
  value: {
-  dps: 5348.10961
-  tps: 13422.54835
+  dps: 5293.29129
+  tps: 13281.44597
  }
 }
 dps_results: {
@@ -1300,8 +1307,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-Settings-BloodElf-P1-Protection Paladin SOR-FullBuffs-LongMultiTarget"
  value: {
-  dps: 4294.12864
-  tps: 10717.68823
+  dps: 4255.77996
+  tps: 10618.97871
  }
 }
 dps_results: {
@@ -1342,8 +1349,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-Settings-BloodElf-P1-Protection Paladin SOV-FullBuffs-LongMultiTarget"
  value: {
-  dps: 5080.50833
-  tps: 12734.55954
+  dps: 5034.06991
+  tps: 12615.02705
  }
 }
 dps_results: {
@@ -1384,8 +1391,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-Settings-Human-P1-Protection Paladin SOC-FullBuffs-LongMultiTarget"
  value: {
-  dps: 5258.60686
-  tps: 13159.02502
+  dps: 5204.99473
+  tps: 13021.02741
  }
 }
 dps_results: {
@@ -1426,8 +1433,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-Settings-Human-P1-Protection Paladin SOR-FullBuffs-LongMultiTarget"
  value: {
-  dps: 4229.89181
-  tps: 10516.05941
+  dps: 4192.24597
+  tps: 10419.15901
  }
 }
 dps_results: {
@@ -1468,8 +1475,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-Settings-Human-P1-Protection Paladin SOV-FullBuffs-LongMultiTarget"
  value: {
-  dps: 5017.76549
-  tps: 12545.30013
+  dps: 4972.13584
+  tps: 12427.84942
  }
 }
 dps_results: {

@@ -13,6 +13,78 @@ func init() {
 
 	// Proc effects. Keep these in order by item ID.
 
+	core.NewItemEffect(871, func(agent core.Agent) {
+		character := agent.GetCharacter()
+		procMask := character.GetProcMaskForItem(871)
+
+		ppmm := character.AutoAttacks.NewPPMManager(3.0, procMask)
+		icd := core.Cooldown{
+			Timer:    character.NewTimer(),
+			Duration: time.Millisecond,
+		}
+
+		flurryAxeSpell := character.GetOrRegisterSpell(core.SpellConfig{
+			ActionID:    core.ActionID{SpellID: 18797},
+			SpellSchool: core.SpellSchoolPhysical,
+			ProcMask:    procMask,
+			Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagNoOnCastComplete,
+
+			DamageMultiplier: character.AutoAttacks.MHConfig.DamageMultiplier,
+			CritMultiplier:   character.DefaultMeleeCritMultiplier(),
+			ThreatMultiplier: character.AutoAttacks.MHConfig.ThreatMultiplier,
+
+			ApplyEffects: character.AutoAttacks.MHConfig.ApplyEffects,
+		})
+
+		character.RegisterAura(core.Aura{
+			Label:    "Flurry Axe",
+			Duration: core.NeverExpires,
+			OnReset: func(aura *core.Aura, sim *core.Simulation) {
+				aura.Activate(sim)
+			},
+			OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+				if !result.Landed() || !spell.ProcMask.Matches(procMask) {
+					return
+				}
+				if !icd.IsReady(sim) {
+					return
+				}
+				if !ppmm.Proc(sim, spell.ProcMask, "Flurry Axe") {
+					return
+				}
+				icd.Use(sim)
+				flurryAxeSpell.Cast(sim, result.Target)
+			},
+		})
+
+	})
+
+	core.NewItemEffect(9423, func(agent core.Agent) {
+		character := agent.GetCharacter()
+		procMask := character.GetProcMaskForItem(9423)
+		ppmm := character.AutoAttacks.NewPPMManager(2.0, procMask)
+
+		procAura := character.NewTemporaryStatsAura("Jackhammer", core.ActionID{ItemID: 9423}, stats.Stats{stats.MeleeHaste: 300, stats.SpellHaste: 300}, time.Second*10)
+
+		character.GetOrRegisterAura(core.Aura{
+			Label:    "Jackhammer",
+			Duration: core.NeverExpires,
+			OnReset: func(aura *core.Aura, sim *core.Simulation) {
+				aura.Activate(sim)
+			},
+			OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+				if !result.Landed() || !spell.ProcMask.Matches(procMask) {
+					return
+				}
+				if !ppmm.Proc(sim, spell.ProcMask, "Jackhammer") {
+					return
+				}
+				procAura.Activate(sim)
+
+			},
+		})
+	})
+
 	core.NewItemEffect(9449, func(agent core.Agent) {
 		character := agent.GetCharacter()
 
