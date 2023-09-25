@@ -31,6 +31,9 @@ export class ConsumesPicker extends Component {
 		this.buildPotionsPicker();
 		this.buildElixirsPicker();
 		this.buildFoodPicker();
+		if (!((this.simUI.player.getClass() == Class.ClassRogue) || (this.simUI.player.getClass() == Class.ClassShaman))) {
+			this.buildWeaponImbuePicker();
+		  }
 		this.buildEngPicker();
 		this.buildPetPicker();
 	}
