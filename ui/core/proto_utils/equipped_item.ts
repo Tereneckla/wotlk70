@@ -199,7 +199,7 @@ export class EquippedItem {
 
 	// Whether this item could have an extra socket, assuming Blacksmithing.
 	couldHaveExtraSocket(): boolean {
-		return [ItemType.ItemTypeWaist, ItemType.ItemTypeWrist, ItemType.ItemTypeHands].includes(this.item.type);
+		return false; [ItemType.ItemTypeWaist, ItemType.ItemTypeWrist, ItemType.ItemTypeHands].includes(this.item.type);
 	}
 
 	requiresExtraSocket(): boolean {
@@ -213,12 +213,13 @@ export class EquippedItem {
 	}
 
 	hasExtraSocket(isBlacksmithing: boolean): boolean {
+		return false;
 		return this.item.type == ItemType.ItemTypeWaist ||
 			(isBlacksmithing && [ItemType.ItemTypeWrist, ItemType.ItemTypeHands].includes(this.item.type));
 	}
 
 	numSockets(isBlacksmithing: boolean): number {
-		return this._item.gemSockets.length + (this.hasExtraSocket(isBlacksmithing) ? 1 : 0);
+		return this._item.gemSockets.length; // + (this.hasExtraSocket(isBlacksmithing) ? 1 : 0);
 	}
 
 	numSocketsOfColor(color: GemColor): number {
