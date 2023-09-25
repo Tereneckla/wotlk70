@@ -46,8 +46,8 @@ character_stats_results: {
 dps_results: {
  key: "TestBloodTank-AllItems-AbacusofViolentOdds-28288"
  value: {
-  dps: 1384.4469
-  tps: 4190.79397
+  dps: 1397.26607
+  tps: 4217.37452
  }
 }
 dps_results: {
@@ -130,8 +130,8 @@ dps_results: {
 dps_results: {
  key: "TestBloodTank-AllItems-BlackenedNaaruSliver-34427"
  value: {
-  dps: 1405.56828
-  tps: 4233.57731
+  dps: 1425.27515
+  tps: 4274.13805
  }
 }
 dps_results: {
@@ -151,22 +151,22 @@ dps_results: {
 dps_results: {
  key: "TestBloodTank-AllItems-BlessedBattlegearofUndeadSlaying"
  value: {
-  dps: 1248.54306
-  tps: 3772.01054
+  dps: 1298.90394
+  tps: 3879.09365
  }
 }
 dps_results: {
  key: "TestBloodTank-AllItems-BlessedGarboftheUndeadSlayer"
  value: {
-  dps: 1227.51839
-  tps: 3677.39119
+  dps: 1272.25407
+  tps: 3774.08236
  }
 }
 dps_results: {
  key: "TestBloodTank-AllItems-BlessedRegaliaofUndeadCleansing"
  value: {
-  dps: 1136.63469
-  tps: 3430.51001
+  dps: 1166.11929
+  tps: 3490.00152
  }
 }
 dps_results: {
@@ -298,8 +298,8 @@ dps_results: {
 dps_results: {
  key: "TestBloodTank-AllItems-DarkrunedBattlegear"
  value: {
-  dps: 1653.85971
-  tps: 4949.94366
+  dps: 1709.83387
+  tps: 5066.00607
  }
 }
 dps_results: {
@@ -586,8 +586,8 @@ dps_results: {
 dps_results: {
  key: "TestBloodTank-AllItems-KissoftheSpider-22954"
  value: {
-  dps: 1379.37634
-  tps: 4177.71665
+  dps: 1391.44798
+  tps: 4202.7472
  }
 }
 dps_results: {
@@ -607,15 +607,15 @@ dps_results: {
 dps_results: {
  key: "TestBloodTank-AllItems-ManualCrowdPummeler-9449"
  value: {
-  dps: 1679.85879
-  tps: 4798.56845
+  dps: 1876.06527
+  tps: 5205.40259
  }
 }
 dps_results: {
  key: "TestBloodTank-AllItems-MercurialAlchemistStone-44322"
  value: {
-  dps: 1382.9706
-  tps: 4175.29174
+  dps: 1403.89979
+  tps: 4218.6884
  }
 }
 dps_results: {
@@ -775,8 +775,8 @@ dps_results: {
 dps_results: {
  key: "TestBloodTank-AllItems-ScourgeborneBattlegear"
  value: {
-  dps: 1546.91819
-  tps: 4680.3243
+  dps: 1601.70294
+  tps: 4793.4852
  }
 }
 dps_results: {
@@ -838,8 +838,8 @@ dps_results: {
 dps_results: {
  key: "TestBloodTank-AllItems-ShiftingNaaruSliver-34429"
  value: {
-  dps: 1389.88258
-  tps: 4189.62373
+  dps: 1409.41013
+  tps: 4230.11409
  }
 }
 dps_results: {
@@ -929,8 +929,8 @@ dps_results: {
 dps_results: {
  key: "TestBloodTank-AllItems-Thassarian'sBattlegear"
  value: {
-  dps: 1831.08378
-  tps: 5426.57451
+  dps: 1869.03987
+  tps: 5505.27646
  }
 }
 dps_results: {
@@ -978,8 +978,8 @@ dps_results: {
 dps_results: {
  key: "TestBloodTank-AllItems-TheTwinBladesofAzzinoth"
  value: {
-  dps: 1371.50916
-  tps: 4173.57142
+  dps: 1402.82349
+  tps: 4236.75263
  }
 }
 dps_results: {
@@ -999,8 +999,8 @@ dps_results: {
 dps_results: {
  key: "TestBloodTank-AllItems-ThunderingSkyflareDiamond"
  value: {
-  dps: 1373.56517
-  tps: 4153.0107
+  dps: 1389.69538
+  tps: 4186.45668
  }
 }
 dps_results: {
@@ -1062,8 +1062,8 @@ dps_results: {
 dps_results: {
  key: "TestBloodTank-AllItems-UndeadSlayer'sBlessedArmor"
  value: {
-  dps: 1224.30243
-  tps: 3666.73388
+  dps: 1258.76744
+  tps: 3735.79924
  }
 }
 dps_results: {

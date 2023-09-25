@@ -46,8 +46,8 @@ character_stats_results: {
 dps_results: {
  key: "TestProtection-AllItems-AbacusofViolentOdds-28288"
  value: {
-  dps: 2501.93091
-  tps: 5760.99977
+  dps: 2514.05625
+  tps: 5791.58882
  }
 }
 dps_results: {
@@ -60,8 +60,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-AllItems-AegisBattlegear"
  value: {
-  dps: 2649.85301
-  tps: 6016.11632
+  dps: 2685.96416
+  tps: 6088.79683
  }
 }
 dps_results: {
@@ -151,8 +151,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-AllItems-BlackenedNaaruSliver-34427"
  value: {
-  dps: 2495.54421
-  tps: 5738.91618
+  dps: 2537.529
+  tps: 5825.33181
  }
 }
 dps_results: {
@@ -172,22 +172,22 @@ dps_results: {
 dps_results: {
  key: "TestProtection-AllItems-BlessedBattlegearofUndeadSlaying"
  value: {
-  dps: 2122.61599
-  tps: 4854.55679
+  dps: 2174.23734
+  tps: 4958.45842
  }
 }
 dps_results: {
  key: "TestProtection-AllItems-BlessedGarboftheUndeadSlayer"
  value: {
-  dps: 2184.66048
-  tps: 5015.94753
+  dps: 2228.96617
+  tps: 5103.81365
  }
 }
 dps_results: {
  key: "TestProtection-AllItems-BlessedRegaliaofUndeadCleansing"
  value: {
-  dps: 2074.30159
-  tps: 4779.19025
+  dps: 2124.80477
+  tps: 4887.68119
  }
 }
 dps_results: {
@@ -663,8 +663,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-AllItems-KissoftheSpider-22954"
  value: {
-  dps: 2501.08103
-  tps: 5758.14998
+  dps: 2507.98543
+  tps: 5775.45746
  }
 }
 dps_results: {
@@ -726,15 +726,15 @@ dps_results: {
 dps_results: {
  key: "TestProtection-AllItems-LightbringerBattlegear"
  value: {
-  dps: 2248.13994
-  tps: 5161.53759
+  dps: 2302.60443
+  tps: 5274.96818
  }
 }
 dps_results: {
  key: "TestProtection-AllItems-LightswornBattlegear"
  value: {
-  dps: 3073.99321
-  tps: 6997.47099
+  dps: 3217.87835
+  tps: 7276.57262
  }
 }
 dps_results: {
@@ -761,8 +761,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-AllItems-MercurialAlchemistStone-44322"
  value: {
-  dps: 2476.6062
-  tps: 5702.9038
+  dps: 2515.13808
+  tps: 5789.12256
  }
 }
 dps_results: {
@@ -852,8 +852,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-AllItems-RedemptionBattlegear"
  value: {
-  dps: 2461.50328
-  tps: 5576.89234
+  dps: 2615.4938
+  tps: 5896.63148
  }
 }
 dps_results: {
@@ -985,8 +985,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-AllItems-ShiftingNaaruSliver-34429"
  value: {
-  dps: 2463.49361
-  tps: 5668.96649
+  dps: 2505.52954
+  tps: 5755.4925
  }
 }
 dps_results: {
@@ -1104,8 +1104,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-AllItems-TheTwinBladesofAzzinoth"
  value: {
-  dps: 2284.80744
-  tps: 5255.88767
+  dps: 2316.65923
+  tps: 5319.42393
  }
 }
 dps_results: {
@@ -1125,8 +1125,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-AllItems-ThunderingSkyflareDiamond"
  value: {
-  dps: 2444.67075
-  tps: 5621.52189
+  dps: 2475.66732
+  tps: 5693.17835
  }
 }
 dps_results: {
@@ -1195,8 +1195,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-AllItems-Turalyon'sBattlegear"
  value: {
-  dps: 2691.74765
-  tps: 6098.8522
+  dps: 2738.14117
+  tps: 6191.80834
  }
 }
 dps_results: {
@@ -1209,8 +1209,8 @@ dps_results: {
 dps_results: {
  key: "TestProtection-AllItems-UndeadSlayer'sBlessedArmor"
  value: {
-  dps: 2100.47905
-  tps: 4791.36046
+  dps: 2141.7377
+  tps: 4882.57303
  }
 }
 dps_results: {

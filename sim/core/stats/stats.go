@@ -399,7 +399,7 @@ func NewPseudoStats() PseudoStats {
 		DamageDealtMultiplier:       1,
 		SchoolDamageDealtMultiplier: NewSchoolFloatArray(),
 
-		MeleeHasteRatingPerHastePercent: 32.79,
+		MeleeHasteRatingPerHastePercent: 15.769233,
 
 		BlockValueMultiplier: 1,
 

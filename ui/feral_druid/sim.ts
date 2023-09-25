@@ -20,6 +20,7 @@ import * as Tooltips from '../core/constants/tooltips.js';
 
 import * as DruidInputs from './inputs.js';
 import * as Presets from './presets.js';
+import { EXPERTISE_PER_QUARTER_PERCENT_REDUCTION, MELEE_HIT_RATING_PER_HIT_CHANCE } from 'ui/core/constants/mechanics.js';
 
 export class FeralDruidSimUI extends IndividualSimUI<Spec.SpecFeralDruid> {
 	constructor(parentElem: HTMLElement, player: Player<Spec.SpecFeralDruid>) {
@@ -198,7 +199,7 @@ export class FeralDruidSimUI extends IndividualSimUI<Spec.SpecFeralDruid> {
 		const arpTarget = this.calcArpTarget(optimizedGear);
 		const arpCap = new Stats().withStat(Stat.StatArmorPenetration, arpTarget + 11);
 		redGemCaps.push([40117, arpCap]);
-		const expCap = new Stats().withStat(Stat.StatExpertise, 6.5 * 32.79 + 4);
+		const expCap = new Stats().withStat(Stat.StatExpertise, 6.5 * EXPERTISE_PER_QUARTER_PERCENT_REDUCTION * 4 + 4);
 		redGemCaps.push([40118, expCap]);
 		const critCap = this.calcCritCap(optimizedGear);
 		redGemCaps.push([40112, critCap]);
@@ -218,7 +219,7 @@ export class FeralDruidSimUI extends IndividualSimUI<Spec.SpecFeralDruid> {
 		// Now repeat the process for yellow gems
 		const yellowSockets = this.findSocketsByColor(optimizedGear, epWeights, GemColor.GemColorYellow, tearSlot);
 		const yellowGemCaps = new Array<[number, Stats]>();
-		const hitCap = new Stats().withStat(Stat.StatMeleeHit, 8. * 32.79 + 4);
+		const hitCap = new Stats().withStat(Stat.StatMeleeHit, 8. * MELEE_HIT_RATING_PER_HIT_CHANCE + 4);
 		yellowGemCaps.push([40125, hitCap]);
 		yellowGemCaps.push([40162, hitCap.add(expCap)]);
 

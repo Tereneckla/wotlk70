@@ -215,7 +215,7 @@ export class WarriorSimUI extends IndividualSimUI<Spec.SpecWarrior> {
 		// Rank order red gems to use with their associated stat caps
 		const redGemCaps = new Array<[number, Stats]>();
 		redGemCaps.push([40117, this.calcArpCap(optimizedGear)]);
-		const expCap = new Stats().withStat(Stat.StatExpertise, 6.5 * 32.79 + 4);
+		const expCap = new Stats().withStat(Stat.StatExpertise, 6.5 * Mechanics.EXPERTISE_PER_QUARTER_PERCENT_REDUCTION * 4 + 4);
 		redGemCaps.push([40118, expCap]);
 		const critCap = this.calcCritCap(optimizedGear);
 		redGemCaps.push([40111, new Stats()]);
@@ -234,7 +234,7 @@ export class WarriorSimUI extends IndividualSimUI<Spec.SpecWarrior> {
 		// Now repeat the process for yellow gems
 		const yellowSockets = this.findSocketsByColor(optimizedGear, epWeights, GemColor.GemColorYellow, tearSlot);
 		const yellowGemCaps = new Array<[number, Stats]>();
-		const hitCap = new Stats().withStat(Stat.StatMeleeHit, 8. * 32.79 + 4);
+		const hitCap = new Stats().withStat(Stat.StatMeleeHit, 8. * Mechanics.MELEE_HIT_RATING_PER_HIT_CHANCE + 4);
 		yellowGemCaps.push([40125, hitCap]);
 		yellowGemCaps.push([40162, hitCap.add(expCap)]);
 		yellowGemCaps.push([40143, hitCap]);
