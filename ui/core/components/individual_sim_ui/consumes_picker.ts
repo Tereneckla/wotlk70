@@ -195,7 +195,7 @@ export class ConsumesPicker extends Component {
 			{ item: Food.FoodRavagerDog, stats: [Stat.StatAttackPower, Stat.StatRangedAttackPower] },
 			{ item: Food.FoodSpicyHotTalbuk, stats: [Stat.StatMeleeHit, Stat.StatSpellHit] },
       		{ item: Food.FoodFishermansFeast, stats: [Stat.StatStamina] },
-   		   { item: Food.FoodSkullfishSoup, stats: [Stat.StatMeleeCrit, Stat.StatSpellCrit]},
+   		    { item: Food.FoodSkullfishSoup, stats: [Stat.StatMeleeCrit, Stat.StatSpellCrit]},
 		]);
 		if (foodOptions.length) {
 			const elem = this.rootElem.querySelector('.consumes-food') as HTMLElement;
@@ -205,6 +205,7 @@ export class ConsumesPicker extends Component {
 
 	private buildWeaponImbuePicker() {
 		let fragment = document.createElement('fragment');
+		
 		fragment.innerHTML = `
 		  <div class="consumes-row input-root input-inline">
 			<label class="form-label">Weapon Imbue</label>
@@ -218,36 +219,45 @@ export class ConsumesPicker extends Component {
 		this.rootElem.appendChild(fragment.children[0] as HTMLElement);
 	
 		const weaponOptions = this.simUI.splitRelevantOptions([
-		  this.simUI.player.getClass() == Class.ClassWarlock ? { item: WeaponImbue.ImbueSpellStone, stats: [] } : null,
-		  this.simUI.player.getClass() == Class.ClassWarlock ? { item: WeaponImbue.ImbueFireStone, stats: [] } : null,
-				{ item: WeaponImbue.ImbueBrilliantWizardOil, stats: [Stat.StatSpellPower,Stat.StatSpellCrit] },
-		  { item: WeaponImbue.ImbueBrilliantManaOil, stats: [Stat.StatSpellPower,Stat.StatMP5]},
-		  { item: WeaponImbue.ImbueSuperiorWizardOil, stats: [Stat.StatSpellPower]},
-		  { item: WeaponImbue.ImbueSuperiorManaOil, stats: [Stat.StatMP5]},
-		  { item: WeaponImbue.ImbueAdamantiteSharpeningStone, stats: [Stat.StatAttackPower, Stat.StatMeleeCrit]},
-		  { item: WeaponImbue.ImbueAdamantiteWeightStone, stats: [Stat.StatAttackPower, Stat.StatMeleeCrit]},
-		  { item: WeaponImbue.ImbueElementalSharpeningStone, stats: [Stat.StatMeleeCrit]},
-	
-			]);
-		const main = this.rootElem.querySelector('.consumes-weapon-main') as HTMLElement;
-		const off = this.rootElem.querySelector('.consumes-weapon-off') as HTMLElement;
-	
-			if (weaponOptions.length) {
-				new IconEnumPicker(main, this.simUI.player, IconInputs.makeMainWeaponImbueInput(weaponOptions));
-		  new IconEnumPicker(off, this.simUI.player, IconInputs.makeOffWeaponImbueInput(weaponOptions));
+			this.simUI.player.getClass() == Class.ClassWarlock ? { item: WeaponImbue.ImbueSpellStone, stats: [] } : null,
+			this.simUI.player.getClass() == Class.ClassWarlock ? { item: WeaponImbue.ImbueFireStone, stats: [] } : null,
+			{ item: WeaponImbue.ImbueBrilliantWizardOil, stats: [Stat.StatSpellPower,Stat.StatSpellCrit] },
+			{ item: WeaponImbue.ImbueBrilliantManaOil, stats: [Stat.StatSpellPower,Stat.StatMP5]},
+			{ item: WeaponImbue.ImbueSuperiorWizardOil, stats: [Stat.StatSpellPower]},
+			{ item: WeaponImbue.ImbueSuperiorManaOil, stats: [Stat.StatMP5]},
+			{ item: WeaponImbue.ImbueAdamantiteSharpeningStone, stats: [Stat.StatAttackPower, Stat.StatMeleeCrit]},
+			{ item: WeaponImbue.ImbueAdamantiteWeightStone, stats: [Stat.StatAttackPower, Stat.StatMeleeCrit]},
+			{ item: WeaponImbue.ImbueElementalSharpeningStone, stats: [Stat.StatMeleeCrit]},
+		]);
+
+		if (weaponOptions.length) {
+			const main = this.rootElem.querySelector('.consumes-weapon-main') as HTMLElement;
+			const off =  this.rootElem.querySelector('.consumes-weapon-off') as HTMLElement;
+			const inputs = off.parentElement!;
+			
+			let offImbue = WeaponImbue.ImbueUnknown;
+
+			new IconEnumPicker(main, this.simUI.player, IconInputs.makeMainWeaponImbueInput(weaponOptions));
+			var offpicker = new IconEnumPicker(off,  this.simUI.player, IconInputs.makeOffWeaponImbueInput(weaponOptions));
+
+			const updateGear = () => {
+				if (this.simUI.player.getGear().hasSharpOHWeapon() || this.simUI.player.getGear().hasBluntOHWeapon()){
+					if (!inputs.contains(off)) {
+						inputs.appendChild(off);
+						offpicker.setInputValue(offImbue);
+					}
+						
+				}
+				else if (inputs.contains(off)) {
+					offImbue = offpicker.getInputValue();
+					offpicker.setInputValue(WeaponImbue.ImbueUnknown);
+					inputs.removeChild(off);
+				}
 			}
-	
-		const updateGear = () => {
-		  if (this.simUI.player.getGear().hasSharpOHWeapon() || this.simUI.player.getGear().hasBluntOHWeapon())
-					off.classList.remove('hide');
-				else
-			off.classList.add('hide');
-	
+		
+			this.simUI.player.gearChangeEmitter.on(updateGear);
+			updateGear();
 		}
-	
-		this.simUI.player.gearChangeEmitter.on(updateGear);
-		updateGear();
-	
 	  }
 
 	private buildEngPicker() {
