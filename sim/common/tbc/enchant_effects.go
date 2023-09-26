@@ -140,7 +140,7 @@ func init() {
 		character := agent.GetCharacter()
 
 		procMask := character.GetProcMaskForEnchant(2673)
-		ppmm := character.AutoAttacks.NewPPMManager(0.73, procMask)
+		ppmm := character.AutoAttacks.NewPPMManager(1, procMask)
 
 		mhAura := character.NewTemporaryStatsAura("Lightning Speed MH", core.ActionID{SpellID: 28093, Tag: 1}, stats.Stats{stats.MeleeHaste: 30.0, stats.Agility: 120}, time.Second*15)
 		ohAura := character.NewTemporaryStatsAura("Lightning Speed OH", core.ActionID{SpellID: 28093, Tag: 2}, stats.Stats{stats.MeleeHaste: 30.0, stats.Agility: 120}, time.Second*15)
