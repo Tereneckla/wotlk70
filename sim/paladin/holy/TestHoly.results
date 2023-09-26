@@ -1,35 +1,35 @@
 character_stats_results: {
  key: "TestHoly-CharacterStats-Default"
  value: {
-  final_stats: 348.15
-  final_stats: 242.55
-  final_stats: 1237.83
-  final_stats: 1573.726
-  final_stats: 200.86
+  final_stats: 320.65
+  final_stats: 228.25
+  final_stats: 1212.53
+  final_stats: 1555.576
+  final_stats: 183.26
   final_stats: 2250
   final_stats: 152.2
   final_stats: 0
-  final_stats: 817.48035
+  final_stats: 815.07618
   final_stats: 620
   final_stats: 0
-  final_stats: 1403.93
+  final_stats: 1343.43
   final_stats: 0
-  final_stats: 823.33977
+  final_stats: 810.61706
   final_stats: 620
   final_stats: 0
   final_stats: 0
-  final_stats: 26278.89
+  final_stats: 26006.64
   final_stats: 0
   final_stats: 0
-  final_stats: 23972.48
+  final_stats: 23943.88
   final_stats: 429
   final_stats: 0
   final_stats: 0
-  final_stats: 395.075
-  final_stats: 211.13045
+  final_stats: 381.325
+  final_stats: 198.68285
   final_stats: 0
   final_stats: 0
-  final_stats: 20432.3
+  final_stats: 16622.3
   final_stats: 35
   final_stats: 35
   final_stats: 35

@@ -1,35 +1,35 @@
 character_stats_results: {
  key: "TestRestoration-CharacterStats-Default"
  value: {
-  final_stats: 249.645
-  final_stats: 231.693
-  final_stats: 1172.8266
-  final_stats: 1093.5012
-  final_stats: 1106.56128
+  final_stats: 235.059
+  final_stats: 218.229
+  final_stats: 1155.9966
+  final_stats: 1067.6952
+  final_stats: 1073.01348
   final_stats: 2544
   final_stats: 126.2
   final_stats: 0
-  final_stats: 320.10689
+  final_stats: 316.68858
   final_stats: 688
   final_stats: 0
-  final_stats: 956.219
+  final_stats: 924.1298
   final_stats: 0
-  final_stats: 427.29737
+  final_stats: 419.86627
   final_stats: 688
   final_stats: 0
   final_stats: 0
-  final_stats: 18492.518
+  final_stats: 18105.428
   final_stats: 0
   final_stats: 0
-  final_stats: 4802.886
+  final_stats: 4775.958
   final_stats: 429
   final_stats: 0
   final_stats: 0
   final_stats: 0
-  final_stats: 342.85533
+  final_stats: 322.93154
   final_stats: 0
   final_stats: 0
-  final_stats: 19336.116
+  final_stats: 15174.666
   final_stats: 35
   final_stats: 35
   final_stats: 35
