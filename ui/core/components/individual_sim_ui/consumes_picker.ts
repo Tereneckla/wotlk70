@@ -58,6 +58,7 @@ export class ConsumesPicker extends Component {
 			// E.g. healing/mana potions.
 			{ item: Potions.DestructionPotion, stats: [Stat.StatSpellCrit,Stat.StatSpellPower] },
 			{ item: Potions.HeroicPotion, stats: [Stat.StatStrength] },
+			{ item: Potions.InsaneStrengthPotion, stats: [Stat.StatStrength] },
 			{ item: Potions.HastePotion, stats: [Stat.StatMeleeHaste, Stat.StatSpellHaste] },
 		]);
 		if (prepopPotionOptions.length) {
@@ -73,6 +74,7 @@ export class ConsumesPicker extends Component {
 			{ item: Potions.SuperManaPotion, stats: [Stat.StatIntellect] },
 			{ item: Potions.IronshieldPotion, stats: [Stat.StatArmor] },
 			{ item: Potions.HeroicPotion, stats: [Stat.StatStrength] },
+			{ item: Potions.InsaneStrengthPotion, stats: [Stat.StatStrength] },
 			{ item: Potions.HastePotion, stats: [Stat.StatMeleeHaste, Stat.StatSpellHaste] },
 			{ item: Potions.DestructionPotion, stats: [Stat.StatSpellCrit, Stat.StatSpellPower] },
 		]);
