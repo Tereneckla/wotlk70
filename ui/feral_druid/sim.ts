@@ -162,7 +162,7 @@ export class FeralDruidSimUI extends IndividualSimUI<Spec.SpecFeralDruid> {
 			},
 		});
 
-		this.addOptimizeGemsAction();
+		//this.addOptimizeGemsAction();
 	}
 
 	addOptimizeGemsAction() {
