@@ -165,10 +165,10 @@ export class Sim {
 				}
 
 				// Remove bonus sockets if not blacksmith.
-				if (!isBlacksmith) {
-					gear = gear.withoutBlacksmithSockets();
-					gearChanged = true;
-				}
+				// if (!isBlacksmith) {
+				// 	gear = gear.withoutBlacksmithSockets();
+				// 	gearChanged = true;
+				// }
 
 				if (gearChanged) {
 					player.equipment = gear.asSpec();
