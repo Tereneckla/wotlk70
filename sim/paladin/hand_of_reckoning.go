@@ -1,5 +1,6 @@
 package paladin
 
+/*
 import (
 	"time"
 
@@ -40,3 +41,4 @@ func (paladin *Paladin) registerHandOfReckoningSpell() {
 		},
 	})
 }
+*/

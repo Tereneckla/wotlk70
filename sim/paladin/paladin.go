@@ -24,14 +24,14 @@ type Paladin struct {
 	CurrentJudgement *core.Aura
 
 	//DivinePlea            *core.Spell
-	DivineStorm           *core.Spell
-	HolyWrath             *core.Spell
-	Consecration          *core.Spell
-	CrusaderStrike        *core.Spell
-	Exorcism              *core.Spell
-	HolyShield            *core.Spell
-	HammerOfTheRighteous  *core.Spell
-	HandOfReckoning       *core.Spell
+	DivineStorm          *core.Spell
+	HolyWrath            *core.Spell
+	Consecration         *core.Spell
+	CrusaderStrike       *core.Spell
+	Exorcism             *core.Spell
+	HolyShield           *core.Spell
+	HammerOfTheRighteous *core.Spell
+	//HandOfReckoning       *core.Spell
 	ShieldOfRighteousness *core.Spell
 	AvengersShield        *core.Spell
 	JudgementOfWisdom     *core.Spell
@@ -145,7 +145,7 @@ func (paladin *Paladin) Initialize() {
 	paladin.registerExorcismSpell()
 	paladin.registerHolyShieldSpell()
 	paladin.registerHammerOfTheRighteousSpell()
-	paladin.registerHandOfReckoningSpell()
+	//paladin.registerHandOfReckoningSpell()
 	paladin.registerShieldOfRighteousnessSpell()
 	paladin.registerAvengersShieldSpell()
 	paladin.registerJudgements()

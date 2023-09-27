@@ -59,9 +59,9 @@ func (ret *RetributionPaladin) customRotation(sim *core.Simulation) {
 	nextSwingAt := ret.AutoAttacks.NextAttackAt()
 	isExecutePhase := sim.IsExecutePhase20()
 
-	if ret.HandOfReckoning != nil && ret.HandOfReckoning.IsReady(sim) {
-		ret.HandOfReckoning.Cast(sim, ret.CurrentTarget)
-	}
+	// if ret.HandOfReckoning != nil && ret.HandOfReckoning.IsReady(sim) {
+	// 	ret.HandOfReckoning.Cast(sim, ret.CurrentTarget)
+	// }
 
 	if ret.GCD.IsReady(sim) {
 	rotationLoop:
@@ -126,9 +126,9 @@ func (ret *RetributionPaladin) customRotation(sim *core.Simulation) {
 		// ret.DivinePlea.CD.ReadyAt(),
 	}
 
-	if ret.HandOfReckoning != nil {
-		events = append(events, ret.HandOfReckoning.CD.ReadyAt())
-	}
+	// if ret.HandOfReckoning != nil {
+	// 	events = append(events, ret.HandOfReckoning.CD.ReadyAt())
+	// }
 
 	CancelChaosBane(ret, sim)
 	ret.waitUntilNextEvent(sim, events, ret.customRotation)
@@ -145,9 +145,9 @@ func (ret *RetributionPaladin) castSequenceRotation(sim *core.Simulation) {
 
 	nextReadyAt := sim.CurrentTime
 
-	if hc := ret.Hardcast; ret.HandOfReckoning != nil && ret.HandOfReckoning.IsReady(sim) && !(hc.Expires > sim.CurrentTime) {
-		ret.HandOfReckoning.Cast(sim, ret.CurrentTarget)
-	}
+	// if hc := ret.Hardcast; ret.HandOfReckoning != nil && ret.HandOfReckoning.IsReady(sim) && !(hc.Expires > sim.CurrentTime) {
+	// 	ret.HandOfReckoning.Cast(sim, ret.CurrentTarget)
+	// }
 
 	if ret.GCD.IsReady(sim) {
 		/*if ret.UseDivinePlea && ret.DivinePlea.IsReady(sim) && ret.CurrentMana() < (ret.MaxMana()*ret.DivinePleaPercentage) {
@@ -177,9 +177,9 @@ func (ret *RetributionPaladin) castSequenceRotation(sim *core.Simulation) {
 		nextReadyAt,
 	}
 
-	if ret.HandOfReckoning != nil {
-		events = append(events, ret.HandOfReckoning.CD.ReadyAt())
-	}
+	// if ret.HandOfReckoning != nil {
+	// 	events = append(events, ret.HandOfReckoning.CD.ReadyAt())
+	// }
 
 	CancelChaosBane(ret, sim)
 	ret.waitUntilNextEvent(sim, events, ret.castSequenceRotation)
@@ -197,9 +197,9 @@ func (ret *RetributionPaladin) mainRotation(sim *core.Simulation) {
 	nextPrimaryAbility = core.MinDuration(nextPrimaryAbility, ret.SelectedJudgement.CD.ReadyAt())
 	nextPrimaryAbilityDelta := nextPrimaryAbility - sim.CurrentTime
 
-	if ret.HandOfReckoning != nil && ret.HandOfReckoning.IsReady(sim) {
-		ret.HandOfReckoning.Cast(sim, ret.CurrentTarget)
-	}
+	// if ret.HandOfReckoning != nil && ret.HandOfReckoning.IsReady(sim) {
+	// 	ret.HandOfReckoning.Cast(sim, ret.CurrentTarget)
+	// }
 
 	if ret.GCD.IsReady(sim) {
 		switch {
@@ -297,9 +297,9 @@ func (ret *RetributionPaladin) mainRotation(sim *core.Simulation) {
 		// ret.DivinePlea.CD.ReadyAt(),
 	}
 
-	if ret.HandOfReckoning != nil {
-		events = append(events, ret.HandOfReckoning.CD.ReadyAt())
-	}
+	// if ret.HandOfReckoning != nil {
+	// 	events = append(events, ret.HandOfReckoning.CD.ReadyAt())
+	// }
 
 	CancelChaosBane(ret, sim)
 	ret.waitUntilNextEvent(sim, events, ret.mainRotation)
