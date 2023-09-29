@@ -230,10 +230,10 @@ export class ActionId {
 		let name = baseName;
 		switch (baseName) {
 			case 'Explosive Shot':
-				if (this.spellId == 60053) {
-					name += ' (R4)';
-				} else if (this.spellId == 60052) {
-					name += ' (R3)';
+				if (this.spellId == 60051) {
+					name += ' (R2)';
+				} else if (this.spellId == 53301) {
+					name += ' (R1)';
 				}
 				break;
 			case 'Explosive Trap':

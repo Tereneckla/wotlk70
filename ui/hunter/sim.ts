@@ -256,9 +256,7 @@ export class HunterSimUI extends IndividualSimUI<Spec.SpecHunter> {
 					Presets.ROTATION_PRESET_LEGACY_DEFAULT,
 					Presets.ROTATION_PRESET_BM,
 					Presets.ROTATION_PRESET_MM,
-					Presets.ROTATION_PRESET_MM_ADVANCED,
 					Presets.ROTATION_PRESET_SV,
-					Presets.ROTATION_PRESET_SV_ADVANCED,
 					Presets.ROTATION_PRESET_AOE,
 				],
 				// Preset gear configurations that the user can quickly select.
@@ -295,20 +293,20 @@ export class HunterSimUI extends IndividualSimUI<Spec.SpecHunter> {
 			simpleRotation: (player: Player<Spec.SpecHunter>, simple: HunterRotation, cooldowns: Cooldowns): APLRotation => {
 				let [prepullActions, actions] = AplUtils.standardCooldownDefaults(cooldowns);
 
-				const serpentSting = APLAction.fromJsonString(`{"condition":{"cmp":{"op":"OpGt","lhs":{"remainingTime":{}},"rhs":{"const":{"val":"6s"}}}},"multidot":{"spellId":{"spellId":49001},"maxDots":${simple.multiDotSerpentSting ? 3 : 1},"maxOverlap":{"const":{"val":"0ms"}}}}`);
+				const serpentSting = APLAction.fromJsonString(`{"condition":{"cmp":{"op":"OpGt","lhs":{"remainingTime":{}},"rhs":{"const":{"val":"6s"}}}},"multidot":{"spellId":{"spellId":27016},"maxDots":${simple.multiDotSerpentSting ? 3 : 1},"maxOverlap":{"const":{"val":"0ms"}}}}`);
 				const scorpidSting = APLAction.fromJsonString(`{"condition":{"auraShouldRefresh":{"auraId":{"spellId":3043},"maxOverlap":{"const":{"val":"0ms"}}}},"castSpell":{"spellId":{"spellId":3043}}}`);
-				const trapWeave = APLAction.fromJsonString(`{"condition":{"not":{"val":{"dotIsActive":{"spellId":{"spellId":49067}}}}},"castSpell":{"spellId":{"tag":1,"spellId":49067}}}`);
-				const volley = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":58434}}}`);
-				const killShot = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":61006}}}`);
-				const aimedShot = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":49050}}}`);
-				const multiShot = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":49048}}}`);
-				const steadyShot = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":49052}}}`);
+				const trapWeave = APLAction.fromJsonString(`{"condition":{"not":{"val":{"dotIsActive":{"spellId":{"spellId":27025}}}}},"castSpell":{"spellId":{"tag":1,"spellId":27025}}}`);
+				const volley = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":27022}}}`);
+				//const killShot = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":61006}}}`);
+				const aimedShot = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":27065}}}`);
+				const multiShot = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":27021}}}`);
+				const steadyShot = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":34120}}}`);
 				const silencingShot = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":34490}}}`);
 				const chimeraShot = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":53209}}}`);
-				const blackArrow = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":63672}}}`);
-				const explosiveShot4 = APLAction.fromJsonString(`{"condition":{"not":{"val":{"dotIsActive":{"spellId":{"spellId":60053}}}}},"castSpell":{"spellId":{"spellId":60053}}}`);
-				const explosiveShot3 = APLAction.fromJsonString(`{"condition":{"dotIsActive":{"spellId":{"spellId":60053}}},"castSpell":{"spellId":{"spellId":60052}}}`);
-				//const arcaneShot = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":49045}}}`);
+				const blackArrow = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":63670}}}`);
+				const explosiveShot4 = APLAction.fromJsonString(`{"condition":{"not":{"val":{"dotIsActive":{"spellId":{"spellId":60051}}}}},"castSpell":{"spellId":{"spellId":60051}}}`);
+				const explosiveShot3 = APLAction.fromJsonString(`{"condition":{"dotIsActive":{"spellId":{"spellId":60051}}},"castSpell":{"spellId":{"spellId":53301}}}`);
+				const arcaneShot = APLAction.fromJsonString(`{"castSpell":{"spellId":{"spellId":27019}}}`);
 
 				if (simple.viperStartManaPercent != 0) {
 					actions.push(APLAction.fromJsonString(`{"condition":{"and":{"vals":[{"not":{"val":{"auraIsActive":{"auraId":{"spellId":34074}}}}},{"cmp":{"op":"OpLt","lhs":{"currentManaPercent":{}},"rhs":{"const":{"val":"${(simple.viperStartManaPercent * 100).toFixed(0)}%"}}}}]}},"castSpell":{"spellId":{"spellId":34074}}}`));
@@ -327,7 +325,7 @@ export class HunterSimUI extends IndividualSimUI<Spec.SpecHunter> {
 					].filter(a => a) as Array<APLAction>)
 				} else if (talentTree == 0) { // BM
 					actions.push(...[
-						killShot,
+						//killShot,
 						simple.trapWeave ? trapWeave : null,
 						simple.sting == StingType.ScorpidSting ? scorpidSting : null,
 						simple.sting == StingType.SerpentSting ? serpentSting : null,
@@ -338,7 +336,7 @@ export class HunterSimUI extends IndividualSimUI<Spec.SpecHunter> {
 				} else if (talentTree == 1) { // MM
 					actions.push(...[
 						silencingShot,
-						killShot,
+						//killShot,
 						simple.sting == StingType.ScorpidSting ? scorpidSting : null,
 						simple.sting == StingType.SerpentSting ? serpentSting : null,
 						simple.trapWeave ? trapWeave : null,
@@ -349,7 +347,7 @@ export class HunterSimUI extends IndividualSimUI<Spec.SpecHunter> {
 					].filter(a => a) as Array<APLAction>)
 				} else if (talentTree == 2) { // SV
 					actions.push(...[
-						killShot,
+						//killShot,
 						explosiveShot4,
 						simple.allowExplosiveShotDownrank ? explosiveShot3 : null,
 						simple.trapWeave ? trapWeave : null,
