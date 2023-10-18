@@ -84,7 +84,7 @@ import {
 	ShamanSpecs,
 } from './proto_utils/utils.js';
 
-
+import * as Mechanics from './constants/mechanics.js';
 import { getLanguageCode } from './constants/lang.js';
 import { EventID, TypedEvent } from './typed_event.js';
 import { Party, MAX_PARTY_SIZE } from './party.js';
@@ -188,6 +188,23 @@ export class UnitMetadataList {
 	asList(): Array<UnitMetadata> {
 		return this.metadatas.slice();
 	}
+}
+
+export interface MeleeCritCapInfo {
+	meleeCrit: number,
+	meleeHit: number,
+	expertise: number,
+	suppression: number,
+	glancing: number,
+	debuffCrit: number,
+	hasOffhandWeapon: boolean,
+	meleeHitCap: number,
+	expertiseCap: number,
+	remainingMeleeHitCap: number,
+	remainingExpertiseCap: number,
+	baseCritCap: number,
+	specSpecificOffset: number,
+	playerCritCapDelta: number
 }
 
 export type AutoRotationGenerator<SpecType extends Spec> = (player: Player<SpecType>) => APLRotation;
@@ -657,6 +674,61 @@ export class Player<SpecType extends Spec> {
 		return BulkEquipmentSpec.clone(this.bulkEquipmentSpec);
 	}
 	*/
+
+	getMeleeCritCapInfo(): MeleeCritCapInfo {
+		const meleeCrit = (this.currentStats.finalStats?.stats[Stat.StatMeleeCrit] || 0.0) / Mechanics.MELEE_CRIT_RATING_PER_CRIT_CHANCE;
+		const meleeHit = (this.currentStats.finalStats?.stats[Stat.StatMeleeHit] || 0.0) / Mechanics.MELEE_HIT_RATING_PER_HIT_CHANCE;
+		const expertise = (this.currentStats.finalStats?.stats[Stat.StatExpertise] || 0.0) / Mechanics.EXPERTISE_PER_QUARTER_PERCENT_REDUCTION / 4;
+		const agility = (this.currentStats.finalStats?.stats[Stat.StatAgility] || 0.0) / this.getClass();
+		const suppression = 4.8;
+		const glancing = 24.0;
+
+		const hasOffhandWeapon = this.getGear().getEquippedItem(ItemSlot.ItemSlotOffHand)?.item.weaponSpeed !== undefined;
+		const meleeHitCap = hasOffhandWeapon && this.spec != Spec.SpecWarrior ? 27.0 : 8.0;
+		const expertiseCap = this.getInFrontOfTarget() ? 20.5 : 6.5;
+
+		const remainingMeleeHitCap = Math.max(meleeHitCap - meleeHit, 0.0);
+		const remainingExpertiseCap = Math.max(expertiseCap - expertise, 0.0)
+
+		let specSpecificOffset = 0.0;
+
+		if(this.spec === Spec.SpecEnhancementShaman) {
+			// Elemental Devastation uptime is near 100%
+			const ranks = (this as Player<Spec.SpecEnhancementShaman>).getTalents().elementalDevastation;
+			specSpecificOffset = 3.0 * ranks;
+		}
+
+		let debuffCrit = 0.0;
+
+		const debuffs = this.sim.raid.getDebuffs();
+		if (debuffs.totemOfWrath || debuffs.heartOfTheCrusader || debuffs.masterPoisoner) {
+			debuffCrit = 3.0;
+		}
+
+		const baseCritCap = 100.0 - glancing + suppression - remainingMeleeHitCap - remainingExpertiseCap - specSpecificOffset;
+		const playerCritCapDelta = meleeCrit - baseCritCap + debuffCrit;
+
+		return {
+			meleeCrit,
+			meleeHit,
+			expertise,
+			suppression,
+			glancing,
+			debuffCrit,
+			hasOffhandWeapon,
+			meleeHitCap,
+			expertiseCap,
+			remainingMeleeHitCap,
+			remainingExpertiseCap,
+			baseCritCap,
+			specSpecificOffset,
+			playerCritCapDelta
+		};
+	}
+
+	getMeleeCritCap() {
+		return this.getMeleeCritCapInfo().playerCritCapDelta
+	}
 
 	getBonusStats(): Stats {
 		return this.bonusStats;
