@@ -2520,7 +2520,7 @@ var DenyListNameRegexes = []*regexp.Regexp{
 
 // Allows manual overriding for Gem fields in case WowHead is wrong.
 var GemOverrides = []*proto.UIGem{
-	{Id: 33131, Stats: stats.Stats{stats.AttackPower: 32, stats.RangedAttackPower: 32}.ToFloatArray()},
+	{Id: 33131, Stats: stats.Stats{stats.AttackPower: 24, stats.RangedAttackPower: 24}.ToFloatArray()},
 	{Id: 35707, Phase: 6}, //Regal Nightseye
 	{Id: 35503, Phase: 6}, //Ember Skyfire Diamond
 	{Id: 35501, Phase: 6}, //Eternal Earthstorm Diamond

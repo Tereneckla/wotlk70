@@ -3669,7 +3669,7 @@
 {"effectId":2654,"itemId":22539,"spellId":27945,"name":"Intellect","type":13,"enchantType":2,"stats":[0,0,0,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"quality":1},
 {"effectId":2656,"itemId":35298,"spellId":27948,"name":"Enchant Boots - Vitality","type":10,"stats":[0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"quality":2},
 {"effectId":2657,"itemId":22544,"spellId":27951,"name":"Enchant Boots - Dexterity","type":10,"stats":[0,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"quality":2},
-{"effectId":2658,"itemId":22545,"spellId":27954,"name":"Enchant Boots - Surefooted","type":10,"stats":[0,0,0,0,0,0,0,5,0,0,0,0,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"quality":2,"phase":2},
+{"effectId":2658,"itemId":22545,"spellId":27954,"name":"Enchant Boots - Surefooted","type":10,"stats":[0,0,0,0,0,0,0,10,10,0,0,0,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"quality":2,"phase":2},
 {"effectId":2659,"spellId":27957,"name":"Chest - Exceptional Health","type":5,"stats":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,150,0,0,0,0,0,0,0,0,0,0,0],"quality":1},
 {"effectId":2661,"itemId":24003,"spellId":27960,"name":"Chest - Exceptional Stats","type":5,"stats":[6,6,6,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"quality":1},
 {"effectId":2661,"spellId":44616,"name":"Greater Stats","type":6,"stats":[6,6,6,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"quality":1,"phase":7},
