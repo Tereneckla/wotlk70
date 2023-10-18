@@ -305,8 +305,8 @@ dps_results: {
 dps_results: {
  key: "TestSubtlety-AllItems-Deathmantle"
  value: {
-  dps: 7369.16379
-  tps: 5230.58602
+  dps: 8796.43023
+  tps: 6243.36074
  }
 }
 dps_results: {

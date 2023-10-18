@@ -319,8 +319,8 @@ dps_results: {
 dps_results: {
  key: "TestCombat-AllItems-Deathmantle"
  value: {
-  dps: 5849.43767
-  tps: 4153.10074
+  dps: 6037.07138
+  tps: 4286.32068
  }
 }
 dps_results: {

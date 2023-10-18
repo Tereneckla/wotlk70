@@ -196,6 +196,13 @@ func (rogue *Rogue) deathmantleActive() bool {
 	return rogue.DeathmantleProcAura != nil && rogue.DeathmantleProcAura.IsActive()
 }
 
+func (rogue *Rogue) applyDeathmantle(sim *core.Simulation, spell *core.Spell, _ *core.Cast) {
+	if rogue.deathmantleActive() {
+		spell.CostMultiplier = 0
+		rogue.DeathmantleProcAura.Deactivate(sim)
+	}
+}
+
 var Tier4 = core.NewItemSet(core.ItemSet{
 	Name: "Netherblade",
 	Bonuses: map[int32]core.ApplyEffect{
