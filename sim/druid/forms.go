@@ -48,8 +48,8 @@ func (druid *Druid) ClearForm(sim *core.Simulation) {
 
 func (druid *Druid) GetCatWeapon() core.Weapon {
 	return core.Weapon{
-		BaseDamageMin:        43,
-		BaseDamageMax:        66,
+		BaseDamageMin:        50,
+		BaseDamageMax:        75,
 		SwingSpeed:           1.0,
 		NormalizedSwingSpeed: 1.0,
 		CritMultiplier:       druid.MeleeCritMultiplier(Cat),
@@ -59,8 +59,8 @@ func (druid *Druid) GetCatWeapon() core.Weapon {
 
 func (druid *Druid) GetBearWeapon() core.Weapon {
 	return core.Weapon{
-		BaseDamageMin:        109,
-		BaseDamageMax:        165,
+		BaseDamageMin:        127,
+		BaseDamageMax:        188,
 		SwingSpeed:           2.5,
 		NormalizedSwingSpeed: 2.5,
 		CritMultiplier:       druid.MeleeCritMultiplier(Bear),
