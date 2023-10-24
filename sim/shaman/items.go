@@ -169,6 +169,7 @@ func init() {
 			Timer:    shaman.NewTimer(),
 			Duration: time.Second * 40,
 		}
+		manametrics := shaman.NewManaMetrics(core.ActionID{ItemID: 30663})
 		shaman.RegisterAura(core.Aura{
 			Label:    "Fathom-Brooch of the Tidewalker",
 			Duration: core.NeverExpires,
@@ -183,7 +184,7 @@ func init() {
 					return
 				}
 				if sim.RandomFloat("Fathom-Brooch of the Tidewalker") > 0.15 {
-					shaman.AddMana(sim, 335, shaman.NewManaMetrics(core.ActionID{ItemID: 30663}))
+					shaman.AddMana(sim, 335, manametrics)
 				}
 
 			},
@@ -193,6 +194,7 @@ func init() {
 	core.NewItemEffect(32491, func(agent core.Agent) {
 		shaman := agent.(ShamanAgent).GetShaman()
 		procAura := shaman.NewTemporaryStatsAura("Ashtongue Talisman of Vision Proc", core.ActionID{ItemID: 32491}, stats.Stats{stats.AttackPower: 275}, time.Second*10)
+		manametrics := shaman.NewManaMetrics(core.ActionID{ItemID: 32491})
 		shaman.RegisterAura(core.Aura{
 			Label:    "Ashtongue Talisman of Vision",
 			Duration: core.NeverExpires,
@@ -210,7 +212,7 @@ func init() {
 					if sim.RandomFloat("Lightning Bolt") > 0.85 {
 						return
 					}
-					shaman.AddMana(sim, 170, shaman.NewManaMetrics(core.ActionID{ItemID: 32491}))
+					shaman.AddMana(sim, 170, manametrics)
 				}
 
 			},
