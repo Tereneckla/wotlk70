@@ -746,8 +746,8 @@ dps_results: {
 dps_results: {
  key: "TestBalancePhase3-AllItems-NordrassilRegalia"
  value: {
-  dps: 8864.23599
-  tps: 8622.91475
+  dps: 9205.09716
+  tps: 8963.77591
  }
 }
 dps_results: {

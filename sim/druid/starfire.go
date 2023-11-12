@@ -48,18 +48,18 @@ func (druid *Druid) registerStarfireSpell() {
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			baseDamage := sim.Roll(828.1, 974.1) + ((spell.SpellPower() + idolSpellPower) * spellCoeff) + (spell.SpellPower() * bonusCoeff)
+			moonfireDot := druid.Moonfire.Dot(target)
+			if moonfireDot.IsActive() || druid.InsectSwarm.Dot(target).IsActive() {
+				baseDamage *= nordrassilMult
+			}
 			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeMagicHitAndCrit)
 			if result.Landed() {
-				moonfireDot := druid.Moonfire.Dot(target)
 				if hasGlyph && moonfireDot.IsActive() && druid.ExtendingMoonfireStacks > 0 {
 					druid.ExtendingMoonfireStacks -= 1
 					moonfireDot.UpdateExpires(moonfireDot.ExpiresAt() + time.Second*3)
 
 					// can proc canProcFromProc on-cast trinkets
 					druid.GetDummyProcSpell().Cast(sim, target)
-				}
-				if moonfireDot.IsActive() || druid.InsectSwarm.Dot(target).IsActive() {
-					baseDamage *= nordrassilMult
 				}
 			}
 			spell.DealDamage(sim, result)
