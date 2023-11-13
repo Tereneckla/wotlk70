@@ -815,9 +815,9 @@ dps_results: {
 dps_results: {
  key: "TestRetribution-AllItems-LightbringerArmor"
  value: {
-  dps: 4383.78265
-  tps: 4440.91328
-  dtps: 10.6633
+  dps: 4379.2569
+  tps: 4436.22511
+  dtps: 10.25507
  }
 }
 dps_results: {
