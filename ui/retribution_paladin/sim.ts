@@ -130,7 +130,6 @@ export class RetributionPaladinSimUI extends IndividualSimUI<Spec.SpecRetributio
 					icyTalons: true,
 					totemOfWrath: true,
 					wrathOfAirTotem: true,
-					demonicPact: 500,
 				}),
 				partyBuffs: PartyBuffs.create({
 				}),

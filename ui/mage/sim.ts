@@ -101,7 +101,6 @@ export class MageSimUI extends IndividualSimUI<Spec.SpecMage> {
 					divineSpirit: true,
 					swiftRetribution: true,
 					sanctifiedRetribution: true,
-					demonicPact: 500,
 					moonkinAura: TristateEffect.TristateEffectImproved,
 					arcaneBrilliance: true,
 				}),

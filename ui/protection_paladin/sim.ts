@@ -140,7 +140,6 @@ export class ProtectionPaladinSimUI extends IndividualSimUI<Spec.SpecProtectionP
 					leaderOfThePack: TristateEffect.TristateEffectRegular,
 					icyTalons: true,
 					totemOfWrath: true,
-					demonicPact: 500,
 					swiftRetribution: true,
 					moonkinAura: TristateEffect.TristateEffectRegular,
 					sanctifiedRetribution: true,

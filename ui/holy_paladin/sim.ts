@@ -81,7 +81,6 @@ export class HolyPaladinSimUI extends IndividualSimUI<Spec.SpecHolyPaladin> {
 					leaderOfThePack: TristateEffect.TristateEffectRegular,
 					icyTalons: true,
 					totemOfWrath: true,
-					demonicPact: 500,
 					swiftRetribution: true,
 					moonkinAura: TristateEffect.TristateEffectRegular,
 					sanctifiedRetribution: true,

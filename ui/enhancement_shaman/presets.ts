@@ -196,7 +196,6 @@ export const DefaultRaidBuffs = RaidBuffs.create({
 	sanctifiedRetribution: true,
 	divineSpirit: true,
 	battleShout: TristateEffect.TristateEffectImproved,
-	demonicPact: 500,
 });
 
 export const DefaultDebuffs = Debuffs.create({
