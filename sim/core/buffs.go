@@ -217,16 +217,9 @@ func applyBuffEffects(agent Agent, raidBuffs *proto.RaidBuffs, partyBuffs *proto
 	if raidBuffs.TotemOfWrath {
 		MakePermanent(TotemOfWrathAura(character))
 	}
-	if raidBuffs.DemonicPactOld > 0 || raidBuffs.DemonicPact > 0 || raidBuffs.DemonicPactSp > 0 {
-		// Use DemonicPactSp if set.
-		power := raidBuffs.DemonicPactSp
-		if power == 0 {
-			power = raidBuffs.DemonicPact // fallback to old setting.
-		}
-		if power == 0 {
-			power = raidBuffs.DemonicPactOld
-		}
+	if raidBuffs.DemonicPact > 0 {
 
+		power = raidBuffs.DemonicPact
 		dpAura := DemonicPactAura(character)
 		dpAura.ExclusiveEffects[0].Priority = float64(power)
 		MakePermanent(dpAura)
