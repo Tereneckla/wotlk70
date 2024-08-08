@@ -585,6 +585,7 @@ func applyConsumeEffects(agent Agent) {
 	case proto.Food_FoodSpicyHotTalbuk:
 		character.AddStats(stats.Stats{
 			stats.MeleeHit: 20,
+			stats.SpellHit: 20,
 			stats.Spirit:   20,
 		})
 	case proto.Food_FoodFishermansFeast:
