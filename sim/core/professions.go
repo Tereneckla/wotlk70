@@ -10,15 +10,15 @@ import (
 // This is just the static bonuses. Most professions are handled elsewhere.
 func (character *Character) applyProfessionEffects() {
 	if character.HasProfession(proto.Profession_Mining) {
-		character.AddStat(stats.Stamina, 60)
+		character.AddStat(stats.Stamina, 30)
 	}
 
 	if character.HasProfession(proto.Profession_Skinning) {
-		character.AddStats(stats.Stats{stats.MeleeCrit: 40, stats.SpellCrit: 40})
+		character.AddStats(stats.Stats{stats.MeleeCrit: 20, stats.SpellCrit: 20})
 	}
 
 	if character.HasProfession(proto.Profession_Herbalism) {
-		actionID := ActionID{SpellID: 55503}
+		actionID := ActionID{SpellID: 55502}
 		healthMetrics := character.NewHealthMetrics(actionID)
 
 		spell := character.RegisterSpell(SpellConfig{
@@ -31,7 +31,7 @@ func (character *Character) applyProfessionEffects() {
 				},
 			},
 			ApplyEffects: func(sim *Simulation, _ *Unit, _ *Spell) {
-				amount := (3600 + character.MaxHealth()*0.016) / 5
+				amount := (1200 + character.MaxHealth()*0.016) / 5
 				StartPeriodicAction(sim, PeriodicActionOptions{
 					Period:   time.Second,
 					NumTicks: 5,
